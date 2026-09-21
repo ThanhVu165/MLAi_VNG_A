@@ -112,7 +112,7 @@ escalation-referee/
 ├── TASKBOARD.md                    S  bảng task
 ├── RUNBOOK.md                      C  clone → chạy
 ├── BUILD_LOG.md                    S  nhật ký phát triển 1 trang
-├── STATUS.md                       S  heartbeat 3 agent
+├── STATUS.md                       S  heartbeat 3 agent 
 ├── README.md                       C
 ├── requirements.txt                C
 ├── .env.example                    C
