@@ -8,7 +8,7 @@ import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Protocol, Sequence, cast
 
 from rank_bm25 import BM25Okapi
 
@@ -129,7 +129,7 @@ def _load_encoder() -> Encoder:
     """Load once; Sentence Transformers stores downloaded model files on disk."""
     from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer(MODEL_NAME, cache_folder=str(EMBEDDING_CACHE_DIR))
+    return cast(Encoder, SentenceTransformer(MODEL_NAME, cache_folder=str(EMBEDDING_CACHE_DIR)))
 
 
 @lru_cache(maxsize=16)
