@@ -450,6 +450,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6 (6đ audit)
 
 ### C-06 · `infra/telemetry.py`
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 2h · **Phụ thuộc:** C-05
 - **File:** `infra/telemetry.py`
 - **Việc phải làm:** Tính đủ 8 chỉ số ở Mục 11.1 spec từ dữ liệu trong DB, không lưu trùng. `median_review_seconds` = trung vị `decided_at − shown_at`; `pct_approved_under_5s` = tỷ lệ duyệt dưới 5 giây.
@@ -520,6 +521,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6 (4đ)
 
 ### C-16 · Trang 4 — Nhật ký kiểm toán
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 3h · **Phụ thuộc:** C-05
 - **File:** `pages/4_Nhat_ky_kiem_toan.py`
 - **Việc phải làm:** Bảng mọi event sắp theo thời gian giảm dần, lọc theo `case_id`, `actor`, `action`, khoảng thời gian. Mỗi dòng mở rộng hiện đủ: **làm gì · lúc nào (+07:00) · trên dữ liệu nào (input_ref, sources) · vì lý do gì (reason) · theo luật nào (rule_id) · trên phiên bản corpus nào**. Bao gồm cả hành động quản trị và hành động corpus. Liên kết sâu từ mọi màn hình khác về đây.
@@ -569,6 +571,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 2 (bảng có dấu thời gian là yêu cầu tường minh)
 
 ### C-23 · Trang 6 — Đo lường
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 2h · **Phụ thuộc:** C-06
 - **File:** `pages/6_Do_luong.py`
 - **Việc phải làm:** Hiển thị 8 chỉ số Mục 11.1 spec kèm **định nghĩa công thức ngay cạnh mỗi con số**. Tách rõ hai nhóm: *chỉ số hiệu quả* và *chỉ số rủi ro* (`pct_approved_under_5s`, `override_rate`, `groundedness_fail_rate`). Ghi rõ dữ liệu hiện tại là từ chạy nội bộ, chưa phải người dùng thật.

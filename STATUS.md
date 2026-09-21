@@ -12,4 +12,10 @@
 [H+00][Agent A] xong A-01 · pipeline fail-safe đã kiểm tra xanh.
 [H+00][Agent C] bắt đầu C-05 · hoàn thiện API audit và kiểm tra chuỗi event · không bị chặn
 [H+00][Agent C] xong C-05 · audit validate action/reason, lưu UTC và truy vấn chuỗi event đã kiểm tra · không bị chặn
+[H+00][Agent C] bắt đầu C-06 · tính telemetry trực tiếp từ SQLite, không lưu bản sao · không bị chặn
+[H+00][Agent C] xong C-06 · 15 case kiểm chứng các tỷ lệ, latency và thời gian duyệt từ SQLite · không bị chặn
+[H+00][Agent C] bắt đầu C-16 · trang tra cứu audit có lọc và liên kết theo case_id · không bị chặn
+[H+00][Agent C] xong C-16 · bảng audit lọc được đầy đủ event và xem chi tiết theo múi giờ +07:00 · không bị chặn
+[H+00][Agent C] bắt đầu C-23 · trang đo lường nội bộ với công thức cạnh từng chỉ số · không bị chặn
+[H+00][Agent C] xong C-23 · tám nhóm chỉ số và công thức hiển thị trực tiếp cho Slide 3/5 · không bị chặn
 [H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
