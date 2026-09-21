@@ -5,12 +5,16 @@ import json
 import core.pipeline as pipeline
 from core.extract import EXTRACTION_SCHEMA, extract_facts
 from core.prepolicy import decision_lock
+from core.retrieval import retrieve_evidence
 from core.sanitize import detect_language, mask_pii, sanitize_body
 from core.types import (
     CaseInput,
     CaseStatus,
+    ChunkLabel,
     Decision,
     Domain,
+    EvidenceChunk,
+    EvidenceStatus,
     EscalationType,
     Extraction,
     RequestItem,
@@ -146,6 +150,122 @@ def test_prepolicy_lock_covers_all_authority_flags() -> None:
         "{}",
     )
     assert decision_lock(informational) is None
+
+
+def test_retrieval_combines_domains_and_audits_chunk_ids(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    seen: dict[str, object] = {}
+    chunks = [
+        EvidenceChunk(
+            "conduct-1",
+            "doc-conduct",
+            "Điều 1",
+            "Điểm rèn luyện.",
+            Domain.CONDUCT_SCORE,
+            ChunkLabel.AUTO_ANSWERABLE,
+            0.9,
+            datetime(2026, 1, 1, tzinfo=timezone.utc).date(),
+            None,
+            [],
+            [],
+            False,
+            False,
+        ),
+        EvidenceChunk(
+            "withdraw-1",
+            "doc-withdraw",
+            "Điều 2",
+            "Hạn rút học phần.",
+            Domain.COURSE_WITHDRAWAL,
+            ChunkLabel.AUTO_ANSWERABLE,
+            0.8,
+            datetime(2026, 1, 1, tzinfo=timezone.utc).date(),
+            None,
+            [],
+            [],
+            False,
+            False,
+        ),
+    ]
+
+    def fake_search(
+        query: str, domains: list[Domain], top_k: int, at: datetime
+    ) -> list[EvidenceChunk]:
+        seen.update(query=query, domains=domains, top_k=top_k, at=at)
+        return chunks
+
+    monkeypatch.setattr("core.retrieval.search", fake_search)
+    extraction = Extraction(
+        "vi",
+        [
+            RequestItem(Domain.CONDUCT_SCORE, "deadline", True, False, False, False, False),
+            RequestItem(Domain.COURSE_WITHDRAWAL, "procedure", True, False, False, False, False),
+        ],
+        {},
+        [],
+        False,
+        "{}",
+    )
+
+    result = retrieve_evidence(
+        case_id="case-retrieval",
+        actor="SYSTEM",
+        inp=_input(),
+        body_clean="Nội dung đã làm sạch",
+        extraction=extraction,
+        corpus_version="cv_test",
+    )
+
+    events = events_for_case("case-retrieval", database_path=str(database_path))
+    assert result.status is EvidenceStatus.OK and result.chunks == chunks
+    assert seen["domains"] == [Domain.CONDUCT_SCORE, Domain.COURSE_WITHDRAWAL]
+    assert seen["top_k"] == 6
+    assert seen["at"] == _input().received_at
+    assert "Hỏi quy trình" in str(seen["query"])
+    assert "Nội dung đã làm sạch" in str(seen["query"])
+    assert [event.action for event in events] == ["EVIDENCE_RETRIEVED"]
+    assert events[0].sources == ["conduct-1", "withdraw-1"]
+
+
+def test_retrieval_corpus_error_returns_no_authoritative_source(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+
+    def broken_search(*args: object, **kwargs: object) -> list[EvidenceChunk]:
+        del args, kwargs
+        raise RuntimeError("index unavailable")
+
+    monkeypatch.setattr("core.retrieval.search", broken_search)
+    result = retrieve_evidence(
+        case_id="case-retrieval-error",
+        actor="SYSTEM",
+        inp=_input(),
+        body_clean="Nội dung đã làm sạch",
+        extraction=Extraction("vi", [], {}, [], False, "{}"),
+        corpus_version="cv_test",
+    )
+
+    assert result.status is EvidenceStatus.NO_AUTHORITATIVE_SOURCE
+    assert result.chunks == []
+
+
+def test_retrieval_empty_corpus_returns_no_authoritative_source(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    monkeypatch.setattr("core.retrieval.search", lambda *args, **kwargs: [])
+
+    result = retrieve_evidence(
+        case_id="case-empty-corpus",
+        actor="SYSTEM",
+        inp=_input(),
+        body_clean="Nội dung đã làm sạch",
+        extraction=Extraction("vi", [], {}, [], False, "{}"),
+        corpus_version="cv_test",
+    )
+
+    assert result.status is EvidenceStatus.NO_AUTHORITATIVE_SOURCE
+    assert result.chunks == []
 
 
 def test_mask_pii_and_keep_audit_free_of_raw_values(monkeypatch, tmp_path) -> None:
