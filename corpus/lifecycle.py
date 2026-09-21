@@ -109,7 +109,7 @@ def activate_source(
         activated_by=actor,
     )
     update_source(activated, database_path=database_path)
-    _supersede_scheduled_sources(activated, activated_at, database_path=database_path)
+    _supersede_scheduled_sources(activated, activated_at, actor, database_path=database_path)
     corpus_version = bump_corpus_version(
         actor, f"Kích hoạt nguồn {activated.doc_id}.", database_path=database_path
     )
@@ -164,7 +164,7 @@ def _require_admin_actor(actor: str) -> None:
 
 
 def _supersede_scheduled_sources(
-    source: SourceRecord, superseded_at: str, *, database_path: DatabasePath
+    source: SourceRecord, superseded_at: str, actor: str, *, database_path: DatabasePath
 ) -> None:
     for doc_id in scheduled_supersede_ids(source, database_path=database_path):
         previous = get_source(doc_id, database_path=database_path)
@@ -177,4 +177,14 @@ def _supersede_scheduled_sources(
                     superseded_at=superseded_at,
                 ),
                 database_path=database_path,
+            )
+            log_event(
+                case_id=None,
+                actor=actor,
+                action="SUPERSEDE_SOURCE",
+                input_ref=previous.doc_id,
+                output_ref=source.doc_id,
+                reason=f"Nguồn {previous.doc_id} được thay thế bởi {source.doc_id}.",
+                sources=[previous.doc_id, source.doc_id],
+                database_path=str(database_path) if database_path is not None else None,
             )

@@ -144,6 +144,7 @@ def test_activate_source_records_human_audit_version_and_scheduled_supersede(
     assert activated.activated_at is not None and activated.activated_at.endswith("Z")
     assert superseded is not None and superseded.status is SourceStatus.SUPERSEDED
     assert superseded.superseded_by == activated.doc_id
+    assert superseded.superseded_at == activated.activated_at
     assert get_current_corpus_version(database_path=database_path) is not None
     assert [chunk.doc_id for chunk in active_chunks(database_path=database_path)] == [
         activated.doc_id
@@ -153,3 +154,6 @@ def test_activate_source_records_human_audit_version_and_scheduled_supersede(
     assert events[0].reason == "Đã duyệt quy định mới."
     assert events[0].sources == [activated.doc_id]
     assert events[0].corpus_version == get_current_corpus_version(database_path=database_path)
+    assert events[1].action == "SUPERSEDE_SOURCE"
+    assert events[1].actor == "ADMIN:lan"
+    assert events[1].sources == [previous.doc_id, activated.doc_id]
