@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import core.pipeline as pipeline
+from core.sanitize import sanitize_body
 from core.types import CaseInput, CaseStatus, Decision
 from infra import db
 from infra.audit import events_for_case
@@ -47,3 +48,19 @@ def test_r0_marks_missing_required_input_invalid(monkeypatch, tmp_path) -> None:
     assert result.decision.decision is Decision.INVALID_INPUT
     assert result.status is CaseStatus.INVALID_INPUT
     assert row is not None and row["status"] == CaseStatus.INVALID_INPUT
+
+
+def test_sanitize_removes_quotes_signatures_html_and_extra_whitespace() -> None:
+    cases = (
+        ("Em cần hỗ trợ.\nOn Tue, 21 Sep wrote:\n> Nội dung cũ", "Em cần hỗ trợ."),
+        ("Cho em hỏi hạn nộp.\nVào 21/09, cô đã viết:\n> Nội dung cũ", "Cho em hỏi hạn nộp."),
+        ("Em cần hỗ trợ.\n\nTrân trọng,\nNguyễn Văn A", "Em cần hỗ trợ."),
+        (
+            "Em cần hỗ trợ.\n--\nNguyễn Văn A\nEmail: a@example.edu\nĐiện thoại: 0900000000",
+            "Em cần hỗ trợ.",
+        ),
+        ("<p>Em cần <b>hỗ trợ</b>.</p><p>Trân trọng,<br>Nguyễn Văn A</p>", "Em cần hỗ trợ."),
+        ("Em   cần\n\n  Cà phe\u0302.", "Em cần Cà phê."),
+    )
+
+    assert [sanitize_body(raw) for raw, _ in cases] == [expected for _, expected in cases]

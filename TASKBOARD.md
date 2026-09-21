@@ -120,7 +120,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 6 (truy xuất được xử lý trên dữ liệu nào)
 
 ### A-03 · R1 Sanitize — bóc chữ ký, quote, HTML
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 2h · **Phụ thuộc:** A-01
 - **File:** `core/sanitize.py`
 - **Việc phải làm:** Gỡ thẻ HTML; cắt phần trích dẫn email cũ (`On ... wrote:`, `Vào ... đã viết:`, dòng bắt đầu bằng `>`, `-----Original Message-----`); cắt chữ ký (`--`, `Trân trọng`, `Best regards`, khối thông tin liên hệ cuối thư); chuẩn hóa NFC; gộp khoảng trắng thừa. Giữ `body_raw` nguyên vẹn.
