@@ -112,7 +112,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Xong khi:** Gọi `process_case()` với input mẫu trả về `PipelineResult` hợp lệ, không ném exception dù bước con ném lỗi.
 
 ### A-02 · R0 Intake
-- **Trạng thái:** BLOCKED
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 1h · **Phụ thuộc:** A-01, C-02
 - **File:** `core/pipeline.py`
 - **Việc phải làm:** Sinh `case_id` (`c_` + ULID) và `trace_id`; lấy `corpus_version` qua `corpus.api.get_corpus_version()` và **đóng băng cho suốt case**; ghi hàng vào `cases` với status `RECEIVED`; ghi audit `CASE_RECEIVED`; kiểm tra trường bắt buộc, thiếu thì `INVALID_INPUT`.
@@ -120,6 +120,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 6 (truy xuất được xử lý trên dữ liệu nào)
 
 ### A-03 · R1 Sanitize — bóc chữ ký, quote, HTML
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 2h · **Phụ thuộc:** A-01
 - **File:** `core/sanitize.py`
 - **Việc phải làm:** Gỡ thẻ HTML; cắt phần trích dẫn email cũ (`On ... wrote:`, `Vào ... đã viết:`, dòng bắt đầu bằng `>`, `-----Original Message-----`); cắt chữ ký (`--`, `Trân trọng`, `Best regards`, khối thông tin liên hệ cuối thư); chuẩn hóa NFC; gộp khoảng trắng thừa. Giữ `body_raw` nguyên vẹn.
@@ -153,6 +154,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 3 (8đ) · tránh mất điểm over-escalation
 
 ### A-08 · R2 Prompt và schema trích xuất
+- **Trạng thái:** WIP
 - **Khối:** B1 · **Ước lượng:** 2.5h · **Phụ thuộc:** A-01, C-04
 - **File:** `core/extract.py`
 - **Việc phải làm:** Viết `EXTRACT_PROMPT_V1` và JSON schema đúng Mục 5.2 spec (`Extraction` + `RequestItem`). Prompt nói rõ: chỉ trích xuất, không suy đoán, không trả lời; trường nào không chắc thì để trống và thêm vào `missing_critical_facts`. Gọi qua `infra.llm.call_json(step="R2_extract")`, `temperature=0`.
