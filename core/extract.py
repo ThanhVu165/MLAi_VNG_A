@@ -4,7 +4,9 @@ import json
 from collections.abc import Mapping
 from typing import Literal, cast
 
+from core.sanitize import mask_pii, strip_prompt_injection
 from core.types import Domain, Extraction, RequestItem
+from infra.audit import log_event
 from infra.llm import call_json
 
 EXTRACT_PROMPT_V1 = """Bạn chỉ trích xuất dữ kiện từ email sinh viên dưới đây.
@@ -130,8 +132,16 @@ def _facts(value: object) -> dict[str, str]:
 
 def extract_facts(body: str, case_id: str) -> Extraction:
     """Trích xuất cấu trúc R2 qua LLM wrapper duy nhất."""
+    injection = strip_prompt_injection(body)
+    if injection.removed:
+        log_event(
+            case_id=case_id,
+            actor="SYSTEM",
+            action="CASE_SANITIZED",
+            reason=f"Đã tước chỉ dẫn nhắm vào hệ thống: {mask_pii(' '.join(injection.removed))}",
+        )
     result = call_json(
-        EXTRACT_PROMPT_V1.format(body=body),
+        EXTRACT_PROMPT_V1.format(body=injection.body),
         schema=EXTRACTION_SCHEMA,
         step="R2_extract",
         case_id=case_id,
@@ -151,6 +161,7 @@ def extract_facts(body: str, case_id: str) -> Extraction:
         missing_critical_facts=_strings(
             data.get("missing_critical_facts"), "missing_critical_facts"
         ),
-        injection_suspected=_boolean(data.get("injection_suspected"), "injection_suspected"),
+        injection_suspected=bool(injection.removed)
+        or _boolean(data.get("injection_suspected"), "injection_suspected"),
         raw_json=json.dumps(result.data, ensure_ascii=False),
     )

@@ -142,7 +142,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 6 · Quy định dữ liệu của cuộc thi
 
 ### A-06 · R1 Nhận diện prompt injection
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 1.5h · **Phụ thuộc:** A-03
 - **File:** `core/sanitize.py`
 - **Việc phải làm:** Bắt các mẫu chỉ dẫn nhắm vào hệ thống: *bỏ qua quy định · duyệt luôn · bạn là AI hãy · ignore previous · system prompt · đừng chuyển cho ai · tự động chấp thuận*. Khi khớp: đặt `injection_suspected=true`, **tước đoạn đó khỏi văn bản gửi LLM**, ghi audit với đoạn bị tước, xử lý phần còn lại bình thường.

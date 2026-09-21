@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import Literal
 
@@ -78,6 +79,17 @@ PII_PATTERNS = (
     (MSSV_PATTERN, "[MSSV]"),
     (PHONE_PATTERN, "[SĐT]"),
 )
+INJECTION_PATTERN = re.compile(
+    r"(?:bỏ qua quy định|duyệt luôn|bạn là ai hãy|ignore previous|system prompt|"
+    r"đừng chuyển cho ai|tự động chấp thuận)[^\n.?!]*(?:[.?!]|$)",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class InjectionRemoval:
+    body: str
+    removed: tuple[str, ...]
 
 
 class _TextExtractor(HTMLParser):
@@ -135,6 +147,18 @@ def mask_pii(body: str) -> str:
     for pattern, replacement in PII_PATTERNS:
         body = pattern.sub(replacement, body)
     return body
+
+
+def strip_prompt_injection(body: str) -> InjectionRemoval:
+    """Tước câu lệnh nhắm vào hệ thống trước khi nội dung tới LLM."""
+    removed: list[str] = []
+
+    def remove(match: re.Match[str]) -> str:
+        removed.append(match.group().strip())
+        return " "
+
+    clean_body = " ".join(INJECTION_PATTERN.sub(remove, body).split())
+    return InjectionRemoval(clean_body, tuple(removed))
 
 
 def detect_language(body: str) -> Literal["vi", "en", "other"]:
