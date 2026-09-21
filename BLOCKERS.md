@@ -15,6 +15,8 @@
 - [C-03][Agent C] `infra/settings.py` đã có đủ ngưỡng và override environment. Chưa thể kiểm tra import, chạy `make check`, hoặc quét core/corpus vì môi trường thiếu Python/Make và hai thư mục đó chưa tồn tại.
 # BLOCKERS
 
-- [A-02][Agent A] Full `mypy .` is blocked by 17 existing errors in `pages/4_Nhat_ky_kiem_toan.py:51,58`, owned by Agent C. A-02's Black, Ruff, `mypy core tests/test_guards.py`, and full pytest pass.
+- [A-08][Agent A] `GOOGLE_API_KEY` và SDK đã sẵn sàng; schema Gemini đã tương thích. Nhưng `infra.llm.DEFAULT_MODEL = "gemini-1.5-flash"` trả `NotFound`; thử `gemini-2.5-flash` cũng `NotFound`. Cần Agent C cấu hình model Gemini khả dụng trong `infra/` rồi Agent A chạy lại 8 mẫu thật.
+
+- [A-02][Agent A][đã gỡ] Full `mypy .` was blocked by 17 errors in Agent C's audit page. Black, Ruff, mypy, and pytest now pass.
 
 - [A-01] Full `make check` is unavailable: this repository has no Makefile and Python 3.11 has no `mypy` module. The targeted pytest smoke check plus Black and Ruff pass.
