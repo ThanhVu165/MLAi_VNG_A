@@ -601,6 +601,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 1 · Quy định về dữ liệu
 
 ### C-25 · Bộ 15 trường hợp kiểm thử
+- **Trạng thái:** WIP
 - **Khối:** B3 · **Ước lượng:** 3h · **Phụ thuộc:** B-15 · **A-26 duyệt**
 - **File:** `verify/cases_verify4.json`, `verify/cases_escalation5.json`, `verify/cases_full15.json`
 - **Việc phải làm:** Soạn theo đúng bảng Mục 10.1–10.3 spec. Mỗi case có: `id`, `input` (email đầy đủ), `expected_decision`, `expected_type`, `expected_rule_id`, `rationale` (**căn cứ điều khoản nào trong tài liệu quy định của đội**), `how_to_run`. 15 case phải phủ: 3 loại escalation, tiếng Anh, ngoài domain, đa ý định, input rác, injection.

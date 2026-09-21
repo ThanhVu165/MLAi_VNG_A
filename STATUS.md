@@ -26,6 +26,7 @@
 [H+00][Agent C] xong C-16 · bảng audit lọc được đầy đủ event và xem chi tiết theo múi giờ +07:00 · không bị chặn
 [H+00][Agent C] bắt đầu C-23 · trang đo lường nội bộ với công thức cạnh từng chỉ số · không bị chặn
 [H+00][Agent C] xong C-23 · tám nhóm chỉ số và công thức hiển thị trực tiếp cho Slide 3/5 · không bị chặn
+[H+00][Agent C] đang làm C-25 bản nháp · soạn 15 case từ corpus seed, chờ A-26 duyệt kỳ vọng · không bị chặn
 [H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
 [H+00][Agent B] B-02 đã hoàn tất CRUD nguồn/chunk/version · 7 test xanh · full check còn lỗi format/cấu hình Mypy ngoài phạm vi B
 [H+00][Agent B] B-03 đã hoàn tất nạp file/text/URL, chống trùng SHA-256 và audit · full check 15 test xanh
