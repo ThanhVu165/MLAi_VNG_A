@@ -3,7 +3,13 @@ from pathlib import Path
 from core.types import Domain, SourceStatus
 from corpus.conflict import flag_active_conflicts, scheduled_supersede_ids
 from corpus.indexer import active_chunks
-from corpus.lifecycle import activate_source, pending_reviews, reject_source, request_change
+from corpus.lifecycle import (
+    activate_source,
+    flag_cases_for_recheck,
+    pending_reviews,
+    reject_source,
+    request_change,
+)
 from corpus.seed import ensure_seeded
 from corpus.store import (
     ChunkRecord,
@@ -15,6 +21,7 @@ from corpus.store import (
     get_source,
 )
 from infra.audit import recent_events
+from infra.db import execute, now_iso
 
 
 def test_conflicting_active_sources_are_flagged_and_supersede_is_scheduled(
@@ -157,3 +164,33 @@ def test_activate_source_records_human_audit_version_and_scheduled_supersede(
     assert events[1].action == "SUPERSEDE_SOURCE"
     assert events[1].actor == "ADMIN:lan"
     assert events[1].sources == [previous.doc_id, activated.doc_id]
+
+
+def test_superseded_source_flags_recent_cases_using_its_chunks(tmp_path: Path) -> None:
+    database_path = tmp_path / "corpus.db"
+    execute(
+        "INSERT INTO cases (case_id, trace_id, channel, created_at, status, corpus_version) VALUES (?, ?, ?, ?, ?, ?)",
+        ("case-1", "trace-1", "paste", now_iso(), "RESOLVED", "cv-old"),
+        database_path=database_path,
+    )
+    execute(
+        "INSERT INTO decisions (decision_id, case_id, decision, rule_id, reason, evidence_ids_json, corpus_version, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            "decision-1",
+            "case-1",
+            "AUTO_REPLY",
+            "P01",
+            "Đủ căn cứ.",
+            '["old:chunk:1"]',
+            "cv-old",
+            now_iso(),
+        ),
+        database_path=database_path,
+    )
+
+    assert flag_cases_for_recheck("old", actor="ADMIN:lan", database_path=database_path) == [
+        "case-1"
+    ]
+    assert [event.action for event in recent_events(database_path=str(database_path))] == [
+        "FLAG_NEEDS_RECHECK"
+    ]
