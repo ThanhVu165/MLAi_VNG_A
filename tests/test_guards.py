@@ -8,6 +8,7 @@ from core.extract import EXTRACTION_SCHEMA, extract_facts
 from core.prepolicy import decision_lock
 from core.evidence import validate_evidence
 from core.generate import generate_reply
+from core.question_gen import generate_escalation_card
 from core.retrieval import retrieve_evidence
 from core.sanitize import detect_language, mask_pii, sanitize_body
 from core.types import (
@@ -658,3 +659,52 @@ def test_generate_reply_rejects_uncited_paragraph(monkeypatch) -> None:
             language="en",
             evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
         )
+
+
+def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    extraction = Extraction(
+        "vi",
+        [],
+        {"Số tiền trên hóa đơn": "450.000₫ hoặc 480.000₫"},
+        ["Ảnh hóa đơn bị mờ"],
+        False,
+        "{}",
+    )
+
+    def fake_call(prompt: str, **kwargs: object) -> LLMResult:
+        assert "450.000₫ hoặc 480.000₫" in prompt
+        assert "Ảnh hóa đơn bị mờ" in prompt
+        assert "Điều 1" in prompt and "FACT_UNRESOLVED" in prompt
+        assert kwargs["step"] == "R7_question" and kwargs["temperature"] == 0.0
+        return LLMResult(
+            True,
+            {
+                "summary": "Hóa đơn mờ nên chưa xác định được số tiền.",
+                "facts": ["Số tiền có thể là 450.000₫ hoặc 480.000₫."],
+                "basis": [{"chunk_id": "chunk-1", "quote": "Căn cứ."}],
+                "question": "Hóa đơn ghi 450.000₫ hay 480.000₫?",
+                "options": ["450.000₫", "480.000₫"],
+            },
+            None,
+            0,
+            "test",
+            "replay",
+        )
+
+    monkeypatch.setattr("core.question_gen.call_json", fake_call)
+    card = generate_escalation_card(
+        case_id="case-card",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        escalation_type=EscalationType.FACT_UNRESOLVED,
+        extraction=extraction,
+        evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
+    )
+    events = events_for_case("case-card", database_path=str(database_path))
+
+    assert "450.000₫" in card.question and "480.000₫" in card.question
+    assert card.options == ["450.000₫", "480.000₫"]
+    assert card.basis == [("Điều 1", "Căn cứ.")]
+    assert [event.action for event in events] == ["QUESTION_GENERATED"]
