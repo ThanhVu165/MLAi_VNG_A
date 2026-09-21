@@ -19,6 +19,7 @@
 [H+00][Agent A] xong A-08 · Gemini 3.5 Flash xác thực thật schema 8/8, domain 8/8.
 [H+00][Agent A] A-04 · heuristic vi/en/other đạt 10/10, chờ full check ngoài phạm vi A xanh để DONE.
 [H+00][Agent A] xong A-04 · heuristic vi/en/other đạt 10/10; full check xanh sau ngoại lệ typing indexer được người dùng ủy quyền.
+[H+00][Agent A] xong A-05 · mask MSSV, CCCD, SĐT và email; body_raw giữ nguyên, body_masked và audit không lộ PII.
 [H+00][Agent C] bắt đầu C-05 · hoàn thiện API audit và kiểm tra chuỗi event · không bị chặn
 [H+00][Agent C] xong C-05 · audit validate action/reason, lưu UTC và truy vấn chuỗi event đã kiểm tra · không bị chặn
 [H+00][Agent C] bắt đầu C-06 · tính telemetry trực tiếp từ SQLite, không lưu bản sao · không bị chặn

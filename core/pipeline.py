@@ -10,6 +10,7 @@ from typing import TypeVar
 from uuid import uuid4
 
 from corpus.api import get_corpus_version
+from core.sanitize import mask_pii
 from core.types import (
     CaseInput,
     CaseStatus,
@@ -61,9 +62,9 @@ def _r0_intake(inp: CaseInput, actor: str, case_id: str, trace_id: str) -> _Inta
     execute(
         """
         INSERT INTO cases (
-            case_id, trace_id, channel, sender, subject, body_raw, received_at, created_at,
+            case_id, trace_id, channel, sender, subject, body_raw, body_masked, received_at, created_at,
             status, corpus_version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             case_id,
@@ -72,6 +73,7 @@ def _r0_intake(inp: CaseInput, actor: str, case_id: str, trace_id: str) -> _Inta
             inp.sender,
             inp.subject,
             inp.body,
+            mask_pii(inp.body),
             to_utc_iso(inp.received_at),
             now_iso(),
             status,

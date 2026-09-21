@@ -68,6 +68,16 @@ ENGLISH_KEYWORDS = frozenset(
 OTHER_SCRIPT_RANGES = (("\u0400", "\u052f"), ("\u3040", "\u30ff"), ("\u3400", "\u9fff"))
 MIN_VIETNAMESE_KEYWORDS = 2
 MIN_ENGLISH_KEYWORDS = 1
+MSSV_PATTERN = re.compile(r"(?<!\d)\d{11}(?!\d)")
+CCCD_PATTERN = re.compile(r"(?<!\d)\d{12}(?!\d)")
+PHONE_PATTERN = re.compile(r"(?<!\d)(?:\+84|84|0)[35789]\d{8}(?!\d)")
+EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+PII_PATTERNS = (
+    (EMAIL_PATTERN, "[EMAIL]"),
+    (CCCD_PATTERN, "[CCCD]"),
+    (MSSV_PATTERN, "[MSSV]"),
+    (PHONE_PATTERN, "[SĐT]"),
+)
 
 
 class _TextExtractor(HTMLParser):
@@ -118,6 +128,13 @@ def sanitize_body(body: str) -> str:
     normalized = unicodedata.normalize("NFC", body)
     lines = _without_signature(_without_quote(_strip_html(normalized).splitlines()))
     return " ".join(" ".join(lines).split())
+
+
+def mask_pii(body: str) -> str:
+    """Che thông tin định danh trước khi hiển thị hoặc ghi audit."""
+    for pattern, replacement in PII_PATTERNS:
+        body = pattern.sub(replacement, body)
+    return body
 
 
 def detect_language(body: str) -> Literal["vi", "en", "other"]:

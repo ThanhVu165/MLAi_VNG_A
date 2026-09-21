@@ -1,8 +1,10 @@
+from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
+import json
 
 import core.pipeline as pipeline
 from core.extract import EXTRACTION_SCHEMA, extract_facts
-from core.sanitize import detect_language, sanitize_body
+from core.sanitize import detect_language, mask_pii, sanitize_body
 from core.types import CaseInput, CaseStatus, Decision
 from infra import db
 from infra.audit import events_for_case
@@ -83,6 +85,37 @@ def test_detect_language_handles_vietnamese_english_and_other() -> None:
     )
 
     assert [detect_language(body) for body, _ in cases] == [expected for _, expected in cases]
+
+
+def test_mask_pii_and_keep_audit_free_of_raw_values(monkeypatch, tmp_path) -> None:
+    body = (
+        "MSSV 12345678901, CCCD 012345678901, SĐT 0912345678, "
+        "email student.name+test@example.edu."
+    )
+    masked = mask_pii(body)
+    assert masked == "MSSV [MSSV], CCCD [CCCD], SĐT [SĐT], email [EMAIL]."
+
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    inp = CaseInput(
+        sender="student@example.edu",
+        subject="Hỏi quy định",
+        body=body,
+        received_at=datetime(2026, 9, 21, 8, 30, tzinfo=timezone.utc),
+        channel="paste",
+    )
+    result = pipeline.process_case(inp)
+    row = db.fetch_one(
+        "SELECT body_raw, body_masked FROM cases WHERE case_id = ?",
+        (result.case_id,),
+        database_path=database_path,
+    )
+    assert row is not None and row["body_raw"] == body and row["body_masked"] == masked
+    audit_json = json.dumps([asdict(event) for event in events_for_case(result.case_id)])
+    assert all(
+        value not in audit_json
+        for value in ("12345678901", "012345678901", "0912345678", "student.name+test@example.edu")
+    )
 
 
 def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:
