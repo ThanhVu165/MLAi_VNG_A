@@ -49,7 +49,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 - **Xong khi:** `python -c "from core.pipeline import process_case; print(process_case(sample))"` chạy được, và `streamlit run streamlit_app.py` mở được trang trắng có tiêu đề. Ba làn từ đây không chặn nhau nữa.
 
 ### S-04 · Checkpoint H16 — lõi độc lập
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B1 kết thúc · **Ước lượng:** 30ph · **Phụ thuộc:** A-13, B-07, C-05
 - **Việc phải làm:** Mỗi agent demo 3 phút phần của mình chạy trên stub. Đối chiếu `STATUS.md`. Xác định làn nào chậm và chuyển việc.
 - **Xong khi:** Có kết luận ghi vào `STATUS.md`: làn nào đúng tiến độ, task nào cắt bớt.
