@@ -310,7 +310,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Xong khi:** Nạp cùng một file hai lần chỉ tạo một hàng `sources`.
 
 ### B-04 · K2 Trích xuất và chuẩn hóa văn bản
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 3h · **Phụ thuộc:** B-03
 - **File:** `corpus/extract_doc.py`
 - **Việc phải làm:** PDF → text (`pdfplumber`), DOCX → text (`python-docx`); bỏ header/footer lặp bằng cách đếm dòng xuất hiện trên đa số trang; **giữ nguyên đánh số Điều / Khoản / Điểm**; chuẩn hóa dấu tiếng Việt về NFC; gộp dòng bị ngắt giữa câu.

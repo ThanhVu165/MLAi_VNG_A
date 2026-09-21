@@ -1,9 +1,15 @@
 from dataclasses import replace
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
+
+from docx import Document
 
 from core.types import ChunkLabel, Domain, SourceStatus
 from corpus.api import get_chunk, get_corpus_version, search, supported_domains
+from corpus import extract_doc
+from corpus.extract_doc import extract_document, normalize_pages
 from corpus.intake import ingest_file, ingest_text, ingest_url
 from corpus.store import (
     ChunkRecord,
@@ -156,3 +162,48 @@ def test_intake_accepts_supported_files_and_manual_url(tmp_path: Path) -> None:
     assert uploaded.source.source_kind == "pdf"
     assert downloaded.source.source_kind == "url"
     assert downloaded.source.source_url == "https://example.edu/quy-dinh.docx"
+
+
+def test_normalize_pages_removes_repeated_margins_and_keeps_legal_headings() -> None:
+    text = normalize_pages(
+        [
+            "TRƯỜNG ĐẠI HỌC\nĐiều 1. Phạm vi áp dụng\nSinh viên thực hiện\ntheo quy định.\nTrang 1",
+            "TRƯỜNG ĐẠI HỌC\nĐiều 2. Đối tượng áp dụng\nKhoản 1. Thời hạn nộp\nHồ sơ được tiếp nhận\ntrong giờ hành chính.\nTrang 2",
+            "TRƯỜNG ĐẠI HỌC\nĐiều 3. Hồ sơ\nĐiểm a) Hồ sơ cần có\nĐơn đề nghị hợp lệ.\nTrang 3",
+            "TRƯỜNG ĐẠI HỌC\nĐiều 4. Trình tự\nNộp hồ sơ tại phòng CTSV.\nTrang 4",
+            "TRƯỜNG ĐẠI HỌC\nĐiều 5. Thời gian\nGiải quyết trong năm ngày.\nTrang 5",
+            "TRƯỜNG ĐẠI HỌC\nĐiều 6. Thi hành\nQuy định này có hiệu lực.\nTrang 6",
+        ]
+    )
+
+    assert "TRƯỜNG ĐẠI HỌC" not in text
+    assert "Trang 1" in text
+    assert "Điều 1. Phạm vi áp dụng" in text
+    assert all(f"Điều {number}." in text for number in range(1, 7))
+    assert "Khoản 1. Thời hạn nộp" in text
+    assert "Điểm a) Hồ sơ cần có" in text
+    assert "Sinh viên thực hiện theo quy định." in text
+
+
+def test_extract_document_reads_docx_and_pdf_pages(monkeypatch) -> None:
+    document = Document()
+    document.add_paragraph("Điều 2. Điều kiện")
+    document.add_paragraph("Sinh viên nộp đơn hợp lệ.")
+    content = BytesIO()
+    document.save(content)
+
+    assert "Điều 2. Điều kiện" in extract_document(content.getvalue(), "quy_dinh.docx")
+
+    class FakePdf:
+        pages = [SimpleNamespace(extract_text=lambda: "Điều 3. Thủ tục")]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return None
+
+    monkeypatch.setattr(
+        extract_doc, "pdfplumber", SimpleNamespace(open=lambda _: FakePdf())
+    )
+    assert extract_document(b"%PDF", "quy_dinh.pdf") == "Điều 3. Thủ tục"

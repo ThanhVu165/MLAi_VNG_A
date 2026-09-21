@@ -1,6 +1,6 @@
 # BLOCKERS.md
 
-- [B-04][Agent B] PROJECT_SPEC/TASKBOARD bắt buộc PDF → text bằng `pdfplumber`, nhưng `requirements.txt` chỉ ghim `pypdf` và môi trường kiểm tra không cài `pdfplumber`. `requirements.txt` thuộc Agent C; không thay bằng thư viện khác vì sai yêu cầu extract. Cần C thêm dependency ghim phiên bản rồi B mới triển khai/kiểm thử B-04.
+- [B-04][Agent B][đã xử lý 2026-09-21] Đã ghim `pdfplumber==0.11.4`; B-04 trích xuất PDF/DOCX và kiểm thử chuẩn hóa đã hoàn tất.
 
 - [B-02][Agent B] Logic B-02 đã pass 7 pytest; không thể đạt `make check` toàn repo vì `black --check .` báo `infra/db.py` chưa đúng format và `mypy --ignore-missing-imports .` nhận cùng file dưới hai module `db` và `infra.db`. Cả hai đều nằm ngoài phạm vi Agent B. Cần Agent C xử lý rồi B chạy lại full check, commit và chuyển B-02 sang DONE.
 
