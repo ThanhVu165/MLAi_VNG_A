@@ -1,0 +1,34 @@
+version: 1
+templates:
+  FACT_UNRESOLVED:
+    summary: "Chưa đủ dữ kiện để áp dụng quy định cho yêu cầu này."
+    facts:
+      - "Dữ kiện đã xác định: {key_fact}"
+    basis:
+      - "Căn cứ: {basis}"
+    question: "Với dữ kiện {key_fact}, anh/chị chọn phương án nào?"
+    options:
+      - "Yêu cầu sinh viên bổ sung thông tin"
+      - "Chuyển chuyên viên xử lý"
+
+  OUT_OF_POLICY:
+    summary: "Yêu cầu chưa có căn cứ quy định đang hiệu lực để trả lời tự động."
+    facts:
+      - "Nội dung yêu cầu: {request_summary}"
+    basis:
+      - "Không tìm thấy quy định đang hiệu lực"
+    question: "Với yêu cầu {request_summary}, anh/chị có tiếp nhận xử lý không?"
+    options:
+      - "Tiếp nhận và xử lý thủ công"
+      - "Hướng dẫn sinh viên liên hệ đơn vị phù hợp"
+
+  AUTHORITY_REQUIRED:
+    summary: "Yêu cầu cần người có thẩm quyền quyết định cho hồ sơ cá nhân."
+    facts:
+      - "Nội dung yêu cầu: {request_summary}"
+    basis:
+      - "Căn cứ: {basis}"
+    question: "Với yêu cầu {request_summary}, anh/chị có chấp thuận không?"
+    options:
+      - "Chấp thuận theo phương án đã nêu"
+      - "Không chấp thuận và hướng dẫn theo quy định"
