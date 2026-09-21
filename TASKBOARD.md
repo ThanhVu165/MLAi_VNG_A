@@ -30,6 +30,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 - **Xong khi:** `main` có `core/types.py`, test contract xanh, cả ba agent đã ACK. Từ đây mọi sửa đổi phải theo quy trình CONTRACT-CHANGE ở AGENT.md Mục 3.
 
 ### S-02 · Chốt lược đồ SQLite và danh mục `action`
+- **Trạng thái:** WIP
 - **Khối:** B0 · **Ước lượng:** 1h · **Phụ thuộc:** — · **Người làm:** C cầm bút, A và B duyệt
 - **File:** `infra/migrations/001_init.sql`, `PROJECT_SPEC.md` Mục 6–7
 - **Việc phải làm:**
