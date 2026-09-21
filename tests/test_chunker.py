@@ -4,6 +4,7 @@ from pathlib import Path
 
 from core.types import ChunkLabel, Domain, SourceStatus
 from corpus.api import get_chunk, get_corpus_version, search, supported_domains
+from corpus.intake import ingest_file, ingest_text, ingest_url
 from corpus.store import (
     ChunkRecord,
     CorpusVersionRecord,
@@ -20,10 +21,12 @@ from corpus.store import (
     get_corpus_version_record,
     get_current_corpus_version,
     get_source,
+    list_sources,
     update_chunk,
     update_corpus_version,
     update_source,
 )
+from infra.audit import recent_events
 
 
 def test_stub_corpus_api_exposes_contract_chunks() -> None:
@@ -112,3 +115,44 @@ def test_store_crud_for_chunks_and_versions(tmp_path: Path) -> None:
     assert get_chunk_record(chunk.chunk_id, database_path=database_path) is None
     assert get_corpus_version_record(version.corpus_version, database_path=database_path) is None
     assert get_source(source.doc_id, database_path=database_path) is None
+
+
+def test_intake_deduplicates_content_and_writes_audit(tmp_path: Path) -> None:
+    database_path = tmp_path / "corpus.db"
+
+    first = ingest_text(
+        "Điều 1. Nội dung quy định.",
+        actor="ADMIN:tester",
+        database_path=database_path,
+    )
+    duplicate = ingest_text(
+        "Điều 1. Nội dung quy định.",
+        actor="ADMIN:tester",
+        database_path=database_path,
+    )
+
+    assert first.created is True
+    assert duplicate.created is False
+    assert duplicate.message == "Tài liệu không thay đổi"
+    assert len(list_sources(database_path=database_path)) == 1
+    assert [event.action for event in recent_events(database_path=str(database_path))] == [
+        "SOURCE_UPLOADED"
+    ]
+
+
+def test_intake_accepts_supported_files_and_manual_url(tmp_path: Path) -> None:
+    database_path = tmp_path / "corpus.db"
+
+    uploaded = ingest_file(
+        b"%PDF-1.7", "quy_dinh.pdf", actor="ADMIN:tester", database_path=database_path
+    )
+    downloaded = ingest_url(
+        "https://example.edu/quy-dinh.docx",
+        actor="ADMIN:tester",
+        fetch=lambda _: b"docx bytes",
+        database_path=database_path,
+    )
+
+    assert uploaded.source.source_kind == "pdf"
+    assert downloaded.source.source_kind == "url"
+    assert downloaded.source.source_url == "https://example.edu/quy-dinh.docx"
