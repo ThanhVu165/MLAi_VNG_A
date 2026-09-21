@@ -427,13 +427,14 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Xong khi:** Xóa `app.db` rồi khởi động lại tạo đủ bảng; hai tiến trình đọc ghi đồng thời không lỗi `database is locked`.
 
 ### C-03 · `infra/settings.py` — mọi ngưỡng ở một chỗ
-- **Trạng thái:** BLOCKED
+- **Trạng thái:** DONE
 - **Khối:** B0 · **Ước lượng:** 45ph · **Phụ thuộc:** —
 - **File:** `infra/settings.py`
 - **Việc phải làm:** Khai báo có tên và comment: `SIMILARITY_THRESHOLD=0.35`, `CITATION_RATIO_MIN=0.6`, `PENDING_SEND_SECONDS=60`, `MIN_WORDS_GUARD=15`, `LLM_TIMEOUT_S=20`, `LLM_RETRIES=1`, `RETRIEVAL_TOP_K=6`, `QUESTION_WORDS_MIN/MAX=8/45`, `RECHECK_WINDOW_DAYS=30`. Đọc override từ biến môi trường.
 - **Xong khi:** `grep` không tìm thấy số ma thuật nào trong `core/` và `corpus/`.
 
 ### C-04 · `infra/llm.py` — wrapper Gemini duy nhất
+- **Trạng thái:** DONE
 - **Khối:** B0 · **Ước lượng:** 3h · **Phụ thuộc:** C-03
 - **File:** `infra/llm.py`
 - **Việc phải làm:** `call_json()` đúng chữ ký contract; structured output theo schema; `temperature=0`; timeout và retry đúng 1 lần; đo `latency_ms`; tính `prompt_hash`; ghi vào `step_latencies`. Ba chế độ qua `LLM_MODE`: `live` · `replay` (đọc cassette trong `tests/cassettes/`, dùng cho CI) · `record`. Cache theo `sha256(prompt)` trong SQLite để demo không tốn quota và chạy nhanh. Trả về `LLMResult` **không bao giờ ném exception**.

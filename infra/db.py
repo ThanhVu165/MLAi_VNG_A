@@ -64,7 +64,9 @@ def initialize_database(database_path: str | Path | None = None) -> None:
     """Tạo đủ bảng của migration duy nhất khi cơ sở dữ liệu còn trống."""
     with closing(_connect(database_path)) as connection:
         with connection:
-            rows = connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            rows = connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
             tables = {row["name"] for row in rows}
             if not tables:
                 connection.executescript(MIGRATION_PATH.read_text(encoding="utf-8"))
