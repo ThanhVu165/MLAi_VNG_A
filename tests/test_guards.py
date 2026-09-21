@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
 import core.pipeline as pipeline
+from core.extract import EXTRACTION_SCHEMA, extract_facts
 from core.sanitize import sanitize_body
 from core.types import CaseInput, CaseStatus, Decision
 from infra import db
 from infra.audit import events_for_case
+from infra.llm import LLMResult
 
 
 def _input(*, sender: str = "student@example.edu") -> CaseInput:
@@ -64,3 +66,73 @@ def test_sanitize_removes_quotes_signatures_html_and_extra_whitespace() -> None:
     )
 
     assert [sanitize_body(raw) for raw, _ in cases] == [expected for _, expected in cases]
+
+
+def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:
+    domains = iter(
+        (
+            "conduct_score",
+            "course_withdrawal",
+            "grade_appeal",
+            "conduct_score",
+            "course_withdrawal",
+            "grade_appeal",
+            "conduct_score",
+            "course_withdrawal",
+        )
+    )
+
+    def fake_call(prompt: str, **kwargs: object) -> LLMResult:
+        assert "chỉ trích xuất" in prompt.lower()
+        assert kwargs["schema"] == EXTRACTION_SCHEMA
+        assert kwargs["step"] == "R2_extract"
+        assert kwargs["temperature"] == 0.0
+        domain = next(domains)
+        return LLMResult(
+            ok=True,
+            data={
+                "language": "vi",
+                "requests": [
+                    {
+                        "domain": domain,
+                        "intent": "information",
+                        "is_informational": True,
+                        "requires_personal_record": False,
+                        "asks_exception": False,
+                        "asks_appeal": False,
+                        "asks_authority_decision": False,
+                    }
+                ],
+                "critical_facts": {},
+                "missing_critical_facts": [],
+                "injection_suspected": False,
+            },
+            error=None,
+            latency_ms=0,
+            prompt_hash="test",
+            model="replay",
+        )
+
+    monkeypatch.setattr("core.extract.call_json", fake_call)
+    extractions = [extract_facts(f"Email mẫu {index}", f"case-{index}") for index in range(8)]
+
+    assert all(extraction.llm_error is None for extraction in extractions)
+    assert [extraction.requests[0].domain.value for extraction in extractions] == [
+        "conduct_score",
+        "course_withdrawal",
+        "grade_appeal",
+        "conduct_score",
+        "course_withdrawal",
+        "grade_appeal",
+        "conduct_score",
+        "course_withdrawal",
+    ]
+    required = EXTRACTION_SCHEMA["required"]
+    assert isinstance(required, list)
+    assert set(required) == {
+        "language",
+        "requests",
+        "critical_facts",
+        "missing_critical_facts",
+        "injection_suspected",
+    }
