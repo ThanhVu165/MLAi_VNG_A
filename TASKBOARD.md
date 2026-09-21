@@ -31,7 +31,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 - **Xong khi:** `main` có `core/types.py`, test contract xanh, cả ba agent đã ACK. Từ đây mọi sửa đổi phải theo quy trình CONTRACT-CHANGE ở AGENT.md Mục 3.
 
 ### S-02 · Chốt lược đồ SQLite và danh mục `action`
-- **Trạng thái:** BLOCKED
+- **Trạng thái:** DONE
 - **Khối:** B0 · **Ước lượng:** 1h · **Phụ thuộc:** — · **Người làm:** C cầm bút, A và B duyệt
 - **File:** `infra/migrations/001_init.sql`, `PROJECT_SPEC.md` Mục 6–7
 - **Việc phải làm:**
@@ -419,6 +419,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** Giai đoạn 0 (kho mã nguồn công khai, đủ lịch sử)
 
 ### C-02 · `infra/db.py` và migration
+- **Trạng thái:** DONE
 - **Khối:** B0 · **Ước lượng:** 1.5h · **Phụ thuộc:** S-02
 - **File:** `infra/db.py`, `infra/migrations/001_init.sql`
 - **Việc phải làm:** Kết nối SQLite bật **WAL mode** (tránh lock khi Verify chạy); chạy migration khi khởi động; hàm `now_iso()` (UTC có `Z`) và `to_local(ts)` (`+07:00`) — **đây là nơi duy nhất xử lý múi giờ**; helper `fetch_one`, `fetch_all`, `execute`.
