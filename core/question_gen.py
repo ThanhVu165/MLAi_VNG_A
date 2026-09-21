@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import Literal, cast
 
+from core.generate import generate_reply
+from core.prepolicy import multi_intent_plan
 from core.types import DraftReply, EscalationCard, EscalationType, EvidenceResult, Extraction
 from infra.audit import log_event
 from infra.llm import call_json
@@ -129,4 +132,54 @@ def generate_escalation_card(
         sources=[chunk.chunk_id for chunk in evidence.chunks],
         corpus_version=corpus_version,
     )
+    return card
+
+
+def generate_multi_intent_card(
+    *,
+    case_id: str,
+    actor: str,
+    corpus_version: str,
+    extraction: Extraction,
+    evidence: EvidenceResult,
+) -> EscalationCard:
+    """Tạo một thẻ escalation và partial draft cho email có cả phần thường quy lẫn bị khóa."""
+    plan = multi_intent_plan(extraction)
+    if plan is None:
+        raise ValueError("Email không có đồng thời phần thường quy và phần cần thẩm quyền.")
+    if extraction.language not in {"vi", "en"}:
+        raise ValueError("Không thể tạo partial draft cho ngôn ngữ ngoài phạm vi phục vụ.")
+    routine_domains = {request.domain for request in plan.routine_requests}
+    routine_evidence = EvidenceResult(
+        status=evidence.status,
+        chunks=[chunk for chunk in evidence.chunks if chunk.domain in routine_domains],
+        failed_checks=evidence.failed_checks,
+    )
+    partial_draft = generate_reply(
+        case_id=case_id,
+        actor=actor,
+        corpus_version=corpus_version,
+        language=cast(Literal["vi", "en"], extraction.language),
+        evidence=routine_evidence,
+    )
+    locked_extraction = Extraction(
+        language=extraction.language,
+        requests=list(plan.locked_requests),
+        critical_facts=extraction.critical_facts,
+        missing_critical_facts=extraction.missing_critical_facts,
+        injection_suspected=extraction.injection_suspected,
+        raw_json=extraction.raw_json,
+        llm_error=extraction.llm_error,
+    )
+    card = generate_escalation_card(
+        case_id=case_id,
+        actor=actor,
+        corpus_version=corpus_version,
+        escalation_type=EscalationType.AUTHORITY_REQUIRED,
+        extraction=locked_extraction,
+        evidence=evidence,
+        partial_draft=partial_draft,
+    )
+    card.partial_draft = partial_draft
+    card.facts.insert(0, "Phần A đã soạn sẵn, phần B cần anh/chị quyết")
     return card

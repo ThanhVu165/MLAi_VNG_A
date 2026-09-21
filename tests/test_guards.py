@@ -9,7 +9,7 @@ from core.prepolicy import decision_lock
 from core.evidence import validate_evidence
 from core.generate import generate_reply
 from core.ground_guard import guard_groundedness
-from core.question_gen import generate_escalation_card
+from core.question_gen import generate_escalation_card, generate_multi_intent_card
 from core.question_guard import guard_question, question_failures
 from core.retrieval import retrieve_evidence
 from core.sanitize import detect_language, mask_pii, sanitize_body
@@ -852,3 +852,53 @@ def test_question_guard_regenerates_once_then_uses_yaml_fallback(monkeypatch, tm
     assert regenerated.question == _card().question
     assert "xem xét lại trường hợp này" not in fallback.question
     assert len(fallback.options) == 2
+
+
+def test_multi_intent_card_keeps_routine_draft_and_asks_only_locked_part(monkeypatch) -> None:
+    extraction = Extraction(
+        "vi",
+        [
+            RequestItem(
+                Domain.GRADE_APPEAL, "quy trình phúc khảo", True, False, False, False, False
+            ),
+            RequestItem(
+                Domain.GRADE_APPEAL, "xin nộp phúc khảo trễ", False, False, True, False, False
+            ),
+        ],
+        {},
+        [],
+        False,
+        "{}",
+    )
+    partial = DraftReply(
+        "Quy trình phúc khảo", "Bản nháp quy trình [chunk-1].", ["chunk-1"], False, []
+    )
+    seen: dict[str, object] = {}
+
+    def fake_reply(**kwargs: object) -> DraftReply:
+        seen["partial_evidence"] = kwargs["evidence"]
+        return partial
+
+    def fake_card(**kwargs: object) -> EscalationCard:
+        seen["question_requests"] = kwargs["extraction"]
+        seen["partial_draft"] = kwargs["partial_draft"]
+        return _card()
+
+    monkeypatch.setattr("core.question_gen.generate_reply", fake_reply)
+    monkeypatch.setattr("core.question_gen.generate_escalation_card", fake_card)
+    card = generate_multi_intent_card(
+        case_id="case-multi",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        extraction=extraction,
+        evidence=EvidenceResult(
+            EvidenceStatus.OK, [_evidence_chunk(domain=Domain.GRADE_APPEAL)], []
+        ),
+    )
+
+    question_extraction = seen["question_requests"]
+    assert isinstance(question_extraction, Extraction)
+    assert len(question_extraction.requests) == 1
+    assert question_extraction.requests[0].intent == "xin nộp phúc khảo trễ"
+    assert seen["partial_draft"] is partial and card.partial_draft is partial
+    assert "Phần A đã soạn sẵn, phần B cần anh/chị quyết" in card.facts
