@@ -433,7 +433,7 @@ Phụ thuộc: `A-03` · File: `core/sanitize.py`
 
 #### `A-05` — R1 Nhận diện và che PII
 Phụ thuộc: `A-03` · File: `core/sanitize.py`
-> Task **A-05**. Regex nhận MSSV (8–10 chữ số), CCCD (12 số), số điện thoại VN, email cá nhân. Tạo
+> Task **A-05**. Regex nhận MSSV (11 chữ số), CCCD (12 số), số điện thoại VN, email cá nhân. Tạo
 > `body_masked` thay bằng `[MSSV]`, `[SĐT]`… Lưu bản gốc ở cột riêng. **Mọi nơi hiển thị và mọi audit
 > event dùng bản masked.**
 > Xong khi: không có chuỗi PII nào xuất hiện trong bảng `audit_events`; có test kiểm chứng điều này.
