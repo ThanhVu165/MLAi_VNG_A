@@ -10,4 +10,6 @@
 [H+00][Agent A] đang làm A-01 · chặn bởi `make check` chưa khả dụng (thiếu Makefile, mypy).
 [H+00][Agent A] xong A-14 · ba YAML chính sách đã kiểm tra xanh.
 [H+00][Agent A] xong A-01 · pipeline fail-safe đã kiểm tra xanh.
+[H+00][Agent C] bắt đầu C-05 · hoàn thiện API audit và kiểm tra chuỗi event · không bị chặn
+[H+00][Agent C] xong C-05 · audit validate action/reason, lưu UTC và truy vấn chuỗi event đã kiểm tra · không bị chặn
 [H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
