@@ -7,6 +7,7 @@ import streamlit as st
 from core.types import ChunkLabel
 from corpus.coverage import chunks_for_coverage, set_chunk_label, suggest_chunk_label
 from corpus.intake import recheck_url_sources
+from corpus.lifecycle import approve_for_activation, pending_reviews, reject_source, request_change
 from corpus.metadata import MetadataDraft, SUPPORTED_DOMAIN_VALUES, save_metadata
 from corpus.store import SourceRecord, list_sources
 
@@ -108,6 +109,51 @@ if submitted:
     else:
         st.success("Đã lưu metadata ở trạng thái chờ duyệt.")
 
+
+st.divider()
+st.subheader("Tài liệu chờ duyệt")
+reviews = pending_reviews()
+if not reviews:
+    st.info("Chưa có tài liệu nào chờ duyệt.")
+for review in reviews:
+    source = review.source
+    with st.expander(source.title or source.doc_id):
+        st.write(
+            f"Mã: {source.doc_id} · Lĩnh vực: {', '.join(domain.value for domain in source.domains)}"
+        )
+        st.write(f"Thay thế: {', '.join(source.supersedes) or 'Không có'}")
+        for chunk in review.chunks:
+            st.caption(f"{chunk.breadcrumb} · {chunk.label.value}")
+        if review.diff_lines:
+            st.code("\n".join(review.diff_lines), language="diff")
+        reason = st.text_area(
+            "Lý do duyệt/từ chối/yêu cầu chỉnh sửa", key=f"review-reason:{source.doc_id}"
+        )
+        confirmed = st.checkbox("Tôi xác nhận thao tác này", key=f"review-confirm:{source.doc_id}")
+        if st.button("Duyệt để kích hoạt", key=f"approve:{source.doc_id}"):
+            if reason.strip() and confirmed:
+                approve_for_activation(source, actor="ADMIN:local", reason=reason)
+                st.success("Nguồn đã được duyệt, sẵn sàng cho bước kích hoạt.")
+            else:
+                st.error("Cần xác nhận thao tác và nhập lý do trước khi duyệt.")
+        if st.button("Từ chối tài liệu", key=f"reject:{source.doc_id}"):
+            try:
+                if not confirmed:
+                    raise ValueError("Cần xác nhận thao tác trước khi từ chối.")
+                reject_source(source, actor="ADMIN:local", reason=reason)
+            except ValueError as error:
+                st.error(str(error))
+            else:
+                st.success("Đã từ chối tài liệu.")
+        if st.button("Yêu cầu chỉnh sửa", key=f"change:{source.doc_id}"):
+            try:
+                if not confirmed:
+                    raise ValueError("Cần xác nhận thao tác trước khi yêu cầu chỉnh sửa.")
+                request_change(source, actor="ADMIN:local", reason=reason)
+            except ValueError as error:
+                st.error(str(error))
+            else:
+                st.success("Đã ghi yêu cầu chỉnh sửa.")
 
 st.divider()
 st.subheader("Gán nhãn thẩm quyền từng điều khoản")
