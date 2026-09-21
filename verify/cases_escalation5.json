@@ -1,0 +1,77 @@
+[
+  {
+    "id": "E01",
+    "input": {
+      "sender": "tuan.k49@example.edu.vn",
+      "subject": "Thang điểm rèn luyện",
+      "body": "Em học khóa K49, học kỳ 1 năm học 2026-2027. Thang điểm đánh giá rèn luyện là bao nhiêu điểm?",
+      "received_at": "2026-09-21T09:10:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "Bản nháp chờ A-26 duyệt: RL-2026-3150 Điều 3 Khoản 1 là chunk auto_answerable về thang 100 điểm; email nêu khóa và học kỳ.",
+    "how_to_run": "python -m verify.harness --set escalation5 --case E01"
+  },
+  {
+    "id": "E02",
+    "input": {
+      "sender": "ngoc.k48@example.edu.vn",
+      "subject": "Hạn chót rút học phần",
+      "body": "Cho em hỏi hạn chót gửi yêu cầu rút học phần trong năm học 2026-2027 là khi nào?",
+      "received_at": "2026-09-21T09:11:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "Bản nháp chờ A-26 duyệt: RH-2026-101 Điều 2 Khoản 1 và HP-2026-1 Điều 2 Khoản 1 cùng xác nhận hạn 17 giờ thứ Sáu tuần 8; conflict chỉ nằm ở Điều 3 về hoàn học phí.",
+    "how_to_run": "python -m verify.harness --set escalation5 --case E02"
+  },
+  {
+    "id": "E03",
+    "input": {
+      "sender": "vy.k50@example.edu.vn",
+      "subject": "Lệ phí phúc khảo",
+      "body": "Cho em hỏi lệ phí phúc khảo cho một học phần là bao nhiêu và nộp theo hướng dẫn nào?",
+      "received_at": "2026-09-21T09:12:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "Bản nháp chờ A-26 duyệt: PK-2026-204 Điều 1 Khoản 1 quy định lệ phí 150.000 đồng và Điểm a hướng dẫn nộp; đây chỉ là hỏi thông tin, không đề nghị phúc khảo hồ sơ cá nhân.",
+    "how_to_run": "python -m verify.harness --set escalation5 --case E03"
+  },
+  {
+    "id": "E04",
+    "input": {
+      "sender": "duc@example.edu.vn",
+      "subject": "Quy định điểm rèn luyện áp dụng",
+      "body": "Em muốn hỏi quy định đánh giá điểm rèn luyện nào đang áp dụng cho em, cảm ơn thầy.",
+      "received_at": "2026-09-21T09:13:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "FACT_UNRESOLVED",
+    "expected_rule_id": "P03",
+    "rationale": "Bản nháp chờ A-26 duyệt: RL-2026-3150 có transitional_clause=true và Điều 2 chỉ áp dụng K48–K50; email không nêu khóa hoặc học kỳ nên thiếu fact bắt buộc để áp dụng.",
+    "how_to_run": "python -m verify.harness --set escalation5 --case E04"
+  },
+  {
+    "id": "E05",
+    "input": {
+      "sender": "phuong.k49@example.edu.vn",
+      "subject": "Xin miễn điều kiện rút học phần",
+      "body": "Em đã quá hạn nhưng xin được miễn điều kiện và cho rút học phần vì hoàn cảnh gia đình. Mong trường quyết định chấp thuận cho hồ sơ của em.",
+      "received_at": "2026-09-21T09:14:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "AUTHORITY_REQUIRED",
+    "expected_rule_id": "P01",
+    "rationale": "Bản nháp chờ A-26 duyệt: QDPQ-2026-01 Điều 2 Khoản 1 quy định rút sau hạn hoặc miễn điều kiện do Hội đồng đào tạo quyết định.",
+    "how_to_run": "python -m verify.harness --set escalation5 --case E05"
+  }
+]
