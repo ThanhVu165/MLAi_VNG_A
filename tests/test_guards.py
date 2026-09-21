@@ -4,8 +4,17 @@ import json
 
 import core.pipeline as pipeline
 from core.extract import EXTRACTION_SCHEMA, extract_facts
+from core.prepolicy import decision_lock
 from core.sanitize import detect_language, mask_pii, sanitize_body
-from core.types import CaseInput, CaseStatus, Decision
+from core.types import (
+    CaseInput,
+    CaseStatus,
+    Decision,
+    Domain,
+    EscalationType,
+    Extraction,
+    RequestItem,
+)
 from infra import db
 from infra.audit import events_for_case
 from infra.llm import LLMResult
@@ -85,6 +94,37 @@ def test_detect_language_handles_vietnamese_english_and_other() -> None:
     )
 
     assert [detect_language(body) for body, _ in cases] == [expected for _, expected in cases]
+
+
+def test_prepolicy_lock_covers_all_authority_flags() -> None:
+    for flag in (
+        "requires_personal_record",
+        "asks_exception",
+        "asks_appeal",
+        "asks_authority_decision",
+    ):
+        request = RequestItem(
+            domain=Domain.GRADE_APPEAL,
+            intent="request",
+            is_informational=False,
+            requires_personal_record=False,
+            asks_exception=False,
+            asks_appeal=False,
+            asks_authority_decision=False,
+        )
+        setattr(request, flag, True)
+        extraction = Extraction("vi", [request], {}, [], False, "{}")
+        assert decision_lock(extraction) is EscalationType.AUTHORITY_REQUIRED
+
+    informational = Extraction(
+        "vi",
+        [RequestItem(Domain.GRADE_APPEAL, "information", True, False, False, False, False)],
+        {},
+        [],
+        False,
+        "{}",
+    )
+    assert decision_lock(informational) is None
 
 
 def test_mask_pii_and_keep_audit_free_of_raw_values(monkeypatch, tmp_path) -> None:

@@ -172,7 +172,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 3 · 7
 
 ### A-10 · R3 Pre-policy Lock
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 1h · **Phụ thuộc:** A-08
 - **File:** `core/prepolicy.py`
 - **Việc phải làm:** Nếu bất kỳ request nào có `requires_personal_record` / `asks_exception` / `asks_appeal` / `asks_authority_decision` = true → `decision_lock = AUTHORITY_REQUIRED`. **Quan trọng: không nhảy tắt.** Pipeline vẫn chạy R4–R5 để thu bằng chứng ở chế độ *context-only*; Policy Engine chỉ bị cấm trả `AUTO_REPLY`.

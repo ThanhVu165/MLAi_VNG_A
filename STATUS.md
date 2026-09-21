@@ -22,6 +22,7 @@
 [H+00][Agent A] xong A-05 · mask MSSV, CCCD, SĐT và email; body_raw giữ nguyên, body_masked và audit không lộ PII.
 [H+00][Agent A] xong A-06 · tước prompt injection trước R2, bật cờ local và audit đoạn đã mask PII.
 [H+00][Agent A] xong A-09 · parse retry đúng một lần, timeout/parse ghi llm_error và audit fail-safe; P04 sẽ tiêu thụ tín hiệu này ở A-13.
+[H+00][Agent A] xong A-10 · R3 khóa AUTHORITY_REQUIRED theo bốn cờ thẩm quyền, không chặn retrieval/evidence.
 [H+00][Agent C] bắt đầu C-05 · hoàn thiện API audit và kiểm tra chuỗi event · không bị chặn
 [H+00][Agent C] xong C-05 · audit validate action/reason, lưu UTC và truy vấn chuỗi event đã kiểm tra · không bị chặn
 [H+00][Agent C] bắt đầu C-06 · tính telemetry trực tiếp từ SQLite, không lưu bản sao · không bị chặn
