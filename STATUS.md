@@ -51,6 +51,7 @@
 [H+00][Agent B] B-13 hoàn tất supersede, giữ nguồn cũ để audit và loại khỏi index · 54 test xanh
 [H+00][Agent B] đang làm B-17 · ráp bốn tab quản trị quy định
 [H+00][Agent B] B-17 hoàn tất bốn tab quản trị, dữ liệu corpus/nhật ký hiển thị trực tiếp · 54 test xanh
+[H+00][Agent B] đang làm B-14 · quét case dùng nguồn bị thay và rollback có audit
 [H+00][Agent A] A-07 đã hoàn tất ba chốt R1: invalid input không vào hàng chờ, ngoài vi/en chuyển OUT_OF_POLICY · 41 test xanh
 [H+00][Agent A] A-11 đã hoàn tất adapter R4 qua corpus.api, audit chunk_id và fail-safe corpus rỗng/lỗi · 44 test xanh
 [H+00][Agent A] A-12 đã hoàn tất bảy kiểm tra evidence theo thứ tự, audit mọi failed_checks · 47 test xanh

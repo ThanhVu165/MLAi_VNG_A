@@ -398,6 +398,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Xong khi:** Sau khi kích hoạt tài liệu #1, tài liệu #2 không còn xuất hiện trong kết quả retrieval nhưng vẫn tra được trong audit của các case cũ.
 
 ### B-14 · K11 Rollback và quét `NEEDS_RECHECK`
+- **Trạng thái:** WIP
 - **Khối:** B4 · **Ước lượng:** 2h · **Phụ thuộc:** B-13
 - **File:** `corpus/lifecycle.py`
 - **Việc phải làm:** Khi một tài liệu rời trạng thái ACTIVE (bị thay thế hoặc bị rollback), hệ thống **tự liệt kê mọi case đã dùng tài liệu đó làm căn cứ trong 30 ngày** và gắn `NEEDS_RECHECK`, ghi audit `FLAG_NEEDS_RECHECK`. Có nút rollback đưa tài liệu về ACTIVE kèm lý do.
