@@ -297,12 +297,14 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Xong khi:** Agent A `import corpus.api` và chạy được R4–R5 mà không cần chờ phần còn lại của làn B. Đây là điều kiện để ba làn song song.
 
 ### B-02 · Lớp truy cập bảng `sources` / `chunks` / `corpus_versions`
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 2h · **Phụ thuộc:** S-02
 - **File:** `corpus/store.py`
 - **Việc phải làm:** Hàm CRUD cho ba bảng qua `infra.db`; hàm `compute_corpus_version()` theo công thức Mục 6 spec; hàm `bump_corpus_version(actor, note)` ghi hàng mới và cập nhật `settings.current_corpus_version`.
 - **Xong khi:** Kích hoạt một tài liệu làm `corpus_version` đổi; hạ cấp cũng làm đổi; không kích hoạt gì thì không đổi.
 
 ### B-03 · K1 Ba đường nạp nguồn và chống trùng
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 2.5h · **Phụ thuộc:** B-02
 - **File:** `corpus/intake.py`
 - **Việc phải làm:** Upload PDF/DOCX; dán URL (**tải một lần, thủ công, không crawler định kỳ**); dán text. Ghi `source_url`, `source_kind`, `fetched_at`, `sha256`. Trùng `sha256` với tài liệu đã có → báo *"Tài liệu không thay đổi"* và dừng. Ghi audit `SOURCE_UPLOADED`.

@@ -37,6 +37,8 @@ Mỗi lần nhận một task, làm đúng bảy bước:
 6. **Chạy** `make check` (format + lint + type + test). Đỏ thì không commit.
 7. **Commit** với ID task, cập nhật trạng thái `DONE`, ghi một dòng vào `STATUS.md`.
 
+**Quy tắc commit theo task:** Khi hoàn tất mỗi task, cập nhật mọi file dùng chung bị ảnh hưởng (tối thiểu `TASKBOARD.md`, `STATUS.md`; thêm `BLOCKERS.md`, `docs/known_failures.md` hoặc `PROJECT_SPEC.md` khi phù hợp) trong cùng commit hoàn tất. Mỗi commit hoàn tất chỉ chứa **một task**; commit `WIP` riêng ở bước 3 chỉ dùng để đổi trạng thái, không trộn code hay việc của task khác.
+
 Không bao giờ để repo ở trạng thái không chạy được quá 30 phút. Nếu cần refactor lớn, chia nhỏ để mỗi commit vẫn khởi động được app.
 
 ---
