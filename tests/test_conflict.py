@@ -40,8 +40,10 @@ def test_conflicting_active_sources_are_flagged_and_supersede_is_scheduled(tmp_p
     assert [(pair.first_chunk_id, pair.second_chunk_id) for pair in pairs] == [
         ("chunk-3", "chunk-5")
     ]
-    assert get_chunk_record("chunk-3", database_path=database_path).conflict_with == "chunk-5"
-    assert get_chunk_record("chunk-5", database_path=database_path).conflict_with == "chunk-3"
+    stored_first = get_chunk_record("chunk-3", database_path=database_path)
+    stored_second = get_chunk_record("chunk-5", database_path=database_path)
+    assert stored_first is not None and stored_first.conflict_with == "chunk-5"
+    assert stored_second is not None and stored_second.conflict_with == "chunk-3"
     assert scheduled_supersede_ids(replacement, database_path=database_path) == ("QD-2025",)
     assert recent_events(database_path=str(database_path))[0].action == "SOURCE_METADATA_EDITED"
 
