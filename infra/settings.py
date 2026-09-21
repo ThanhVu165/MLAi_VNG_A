@@ -51,6 +51,8 @@ QUESTION_WORDS_MIN: int = _read_int("QUESTION_WORDS_MIN", 8, _MINIMUM_POSITIVE)
 QUESTION_WORDS_MAX: int = _read_int("QUESTION_WORDS_MAX", 45, _MINIMUM_POSITIVE)
 # Khoảng thời gian quét case cần kiểm tra lại khi nguồn bị gỡ hiệu lực.
 RECHECK_WINDOW_DAYS: int = _read_int("RECHECK_WINDOW_DAYS", 30, _MINIMUM_POSITIVE)
+# Thời gian SQLite chờ writer khác nhả khóa khi Verify chạy tuần tự.
+DATABASE_BUSY_TIMEOUT_MS: int = _read_int("DATABASE_BUSY_TIMEOUT_MS", 5000, _MINIMUM_POSITIVE)
 
 if QUESTION_WORDS_MIN > QUESTION_WORDS_MAX:
     raise ValueError("QUESTION_WORDS_MIN không được lớn hơn QUESTION_WORDS_MAX.")
