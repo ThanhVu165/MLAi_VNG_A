@@ -226,7 +226,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 7 · 3
 
 ### A-17 · R7b Sinh câu hỏi chuyển tiếp
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 2.5h · **Phụ thuộc:** A-13
 - **File:** `core/question_gen.py`
 - **Việc phải làm:** Sinh `EscalationCard` đúng bốn khối ở Mục 8.6 spec. Prompt nhận: fact đã xác định, fact còn thiếu, evidence kèm breadcrumb, loại escalation. Yêu cầu **một câu hỏi đóng duy nhất** kèm 2–4 phương án trả lời sẵn để chuyên viên chỉ cần chọn.

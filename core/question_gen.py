@@ -42,7 +42,9 @@ QUESTION_SCHEMA: dict[str, object] = {
 
 
 def _strings(value: object, field: str) -> list[str]:
-    if not isinstance(value, list) or not all(isinstance(item, str) and item.strip() for item in value):
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
         raise ValueError(f"{field} phải là mảng chuỗi không rỗng.")
     return [item.strip() for item in value]
 

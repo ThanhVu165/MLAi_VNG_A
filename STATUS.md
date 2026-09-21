@@ -52,3 +52,4 @@
 [H+00][Agent A] A-12 đã hoàn tất bảy kiểm tra evidence theo thứ tự, audit mọi failed_checks · 47 test xanh
 [H+00][Agent A] A-13 đã hoàn tất Policy Engine YAML với parser whitelist, P01–P05 và P04 fail-safe · 53 test xanh
 [H+00][Agent A] A-15 đã hoàn tất sinh draft chỉ từ evidence, citation mỗi đoạn và đúng ngôn ngữ · 55 test xanh
+[H+00][Agent A] A-17 đã hoàn tất thẻ escalation bốn khối, facts/evidence và câu hỏi có phương án · 56 test xanh

@@ -661,7 +661,9 @@ def test_generate_reply_rejects_uncited_paragraph(monkeypatch) -> None:
         )
 
 
-def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(monkeypatch, tmp_path) -> None:
+def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
+    monkeypatch, tmp_path
+) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
     extraction = Extraction(
