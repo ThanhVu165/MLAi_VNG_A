@@ -188,6 +188,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Xong khi:** Email đa domain lấy được chunk của cả hai domain; corpus rỗng không làm sập pipeline.
 
 ### A-12 · R5 Evidence Validator
+- **Trạng thái:** WIP
 - **Khối:** B2 · **Ước lượng:** 2.5h · **Phụ thuộc:** A-11
 - **File:** `core/evidence.py`
 - **Việc phải làm:** Cài đủ 7 kiểm tra ở Mục 8.4 spec, theo đúng thứ tự. Trả `EvidenceResult` với `status` của kiểm tra đầu tiên fail nhưng `failed_checks` liệt kê **tất cả** kiểm tra fail. Ghi audit `EVIDENCE_VALIDATED` kèm `failed_checks`.
