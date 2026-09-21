@@ -2,7 +2,8 @@ from pathlib import Path
 
 from core.types import Domain, SourceStatus
 from corpus.conflict import flag_active_conflicts, scheduled_supersede_ids
-from corpus.lifecycle import pending_reviews, reject_source, request_change
+from corpus.indexer import active_chunks
+from corpus.lifecycle import activate_source, pending_reviews, reject_source, request_change
 from corpus.seed import ensure_seeded
 from corpus.store import (
     ChunkRecord,
@@ -10,6 +11,8 @@ from corpus.store import (
     create_chunk,
     create_source,
     get_chunk_record,
+    get_current_corpus_version,
+    get_source,
 )
 from infra.audit import recent_events
 
@@ -103,3 +106,50 @@ def test_pending_review_shows_diff_and_requires_reason(tmp_path: Path) -> None:
         ).status
         is SourceStatus.REJECTED
     )
+
+
+def test_activate_source_records_human_audit_version_and_scheduled_supersede(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "corpus.db"
+    previous = SourceRecord(doc_id="old", status=SourceStatus.ACTIVE, content_hash="old")
+    pending = SourceRecord(
+        doc_id="new",
+        status=SourceStatus.PENDING_REVIEW,
+        supersedes=(previous.doc_id,),
+        content_hash="new",
+    )
+    create_source(previous, database_path=database_path)
+    create_source(pending, database_path=database_path)
+    create_chunk(
+        ChunkRecord("old-1", previous.doc_id, "Điều 1", "Nội dung cũ.", Domain.CONDUCT_SCORE),
+        database_path=database_path,
+    )
+    create_chunk(
+        ChunkRecord("new-1", pending.doc_id, "Điều 1", "Nội dung mới.", Domain.CONDUCT_SCORE),
+        database_path=database_path,
+    )
+
+    activated = activate_source(
+        pending,
+        actor="ADMIN:lan",
+        reason="Đã duyệt quy định mới.",
+        database_path=database_path,
+    )
+
+    superseded = get_source(previous.doc_id, database_path=database_path)
+    events = recent_events(database_path=str(database_path))
+    assert activated.status is SourceStatus.ACTIVE
+    assert activated.activated_by == "ADMIN:lan"
+    assert activated.activated_at is not None and activated.activated_at.endswith("Z")
+    assert superseded is not None and superseded.status is SourceStatus.SUPERSEDED
+    assert superseded.superseded_by == activated.doc_id
+    assert get_current_corpus_version(database_path=database_path) is not None
+    assert [chunk.doc_id for chunk in active_chunks(database_path=database_path)] == [
+        activated.doc_id
+    ]
+    assert events[0].action == "ACTIVATE_SOURCE"
+    assert events[0].actor == "ADMIN:lan"
+    assert events[0].reason == "Đã duyệt quy định mới."
+    assert events[0].sources == [activated.doc_id]
+    assert events[0].corpus_version == get_current_corpus_version(database_path=database_path)

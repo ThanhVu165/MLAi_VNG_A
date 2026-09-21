@@ -374,7 +374,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Xong khi:** Nạp tài liệu #1 (thay thế #2) hiển thị đúng phần văn bản đã đổi.
 
 ### B-11 · K8 Kích hoạt tài liệu
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 1.5h · **Phụ thuộc:** B-10, B-02
 - **File:** `corpus/lifecycle.py`
 - **Việc phải làm:** `PENDING_REVIEW → ACTIVE`; ghi `activated_at`, `activated_by`; audit `ACTIVATE_SOURCE` với **actor là người thật**, không phải `SYSTEM`; thực thi lịch hạ cấp từ B-08; tăng `corpus_version`; kích hoạt lại index.
