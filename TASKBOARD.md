@@ -20,7 +20,7 @@
 Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 
 ### S-01 · Đóng băng contract `core/types.py`
-- **Trạng thái:** WIP
+- **Trạng thái:** BLOCKED
 - **Khối:** B0 · **Ước lượng:** 2h · **Phụ thuộc:** — · **Người làm:** cả 3, A cầm bút
 - **File:** `core/types.py`
 - **Việc phải làm:**
