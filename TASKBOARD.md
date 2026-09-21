@@ -154,7 +154,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 3 (8đ) · tránh mất điểm over-escalation
 
 ### A-08 · R2 Prompt và schema trích xuất
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 2.5h · **Phụ thuộc:** A-01, C-04
 - **File:** `core/extract.py`
 - **Việc phải làm:** Viết `EXTRACT_PROMPT_V1` và JSON schema đúng Mục 5.2 spec (`Extraction` + `RequestItem`). Prompt nói rõ: chỉ trích xuất, không suy đoán, không trả lời; trường nào không chắc thì để trống và thêm vào `missing_critical_facts`. Gọi qua `infra.llm.call_json(step="R2_extract")`, `temperature=0`.
