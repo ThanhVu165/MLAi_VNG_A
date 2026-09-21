@@ -9,3 +9,4 @@
 [H+00][Agent A] xong A-14 · ba YAML chính sách đã kiểm tra xanh.
 [H+00][Agent A] xong A-01 · pipeline fail-safe đã kiểm tra xanh.
 [H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
+[H+00][Agent B] B-02 đã hoàn tất CRUD nguồn/chunk/version · 7 test xanh · full check còn lỗi format/cấu hình Mypy ngoài phạm vi B
