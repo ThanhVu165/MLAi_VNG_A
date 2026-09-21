@@ -59,3 +59,5 @@
 [H+00][Agent B] xong B-11 · kích hoạt nguồn ghi actor/lý do/audit, hạ nguồn theo lịch, tăng corpus_version và làm mới kết quả index · không bị chặn
 [H+00][Agent A] A-13 đã hoàn tất Policy Engine YAML với parser whitelist, P01–P05 và P04 fail-safe · 53 test xanh
 [H+16][S-04] Checkpoint lõi: smoke A/C 5 passed, corpus B 19 passed; A và B đúng tiến độ, C hoàn tất C-05 nhưng rủi ro H28. Chuyển ưu tiên C từ C-25 (chờ A-26) sang C-07→C-10 và C-18; hoãn C-21, B-13 và B-14 tới sau H42 nếu cần cắt thêm.
+[H+00][Agent A] A-15 đã hoàn tất sinh draft chỉ từ evidence, citation mỗi đoạn và đúng ngôn ngữ · 55 test xanh
+[H+00][Agent A] A-17 đã hoàn tất thẻ escalation bốn khối, facts/evidence và câu hỏi có phương án · 56 test xanh

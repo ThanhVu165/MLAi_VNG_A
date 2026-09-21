@@ -3,9 +3,12 @@ from datetime import datetime, timedelta, timezone
 import json
 
 import core.pipeline as pipeline
+import pytest
 from core.extract import EXTRACTION_SCHEMA, extract_facts
 from core.prepolicy import decision_lock
 from core.evidence import validate_evidence
+from core.generate import generate_reply
+from core.question_gen import generate_escalation_card
 from core.retrieval import retrieve_evidence
 from core.sanitize import detect_language, mask_pii, sanitize_body
 from core.types import (
@@ -593,3 +596,117 @@ def test_extract_timeout_is_fail_safe_and_records_error(monkeypatch, tmp_path) -
     assert calls == 1
     assert extraction.llm_error == "Timeout sau 20 giây."
     assert len(events) == 1 and events[0].action == "CASE_ERROR"
+
+
+def test_generate_reply_uses_only_evidence_and_cites_each_paragraph(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    raw_body = "Thông tin hồ sơ gốc không được đưa vào prompt."
+
+    def fake_call(prompt: str, **kwargs: object) -> LLMResult:
+        assert raw_body not in prompt
+        assert "Căn cứ." in prompt and "chunk-1" in prompt
+        assert "English" in prompt
+        assert kwargs["step"] == "R7_generate"
+        assert kwargs["temperature"] == 0.0
+        return LLMResult(
+            True,
+            {
+                "subject": "Course withdrawal deadline",
+                "body": "The deadline is stated in the current regulation. [chunk-1]",
+                "citations": ["chunk-1"],
+            },
+            None,
+            0,
+            "test",
+            "replay",
+        )
+
+    monkeypatch.setattr("core.generate.call_json", fake_call)
+    draft = generate_reply(
+        case_id="case-generate",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        language="en",
+        evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
+    )
+    events = events_for_case("case-generate", database_path=str(database_path))
+
+    assert draft.subject == "Course withdrawal deadline"
+    assert draft.citations == ["chunk-1"] and "[chunk-1]" in draft.body
+    assert [event.action for event in events] == ["DRAFT_GENERATED"]
+    assert events[0].sources == ["chunk-1"]
+
+
+def test_generate_reply_rejects_uncited_paragraph(monkeypatch) -> None:
+    def fake_call(*args: object, **kwargs: object) -> LLMResult:
+        del args, kwargs
+        return LLMResult(
+            True,
+            {"subject": "Subject", "body": "Unsupported statement.", "citations": ["chunk-1"]},
+            None,
+            0,
+            "test",
+            "replay",
+        )
+
+    monkeypatch.setattr("core.generate.call_json", fake_call)
+    with pytest.raises(ValueError, match="chunk_id"):
+        generate_reply(
+            case_id="case-uncited",
+            actor="SYSTEM",
+            corpus_version="cv_test",
+            language="en",
+            evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
+        )
+
+
+def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
+    monkeypatch, tmp_path
+) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    extraction = Extraction(
+        "vi",
+        [],
+        {"Số tiền trên hóa đơn": "450.000₫ hoặc 480.000₫"},
+        ["Ảnh hóa đơn bị mờ"],
+        False,
+        "{}",
+    )
+
+    def fake_call(prompt: str, **kwargs: object) -> LLMResult:
+        assert "450.000₫ hoặc 480.000₫" in prompt
+        assert "Ảnh hóa đơn bị mờ" in prompt
+        assert "Điều 1" in prompt and "FACT_UNRESOLVED" in prompt
+        assert kwargs["step"] == "R7_question" and kwargs["temperature"] == 0.0
+        return LLMResult(
+            True,
+            {
+                "summary": "Hóa đơn mờ nên chưa xác định được số tiền.",
+                "facts": ["Số tiền có thể là 450.000₫ hoặc 480.000₫."],
+                "basis": [{"chunk_id": "chunk-1", "quote": "Căn cứ."}],
+                "question": "Hóa đơn ghi 450.000₫ hay 480.000₫?",
+                "options": ["450.000₫", "480.000₫"],
+            },
+            None,
+            0,
+            "test",
+            "replay",
+        )
+
+    monkeypatch.setattr("core.question_gen.call_json", fake_call)
+    card = generate_escalation_card(
+        case_id="case-card",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        escalation_type=EscalationType.FACT_UNRESOLVED,
+        extraction=extraction,
+        evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
+    )
+    events = events_for_case("case-card", database_path=str(database_path))
+
+    assert "450.000₫" in card.question and "480.000₫" in card.question
+    assert card.options == ["450.000₫", "480.000₫"]
+    assert card.basis == [("Điều 1", "Căn cứ.")]
+    assert [event.action for event in events] == ["QUESTION_GENERATED"]
