@@ -1,0 +1,22 @@
+# Thông tin nhạy cảm và cơ sở dữ liệu cục bộ
+.env
+data/app.db
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Cache mô hình và embedding
+data/embedding_cache/
+data/vector_cache/
+*.faiss
+*.npy
+*.npz
+
+# Streamlit
+.streamlit/secrets.toml
