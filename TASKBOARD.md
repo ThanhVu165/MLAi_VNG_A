@@ -49,6 +49,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 - **Xong khi:** `python -c "from core.pipeline import process_case; print(process_case(sample))"` chạy được, và `streamlit run streamlit_app.py` mở được trang trắng có tiêu đề. Ba làn từ đây không chặn nhau nữa.
 
 ### S-04 · Checkpoint H16 — lõi độc lập
+- **Trạng thái:** DONE
 - **Khối:** B1 kết thúc · **Ước lượng:** 30ph · **Phụ thuộc:** A-13, B-07, C-05
 - **Việc phải làm:** Mỗi agent demo 3 phút phần của mình chạy trên stub. Đối chiếu `STATUS.md`. Xác định làn nào chậm và chuyển việc.
 - **Xong khi:** Có kết luận ghi vào `STATUS.md`: làn nào đúng tiến độ, task nào cắt bớt.
@@ -374,6 +375,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Xong khi:** Nạp tài liệu #1 (thay thế #2) hiển thị đúng phần văn bản đã đổi.
 
 ### B-11 · K8 Kích hoạt tài liệu
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 1.5h · **Phụ thuộc:** B-10, B-02
 - **File:** `corpus/lifecycle.py`
 - **Việc phải làm:** `PENDING_REVIEW → ACTIVE`; ghi `activated_at`, `activated_by`; audit `ACTIVATE_SOURCE` với **actor là người thật**, không phải `SYSTEM`; thực thi lịch hạ cấp từ B-08; tăng `corpus_version`; kích hoạt lại index.
