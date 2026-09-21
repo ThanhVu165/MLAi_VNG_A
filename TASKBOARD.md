@@ -220,6 +220,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 2 (V02)
 
 ### A-16 · R8a Groundedness Guard
+- **Trạng thái:** WIP
 - **Khối:** B3 · **Ước lượng:** 3h · **Phụ thuộc:** A-15
 - **File:** `core/ground_guard.py`
 - **Việc phải làm:** Cài đủ 4 kiểm tra ở Mục 8.5 spec. Fail bất kỳ mục nào → chuyển case sang `ESCALATE / FACT_UNRESOLVED`, `reason = "groundedness_failed:<mục>"`, **giữ bản nháp cho DSA xem** với `grounded=false`, ghi audit `GROUNDEDNESS_FAILED`. Tuyệt đối không tự sửa nội dung cho hợp lệ.
