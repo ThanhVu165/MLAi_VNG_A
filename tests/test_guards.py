@@ -5,6 +5,7 @@ import json
 import core.pipeline as pipeline
 from core.extract import EXTRACTION_SCHEMA, extract_facts
 from core.prepolicy import decision_lock
+from core.evidence import validate_evidence
 from core.retrieval import retrieve_evidence
 from core.sanitize import detect_language, mask_pii, sanitize_body
 from core.types import (
@@ -14,6 +15,7 @@ from core.types import (
     Decision,
     Domain,
     EvidenceChunk,
+    EvidenceResult,
     EvidenceStatus,
     EscalationType,
     Extraction,
@@ -266,6 +268,141 @@ def test_retrieval_empty_corpus_returns_no_authoritative_source(monkeypatch, tmp
 
     assert result.status is EvidenceStatus.NO_AUTHORITATIVE_SOURCE
     assert result.chunks == []
+
+
+def _evidence_chunk(
+    *,
+    domain: Domain = Domain.CONDUCT_SCORE,
+    label: ChunkLabel = ChunkLabel.AUTO_ANSWERABLE,
+    score: float = 0.9,
+    cohorts: list[str] | None = None,
+    transitional_clause: bool = False,
+    conflict_flag: bool = False,
+) -> EvidenceChunk:
+    return EvidenceChunk(
+        "chunk-1",
+        "doc-1",
+        "Điều 1",
+        "Căn cứ.",
+        domain,
+        label,
+        score,
+        datetime(2026, 1, 1, tzinfo=timezone.utc).date(),
+        None,
+        [],
+        cohorts or [],
+        transitional_clause,
+        conflict_flag,
+    )
+
+
+def _evidence_extraction(
+    *,
+    domain: Domain = Domain.CONDUCT_SCORE,
+    facts: dict[str, str] | None = None,
+    missing: list[str] | None = None,
+) -> Extraction:
+    return Extraction(
+        "vi",
+        [RequestItem(domain, "information", True, False, False, False, False)],
+        facts or {},
+        missing or [],
+        False,
+        "{}",
+    )
+
+
+def test_evidence_validator_has_seven_failures_in_fixed_order(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    monkeypatch.setattr("core.evidence.supported_domains", lambda: [Domain.CONDUCT_SCORE])
+    cases = (
+        (
+            [_evidence_chunk(score=0.1)],
+            _evidence_extraction(),
+            EvidenceStatus.NO_AUTHORITATIVE_SOURCE,
+        ),
+        (
+            [_evidence_chunk(domain=Domain.COURSE_WITHDRAWAL)],
+            _evidence_extraction(),
+            EvidenceStatus.NO_AUTHORITATIVE_SOURCE,
+        ),
+        (
+            [_evidence_chunk(domain=Domain.UNKNOWN)],
+            _evidence_extraction(domain=Domain.UNKNOWN),
+            EvidenceStatus.UNSUPPORTED_DOMAIN,
+        ),
+        (
+            [_evidence_chunk(label=ChunkLabel.HUMAN_ONLY)],
+            _evidence_extraction(),
+            EvidenceStatus.AUTHORITY_CONTENT,
+        ),
+        (
+            [_evidence_chunk(conflict_flag=True)],
+            _evidence_extraction(),
+            EvidenceStatus.CONFLICTING_SOURCES,
+        ),
+        ([_evidence_chunk(cohorts=["K50"])], _evidence_extraction(), EvidenceStatus.SCOPE_MISMATCH),
+        (
+            [_evidence_chunk(transitional_clause=True)],
+            _evidence_extraction(),
+            EvidenceStatus.FACT_MISSING,
+        ),
+    )
+
+    for index, (chunks, extraction, expected_status) in enumerate(cases):
+        result = validate_evidence(
+            case_id=f"case-evidence-{index}",
+            actor="SYSTEM",
+            corpus_version="cv_test",
+            evidence=EvidenceResult(EvidenceStatus.OK, chunks, []),
+            extraction=extraction,
+        )
+        assert result.status is expected_status
+
+
+def test_evidence_validator_records_all_failures_and_audits(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    monkeypatch.setattr("core.evidence.supported_domains", lambda: [Domain.CONDUCT_SCORE])
+
+    result = validate_evidence(
+        case_id="case-evidence-audit",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        evidence=EvidenceResult(
+            EvidenceStatus.OK,
+            [_evidence_chunk(score=0.1, label=ChunkLabel.HUMAN_ONLY, conflict_flag=True)],
+            [],
+        ),
+        extraction=_evidence_extraction(missing=["học kỳ"]),
+    )
+    events = events_for_case("case-evidence-audit", database_path=str(database_path))
+
+    assert result.status is EvidenceStatus.NO_AUTHORITATIVE_SOURCE
+    assert result.failed_checks == ["similarity", "authority", "conflict", "facts"]
+    assert [event.action for event in events] == ["EVIDENCE_VALIDATED"]
+    assert (
+        events[0].reason is not None
+        and "similarity" in events[0].reason
+        and "facts" in events[0].reason
+    )
+
+
+def test_evidence_validator_returns_ok_for_matching_evidence(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    monkeypatch.setattr("core.evidence.supported_domains", lambda: [Domain.CONDUCT_SCORE])
+
+    result = validate_evidence(
+        case_id="case-evidence-ok",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
+        extraction=_evidence_extraction(),
+    )
+
+    assert result.status is EvidenceStatus.OK
+    assert result.failed_checks == []
 
 
 def test_mask_pii_and_keep_audit_free_of_raw_values(monkeypatch, tmp_path) -> None:

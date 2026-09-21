@@ -49,3 +49,4 @@
 [H+00][Agent B] B-10 đã hoàn tất hàng chờ duyệt, diff và lý do bắt buộc · 2 test lifecycle xanh
 [H+00][Agent A] A-07 đã hoàn tất ba chốt R1: invalid input không vào hàng chờ, ngoài vi/en chuyển OUT_OF_POLICY · 41 test xanh
 [H+00][Agent A] A-11 đã hoàn tất adapter R4 qua corpus.api, audit chunk_id và fail-safe corpus rỗng/lỗi · 44 test xanh
+[H+00][Agent A] A-12 đã hoàn tất bảy kiểm tra evidence theo thứ tự, audit mọi failed_checks · 47 test xanh
