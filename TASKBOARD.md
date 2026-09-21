@@ -181,6 +181,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 7 (6đ chất lượng câu hỏi)
 
 ### A-11 · R4 Adapter retrieval
+- **Trạng thái:** WIP
 - **Khối:** B2 · **Ước lượng:** 1.5h · **Phụ thuộc:** A-10, B-01
 - **File:** `core/retrieval.py`
 - **Việc phải làm:** Dựng truy vấn từ `subject + body_clean + intent`; gọi `corpus.api.search(query, domains, top_k=6, at=received_at)`; **chỉ dùng `corpus.api`, không import module nào khác của `corpus/`**; bọc lỗi corpus thành `EvidenceStatus.NO_AUTHORITATIVE_SOURCE`; ghi audit `EVIDENCE_RETRIEVED` kèm danh sách `chunk_id`.
