@@ -21,6 +21,8 @@
 
 - [A-08][Agent A][đã gỡ 2026-09-21] Model `gemini-3.5-flash` hoạt động; xác thực thật đạt schema 8/8 và domain 8/8.
 
+- [A-04][Agent A] Heuristic nhận diện ngôn ngữ đạt 10/10 mẫu và 30 pytest xanh, nhưng `make check` tương đương còn bị chặn ngoài phạm vi A: Black cần format 6 file `corpus/`/`pages/`/test B-C; Mypy báo 10 lỗi có sẵn trong `tests/test_conflict.py` và `tests/test_chunker.py`. Cần chủ sở hữu xử lý để A-04 chuyển DONE.
+
 - [A-02][Agent A][đã gỡ] Full `mypy .` was blocked by 17 errors in Agent C's audit page. Black, Ruff, mypy, and pytest now pass.
 
 - [A-01] Full `make check` is unavailable: this repository has no Makefile and Python 3.11 has no `mypy` module. The targeted pytest smoke check plus Black and Ruff pass.

@@ -127,6 +127,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Xong khi:** Test với 6 mẫu email (2 có quote, 2 có chữ ký tiếng Việt, 1 HTML, 1 sạch) cho ra `body_clean` đúng kỳ vọng.
 
 ### A-04 · R1 Nhận diện ngôn ngữ
+- **Trạng thái:** WIP
 - **Khối:** B1 · **Ước lượng:** 45ph · **Phụ thuộc:** A-03
 - **File:** `core/sanitize.py`
 - **Việc phải làm:** Phân loại `vi` / `en` / `other`. Ưu tiên heuristic rẻ: tỷ lệ ký tự có dấu tiếng Việt + từ khóa đặc trưng; chỉ dùng thư viện nếu heuristic không quyết được. Không gọi LLM ở bước này.
