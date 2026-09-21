@@ -318,18 +318,21 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Xong khi:** Với 6 tài liệu seed, mọi tiêu đề `Điều N.` đều còn nguyên và nằm đầu dòng. **Mất đánh số là hỏng toàn bộ breadcrumb, kéo theo mất điểm chất lượng câu hỏi.**
 
 ### B-05 · K3 LLM đề xuất metadata
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 2h · **Phụ thuộc:** B-04, C-04
 - **File:** `corpus/metadata.py`
 - **Việc phải làm:** Prompt `METADATA_PROMPT_V1` sinh bản nháp đúng schema Mục 9.1 spec từ 3000 ký tự đầu của tài liệu. Trường không suy ra được thì để `null`, **không bịa**. Đặc biệt chú ý `supersedes`, `effective_from`, `cohorts`, `transitional_clause`.
 - **Xong khi:** Trên 6 tài liệu seed, schema hợp lệ 6/6 và `transitional_clause` đúng với tài liệu số 1.
 
 ### B-06 · K3 Biểu mẫu người sửa và kiểm tra hợp lệ
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 2h · **Phụ thuộc:** B-05
 - **File:** `corpus/metadata.py`, `pages/3_Quan_tri_quy_dinh.py`
 - **Việc phải làm:** Form Streamlit hiển thị bản nháp cho người sửa từng trường; validate: `effective_from` ≤ `effective_to`, `domains` thuộc danh sách hợp lệ, `document_id` duy nhất; lưu với `status=PENDING_REVIEW`; ghi audit `SOURCE_METADATA_EDITED` với diff trường nào đổi.
 - **Xong khi:** Không lưu được metadata sai định dạng; mọi lần sửa đều có dấu vết audit.
 
 ### B-07 · K4 Chunker theo đơn vị pháp lý
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 3.5h · **Phụ thuộc:** B-04
 - **File:** `corpus/chunker.py`
 - **Việc phải làm:** Tách theo **Điều → Khoản → Điểm**, không theo cửa sổ token cố định. Mỗi chunk giữ `doc_id`, `article_no`, `clause_no`, `breadcrumb` dạng `QĐ 3150/2026 · Điều 8 · Khoản 2`, `ord`. Khoản quá dài (> 800 token) thì tách tiếp nhưng giữ nguyên breadcrumb và đánh dấu phần. Gán `domain` theo metadata của tài liệu.
@@ -337,6 +340,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 7 (chất lượng câu hỏi) · 6 (audit truy xuất nguồn)
 
 ### B-08 · K5 Kiểm tra mâu thuẫn và thay thế
+- **Trạng thái:** BLOCKED
 - **Khối:** B3 · **Ước lượng:** 3h · **Phụ thuộc:** B-07
 - **File:** `corpus/conflict.py`
 - **Việc phải làm:** Nếu `supersedes` trỏ tới tài liệu đang ACTIVE → **xếp lịch hạ cấp tài liệu đó khi kích hoạt** (không hạ ngay). Nếu hai tài liệu ACTIVE cùng domain có nội dung mâu thuẫn ở cùng chủ đề (heuristic: cùng chủ đề + hai con số/mốc thời gian khác nhau) → gắn `conflict_flag` và `conflict_with` cho cả hai chunk. Ghi audit.
@@ -391,6 +395,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 1 · 2 · Quy định về dữ liệu
 
 ### B-16 · Nút "Kiểm tra nguồn mới"
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 1h · **Phụ thuộc:** B-03
 - **File:** `corpus/intake.py`, `pages/3_Quan_tri_quy_dinh.py`
 - **Việc phải làm:** Admin bấm thủ công; hệ thống tải lại các URL đã đăng ký, so `sha256`, báo tài liệu nào đã đổi và đề xuất nạp bản mới vào `PENDING_REVIEW`. **Không chạy nền, không định kỳ.** Audit `SOURCE_RECHECKED`.

@@ -9,8 +9,16 @@ from docx import Document
 from core.types import ChunkLabel, Domain, SourceStatus
 from corpus.api import get_chunk, get_corpus_version, search, supported_domains
 from corpus import extract_doc
+from corpus.chunker import chunk_document
 from corpus.extract_doc import extract_document, normalize_pages
-from corpus.intake import ingest_file, ingest_text, ingest_url
+from corpus.intake import (
+    SourceRecheckResult,
+    ingest_file,
+    ingest_text,
+    ingest_url,
+    recheck_url_sources,
+)
+from corpus.metadata import METADATA_SCHEMA, MetadataDraft, propose_metadata, save_metadata
 from corpus.store import (
     ChunkRecord,
     CorpusVersionRecord,
@@ -162,6 +170,159 @@ def test_intake_accepts_supported_files_and_manual_url(tmp_path: Path) -> None:
     assert uploaded.source.source_kind == "pdf"
     assert downloaded.source.source_kind == "url"
     assert downloaded.source.source_url == "https://example.edu/quy-dinh.docx"
+
+
+def test_recheck_url_sources_reports_changes_and_creates_pending_source(tmp_path: Path) -> None:
+    database_path = tmp_path / "corpus.db"
+    original = ingest_url(
+        "https://example.edu/quy-dinh.docx",
+        actor="ADMIN:tester",
+        fetch=lambda _: b"ban dau",
+        database_path=database_path,
+    ).source
+
+    unchanged = recheck_url_sources(
+        actor="ADMIN:tester", fetch=lambda _: b"ban dau", database_path=database_path
+    )
+    changed = recheck_url_sources(
+        actor="ADMIN:tester", fetch=lambda _: b"ban moi", database_path=database_path
+    )
+
+    assert unchanged == [SourceRecheckResult(original, False, "Không đổi")]
+    assert changed[0].changed is True
+    assert changed[0].proposed_source is not None
+    assert changed[0].proposed_source.status is SourceStatus.PENDING_REVIEW
+    assert len(list_sources(database_path=database_path)) == 2
+    assert [event.action for event in recent_events(database_path=str(database_path))].count(
+        "SOURCE_RECHECKED"
+    ) == 2
+
+
+def test_metadata_proposal_uses_excerpt_and_keeps_unknown_fields_null(monkeypatch) -> None:
+    documents = [f"TÀI LIỆU SỐ {number}\nĐiều {number}. Nội dung." for number in range(1, 7)]
+    prompts: list[str] = []
+
+    def fake_call(prompt, *, schema, step, case_id, temperature):
+        prompts.append(prompt)
+        number = next(
+            (number for number in range(1, 7) if f"TÀI LIỆU SỐ {number}" in prompt), 1
+        )
+        assert schema == METADATA_SCHEMA
+        assert step == "K3_metadata"
+        assert temperature == 0.0
+        return SimpleNamespace(
+            ok=True,
+            data={
+                "document_id": f"DOC-{number}",
+                "title": f"Tài liệu {number}",
+                "issuer": None,
+                "published_at": None,
+                "effective_from": None,
+                "effective_to": None,
+                "applies_to": None,
+                "cohorts": None,
+                "supersedes": ["DOC-OLD"] if number == 1 else None,
+                "transitional_clause": number == 1,
+                "domains": ["conduct_score"],
+                "status": "PENDING_REVIEW",
+                "content_hash": None,
+            },
+            error=None,
+        )
+
+    monkeypatch.setattr("corpus.metadata.call_json", fake_call)
+    proposals = [propose_metadata(document, case_id=f"case-{number}") for number, document in enumerate(documents, 1)]
+
+    assert all(proposal.error is None and proposal.draft is not None for proposal in proposals)
+    assert proposals[0].draft.transitional_clause is True
+    assert proposals[0].draft.supersedes == ("DOC-OLD",)
+    assert proposals[1].draft.transitional_clause is False
+    assert proposals[1].draft.issuer is None
+    assert proposals[1].draft.cohorts is None
+    assert propose_metadata("x" * 3_001, case_id="case-long").error is None
+    assert prompts[-1].endswith("x" * 3_000)
+
+
+def test_metadata_save_validates_and_writes_edit_audit(tmp_path: Path) -> None:
+    database_path = tmp_path / "corpus.db"
+    draft = MetadataDraft(
+        "RL-2026-3150",
+        "Quy định rèn luyện",
+        None,
+        None,
+        "2026-07-07",
+        None,
+        ("undergraduate",),
+        ("K50",),
+        None,
+        True,
+        ("conduct_score",),
+        "hash-1",
+    )
+
+    stored = save_metadata(draft, actor="ADMIN:tester", database_path=database_path)
+
+    assert stored.status is SourceStatus.PENDING_REVIEW
+    assert stored.domains == (Domain.CONDUCT_SCORE,)
+    assert [event.action for event in recent_events(database_path=str(database_path))] == [
+        "SOURCE_METADATA_EDITED"
+    ]
+    assert "domains" in recent_events(database_path=str(database_path))[0].reason
+
+    updated = save_metadata(
+        replace(draft, title="Quy định rèn luyện đã sửa", content_hash="hash-2"),
+        actor="ADMIN:tester",
+        source_id=draft.document_id,
+        database_path=database_path,
+    )
+    assert updated.status is SourceStatus.PENDING_REVIEW
+    assert "title" in recent_events(database_path=str(database_path))[0].reason
+
+    invalid_dates = replace(draft, document_id="RL-2026-3151", effective_to="2026-07-06")
+    invalid_domain = replace(draft, document_id="RL-2026-3152", domains=("other",))
+    for invalid in (invalid_dates, invalid_domain, draft):
+        try:
+            save_metadata(invalid, actor="ADMIN:tester", database_path=database_path)
+        except ValueError:
+            continue
+        raise AssertionError("Metadata sai không được lưu.")
+
+
+def test_chunker_keeps_legal_units_breadcrumbs_and_long_clause_content() -> None:
+    first = chunk_document(
+        "Điều 8. Rút học phần\nKhoản 2. Sinh viên nộp đơn.\nĐiểm a) Nộp trước hạn.",
+        doc_id="QD-3150",
+        document_title="QĐ 3150/2026",
+        domain=Domain.COURSE_WITHDRAWAL,
+    )
+    second = chunk_document(
+        "Điều 4. Phúc khảo\nKhoản 1. Chuyên viên tiếp nhận hồ sơ.",
+        doc_id="QD-4000",
+        document_title="QĐ 4000/2026",
+        domain=Domain.GRADE_APPEAL,
+    )
+    long_clause = " ".join(["nội_dung"] * 801)
+    third = chunk_document(
+        f"Điều 3. Điểm rèn luyện\nKhoản 2. {long_clause}",
+        doc_id="QD-5000",
+        document_title="QĐ 5000/2026",
+        domain=Domain.CONDUCT_SCORE,
+    )
+
+    assert all(chunk.text.strip() for chunk in first + second + third)
+    assert "QĐ 3150/2026 · Điều 8 · Khoản 2" in {
+        chunk.breadcrumb for chunk in first
+    }
+    assert "QĐ 3150/2026 · Điều 8 · Khoản 2 · Điểm a" in {
+        chunk.breadcrumb for chunk in first
+    }
+    assert "Điểm a) Nộp trước hạn." in "\n".join(chunk.text for chunk in first)
+    assert "Chuyên viên tiếp nhận hồ sơ." in "\n".join(chunk.text for chunk in second)
+    long_chunks = [chunk for chunk in third if chunk.clause_no == "2"]
+    assert len(long_chunks) == 2
+    assert {chunk.breadcrumb for chunk in long_chunks} == {"QĐ 5000/2026 · Điều 3 · Khoản 2"}
+    assert all(chunk.token_count <= 800 for chunk in long_chunks)
+    assert [chunk.ordinal for chunk in first] == list(range(1, len(first) + 1))
 
 
 def test_normalize_pages_removes_repeated_margins_and_keeps_legal_headings() -> None:
