@@ -259,6 +259,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 6 — khẩu hiệu Slide 2: *con người quyết định cái gì, AI lo cách diễn đạt*
 
 ### A-21 · Ráp `process_case()` và máy trạng thái
+- **Trạng thái:** WIP
 - **Khối:** B2 · **Ước lượng:** 3h · **Phụ thuộc:** A-02..A-13
 - **File:** `core/pipeline.py`
 - **Việc phải làm:** Nối R0→R14 thành một hàm; ghi `step_latencies_ms` cho từng bước; ghi trạng thái case vào DB sau mỗi chuyển tiếp **kèm audit tương ứng**; bọc mọi bước để lỗi bất kỳ đều rơi về `P04`; đảm bảo hàm không bao giờ ném exception ra ngoài.
