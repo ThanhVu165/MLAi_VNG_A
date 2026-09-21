@@ -11,7 +11,6 @@ from corpus.lifecycle import approve_for_activation, pending_reviews, reject_sou
 from corpus.metadata import MetadataDraft, SUPPORTED_DOMAIN_VALUES, save_metadata
 from corpus.store import SourceRecord, list_sources
 
-
 st.set_page_config(page_title="Quản trị quy định", page_icon="📚")
 st.title("Quản trị quy định")
 st.caption("Chỉ kiểm tra khi bạn bấm nút; hệ thống không chạy nền hay định kỳ.")
