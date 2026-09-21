@@ -192,7 +192,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 7 (20đ) · 6 (audit có `rule_id`)
 
 ### A-14 · Ba file YAML cấu hình chính sách
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 1.5h · **Phụ thuộc:** S-01
 - **File:** `policies/policy.yaml`, `policies/blocklist.yaml`, `policies/fallback_questions.yaml`
 - **Việc phải làm:** Chép `policy.yaml` từ Mục 8.3 spec. `blocklist.yaml` chứa các cụm chung chung bị cấm trong câu hỏi escalation. `fallback_questions.yaml` chứa **ba template cứng** tương ứng ba `escalation_type`, mỗi template có sẵn khung 4 khối và 2–3 phương án trả lời.
