@@ -37,6 +37,13 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def to_utc_iso(value: datetime) -> str:
+    """Đổi datetime có múi giờ sang UTC ISO-8601 để lưu SQLite."""
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError("Datetime phải có múi giờ.")
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 def to_local(timestamp: str) -> str:
     """Đổi chuỗi UTC đã lưu sang múi giờ hiển thị +07:00."""
     parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
