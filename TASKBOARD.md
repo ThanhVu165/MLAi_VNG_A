@@ -279,6 +279,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 6 (4đ giải thích cho người không chuyên)
 
 ### A-24 · Xử lý email đa ý định
+- **Trạng thái:** WIP
 - **Khối:** B3 · **Ước lượng:** 2h · **Phụ thuộc:** A-10, A-15, A-17
 - **File:** `core/prepolicy.py`, `core/question_gen.py`
 - **Việc phải làm:** Khi `requests[]` có nhiều phần tử và ít nhất một phần tử bị khóa: escalate ở **cấp case**, đồng thời sinh `partial_draft` cho phần thường quy. Thẻ escalation hiển thị *"Phần A đã soạn sẵn, phần B cần anh/chị quyết"*. Chuyên viên duyệt **một lần** là xong cả hai.
