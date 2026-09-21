@@ -359,6 +359,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 6 (6đ ranh giới quyết định) · 7
 
 ### B-10 · K7 Hàng chờ duyệt và màn hình diff
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 2.5h · **Phụ thuộc:** B-06, B-09
 - **File:** `corpus/lifecycle.py`, `pages/3_Quan_tri_quy_dinh.py`
 - **Việc phải làm:** Danh sách tài liệu `PENDING_REVIEW`; mỗi tài liệu hiển thị metadata đề xuất, danh sách chunk kèm nhãn, và **diff với phiên bản cũ** nếu có `supersedes` (dùng `difflib`, tô màu thêm/bớt). Ba hành động: Duyệt · Từ chối · Yêu cầu chỉnh sửa, đều bắt buộc nhập lý do.
