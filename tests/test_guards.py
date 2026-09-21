@@ -8,6 +8,7 @@ from core.extract import EXTRACTION_SCHEMA, extract_facts
 from core.prepolicy import decision_lock
 from core.evidence import validate_evidence
 from core.generate import generate_reply
+from core.ground_guard import guard_groundedness
 from core.question_gen import generate_escalation_card
 from core.retrieval import retrieve_evidence
 from core.sanitize import detect_language, mask_pii, sanitize_body
@@ -16,6 +17,7 @@ from core.types import (
     CaseStatus,
     ChunkLabel,
     Decision,
+    DraftReply,
     Domain,
     EvidenceChunk,
     EvidenceResult,
@@ -710,3 +712,75 @@ def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
     assert card.options == ["450.000₫", "480.000₫"]
     assert card.basis == [("Điều 1", "Căn cứ.")]
     assert [event.action for event in events] == ["QUESTION_GENERATED"]
+
+
+def _draft(body: str, citations: list[str] | None = None) -> DraftReply:
+    return DraftReply("Trả lời", body, citations or ["chunk-1"], True, [])
+
+
+def test_ground_guard_escalates_unsupported_number_without_editing_draft(
+    monkeypatch, tmp_path
+) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    monkeypatch.setattr("core.ground_guard.is_active", lambda chunk_id: chunk_id == "chunk-1")
+    draft = _draft("Lệ phí là 500.000 đồng [chunk-1].")
+
+    result = guard_groundedness(
+        case_id="case-ground-number",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=draft,
+        evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
+    )
+    events = events_for_case("case-ground-number", database_path=str(database_path))
+
+    assert result.decision is not None
+    assert result.decision.decision is Decision.ESCALATE
+    assert result.decision.escalation_type is EscalationType.FACT_UNRESOLVED
+    assert result.decision.reason == "groundedness_failed:number"
+    assert result.draft.grounded is False and result.draft.body == draft.body
+    assert [event.action for event in events] == ["GROUNDEDNESS_FAILED"]
+
+
+def test_ground_guard_covers_citation_authority_and_ratio(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    evidence = EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], [])
+    active = False
+
+    def fake_active(chunk_id: str) -> bool:
+        return active and chunk_id == "chunk-1"
+
+    monkeypatch.setattr("core.ground_guard.is_active", fake_active)
+    citation_result = guard_groundedness(
+        case_id="case-ground-citation",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=_draft("Căn cứ hợp lệ [chunk-1]."),
+        evidence=evidence,
+    )
+    active = True
+    authority_result = guard_groundedness(
+        case_id="case-ground-authority",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=_draft("We approve this request [chunk-1]."),
+        evidence=evidence,
+    )
+    ratio_result = guard_groundedness(
+        case_id="case-ground-ratio",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=_draft("Căn cứ hợp lệ [chunk-1]. Câu này không có citation."),
+        evidence=evidence,
+    )
+
+    assert citation_result.decision is not None and citation_result.decision.reason.endswith(
+        "citation"
+    )
+    assert authority_result.decision is not None and authority_result.decision.reason.endswith(
+        "authority"
+    )
+    assert ratio_result.decision is not None and ratio_result.decision.reason.endswith(
+        "citation_ratio"
+    )
