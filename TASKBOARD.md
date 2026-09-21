@@ -164,6 +164,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Xong khi:** Trên 8 email mẫu, schema hợp lệ 8/8 và `requests[]` xác định đúng domain 7/8 trở lên.
 
 ### A-09 · R2 Retry, timeout và fail-safe
+- **Trạng thái:** WIP
 - **Khối:** B1 · **Ước lượng:** 1h · **Phụ thuộc:** A-08
 - **File:** `core/extract.py`
 - **Việc phải làm:** Parse fail → retry đúng 1 lần → vẫn fail thì đặt `llm_error` và để Policy Engine ra `P04 / FACT_UNRESOLVED`. Timeout > 20s xử lý y hệt. Ghi audit `FACTS_EXTRACTED` hoặc `CASE_ERROR`.
