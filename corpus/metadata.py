@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 
+from core.types import Domain, SourceStatus
 from infra.llm import JsonObject, call_json
+from infra.audit import log_event
+from corpus.store import DatabasePath, SourceRecord, create_source, get_source, update_source
 
 METADATA_EXCERPT_LENGTH = 3_000
+SUPPORTED_DOMAIN_VALUES = frozenset(domain.value for domain in Domain if domain is not Domain.UNKNOWN)
 METADATA_PROMPT_V1 = """Bạn trích xuất metadata từ văn bản quy định bên dưới.
 Chỉ dùng thông tin hiện diện trong văn bản; không suy đoán. Trường không chắc phải là null.
 `transitional_clause` chỉ true khi văn bản có điều khoản chuyển tiếp rõ ràng.
@@ -74,6 +78,31 @@ class MetadataProposal:
     error: str | None
 
 
+def save_metadata(
+    draft: MetadataDraft,
+    *,
+    actor: str,
+    source_id: str | None = None,
+    database_path: DatabasePath = None,
+) -> SourceRecord:
+    """Kiểm tra và lưu metadata, luôn giữ nguồn ở trạng thái chờ duyệt."""
+    _validate_draft(draft)
+    document_id = draft.document_id or ""
+    existing = get_source(source_id or document_id, database_path=database_path)
+    if source_id is None and existing is not None:
+        raise ValueError("document_id đã tồn tại.")
+    if source_id is not None and source_id != document_id:
+        raise ValueError("Không thể đổi document_id của nguồn đã nạp.")
+
+    stored = _source_from_draft(draft, existing)
+    if existing is None:
+        create_source(stored, database_path=database_path)
+    else:
+        update_source(stored, database_path=database_path)
+    _log_metadata_edit(existing, stored, actor=actor, database_path=database_path)
+    return stored
+
+
 def propose_metadata(text: str, *, case_id: str) -> MetadataProposal:
     """Đề xuất bản nháp metadata từ tối đa 3.000 ký tự đầu của tài liệu."""
     prompt = METADATA_PROMPT_V1.format(excerpt=text[:METADATA_EXCERPT_LENGTH])
@@ -107,6 +136,97 @@ def _draft_from_data(data: JsonObject, text: str) -> MetadataDraft:
         domains=_nullable_strings(data, "domains"),
         content_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
     )
+
+
+def _validate_draft(draft: MetadataDraft) -> None:
+    if not draft.document_id or not draft.document_id.strip():
+        raise ValueError("document_id không được để trống.")
+    for value in (draft.published_at, draft.effective_from, draft.effective_to):
+        if value:
+            date.fromisoformat(value)
+    if draft.effective_from and draft.effective_to:
+        if date.fromisoformat(draft.effective_from) > date.fromisoformat(draft.effective_to):
+            raise ValueError("effective_from phải trước hoặc bằng effective_to.")
+    if not draft.domains or not set(draft.domains) <= SUPPORTED_DOMAIN_VALUES:
+        raise ValueError("domains phải thuộc danh sách domain hợp lệ.")
+    if draft.transitional_clause is None:
+        raise ValueError("Cần xác nhận transitional_clause trước khi lưu.")
+
+
+def _source_from_draft(draft: MetadataDraft, existing: SourceRecord | None) -> SourceRecord:
+    assert draft.document_id is not None
+    assert draft.transitional_clause is not None
+    domains = tuple(Domain(domain) for domain in draft.domains or ())
+    if existing is not None:
+        return replace(
+            existing,
+            title=draft.title,
+            issuer=draft.issuer,
+            published_at=draft.published_at,
+            effective_from=draft.effective_from,
+            effective_to=draft.effective_to,
+            applies_to=draft.applies_to or (),
+            cohorts=draft.cohorts or (),
+            domains=domains,
+            supersedes=draft.supersedes or (),
+            transitional_clause=draft.transitional_clause,
+            status=SourceStatus.PENDING_REVIEW,
+            content_hash=draft.content_hash,
+        )
+    return SourceRecord(
+        doc_id=draft.document_id,
+        title=draft.title,
+        issuer=draft.issuer,
+        published_at=draft.published_at,
+        effective_from=draft.effective_from,
+        effective_to=draft.effective_to,
+        applies_to=draft.applies_to or (),
+        cohorts=draft.cohorts or (),
+        domains=domains,
+        supersedes=draft.supersedes or (),
+        transitional_clause=draft.transitional_clause,
+        status=SourceStatus.PENDING_REVIEW,
+        content_hash=draft.content_hash,
+    )
+
+
+def _log_metadata_edit(
+    previous: SourceRecord | None,
+    stored: SourceRecord,
+    *,
+    actor: str,
+    database_path: DatabasePath,
+) -> None:
+    fields = _changed_fields(previous, stored)
+    log_event(
+        case_id=None,
+        actor=actor,
+        action="SOURCE_METADATA_EDITED",
+        input_ref=stored.content_hash,
+        output_ref=stored.doc_id,
+        reason=f"Đã cập nhật metadata: {', '.join(fields)}.",
+        sources=[stored.doc_id],
+        database_path=str(database_path) if database_path is not None else None,
+    )
+
+
+def _changed_fields(previous: SourceRecord | None, stored: SourceRecord) -> list[str]:
+    fields = [
+        "title",
+        "issuer",
+        "published_at",
+        "effective_from",
+        "effective_to",
+        "applies_to",
+        "cohorts",
+        "domains",
+        "supersedes",
+        "transitional_clause",
+        "content_hash",
+    ]
+    return fields if previous is None else [
+        field for field in fields if getattr(previous, field) != getattr(stored, field)
+    ]
 
 
 def _nullable_string(data: JsonObject, key: str) -> str | None:

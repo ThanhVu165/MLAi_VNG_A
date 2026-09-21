@@ -18,7 +18,7 @@ from corpus.intake import (
     ingest_url,
     recheck_url_sources,
 )
-from corpus.metadata import METADATA_SCHEMA, propose_metadata
+from corpus.metadata import METADATA_SCHEMA, MetadataDraft, propose_metadata, save_metadata
 from corpus.store import (
     ChunkRecord,
     CorpusVersionRecord,
@@ -241,6 +241,51 @@ def test_metadata_proposal_uses_excerpt_and_keeps_unknown_fields_null(monkeypatc
     assert proposals[1].draft.cohorts is None
     assert propose_metadata("x" * 3_001, case_id="case-long").error is None
     assert prompts[-1].endswith("x" * 3_000)
+
+
+def test_metadata_save_validates_and_writes_edit_audit(tmp_path: Path) -> None:
+    database_path = tmp_path / "corpus.db"
+    draft = MetadataDraft(
+        "RL-2026-3150",
+        "Quy định rèn luyện",
+        None,
+        None,
+        "2026-07-07",
+        None,
+        ("undergraduate",),
+        ("K50",),
+        None,
+        True,
+        ("conduct_score",),
+        "hash-1",
+    )
+
+    stored = save_metadata(draft, actor="ADMIN:tester", database_path=database_path)
+
+    assert stored.status is SourceStatus.PENDING_REVIEW
+    assert stored.domains == (Domain.CONDUCT_SCORE,)
+    assert [event.action for event in recent_events(database_path=str(database_path))] == [
+        "SOURCE_METADATA_EDITED"
+    ]
+    assert "domains" in recent_events(database_path=str(database_path))[0].reason
+
+    updated = save_metadata(
+        replace(draft, title="Quy định rèn luyện đã sửa", content_hash="hash-2"),
+        actor="ADMIN:tester",
+        source_id=draft.document_id,
+        database_path=database_path,
+    )
+    assert updated.status is SourceStatus.PENDING_REVIEW
+    assert "title" in recent_events(database_path=str(database_path))[0].reason
+
+    invalid_dates = replace(draft, document_id="RL-2026-3151", effective_to="2026-07-06")
+    invalid_domain = replace(draft, document_id="RL-2026-3152", domains=("other",))
+    for invalid in (invalid_dates, invalid_domain, draft):
+        try:
+            save_metadata(invalid, actor="ADMIN:tester", database_path=database_path)
+        except ValueError:
+            continue
+        raise AssertionError("Metadata sai không được lưu.")
 
 
 def test_chunker_keeps_legal_units_breadcrumbs_and_long_clause_content() -> None:
