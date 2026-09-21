@@ -134,6 +134,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Xong khi:** Đúng trên 10 mẫu thử, trong đó có 1 email tiếng Anh, 1 email tiếng Việt không dấu, 1 email tiếng Nhật.
 
 ### A-05 · R1 Nhận diện và che PII
+- **Trạng thái:** WIP
 - **Khối:** B1 · **Ước lượng:** 1.5h · **Phụ thuộc:** A-03
 - **File:** `core/sanitize.py`
 - **Việc phải làm:** Regex nhận MSSV (8–10 chữ số), CCCD (12 số), số điện thoại VN, email cá nhân. Tạo `body_masked` thay bằng `[MSSV]`, `[SĐT]`… Lưu bản gốc ở cột riêng. **Mọi nơi hiển thị và mọi audit event dùng bản masked.**
