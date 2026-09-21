@@ -236,6 +236,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 7 (6đ chất lượng câu hỏi)
 
 ### A-18 · R8b Question Quality Guard
+- **Trạng thái:** WIP
 - **Khối:** B3 · **Ước lượng:** 2h · **Phụ thuộc:** A-17, A-14
 - **File:** `core/question_guard.py`
 - **Việc phải làm:** Cài đủ các luật ở Mục 8.7 spec (kết thúc bằng `?`, 8–45 từ, đúng một dấu hỏi, chứa dữ kiện cụ thể từ khối [2], có 2–4 phương án, có breadcrumb, không chứa cụm blocklist). Fail → regenerate **1 lần** → fallback template cứng theo loại.
