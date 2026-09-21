@@ -15,8 +15,7 @@ from corpus.store import (
 class FakeEncoder:
     def encode(self, texts: list[str], **_: object) -> list[list[float]]:
         return [
-            [float("thang" in text.casefold()), float("điểm" in text.casefold())]
-            for text in texts
+            [float("thang" in text.casefold()), float("điểm" in text.casefold())] for text in texts
         ]
 
 
@@ -78,4 +77,6 @@ def test_downgrade_removes_document_when_index_rebuilt(tmp_path) -> None:
     assert build_active_index(database_path=database_path, encoder=FakeEncoder()).search("điểm")
 
     update_source(replace(source, status=SourceStatus.SUPERSEDED), database_path=database_path)
-    assert build_active_index(database_path=database_path, encoder=FakeEncoder()).search("điểm") == []
+    assert (
+        build_active_index(database_path=database_path, encoder=FakeEncoder()).search("điểm") == []
+    )
