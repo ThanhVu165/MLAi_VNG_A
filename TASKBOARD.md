@@ -211,6 +211,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Xong khi:** Ba file hợp lệ YAML, `reason_vi` viết bằng tiếng Việt dễ hiểu cho người không chuyên.
 
 ### A-15 · R7a Sinh câu trả lời tự động
+- **Trạng thái:** WIP
 - **Khối:** B3 · **Ước lượng:** 2.5h · **Phụ thuộc:** A-13
 - **File:** `core/generate.py`
 - **Việc phải làm:** Prompt **chỉ chứa evidence đã lọc**, không chứa body gốc thô. Bắt buộc mỗi đoạn nội dung gắn `chunk_id`. Output `{subject, body, citations[]}`. Trả lời đúng ngôn ngữ của email. System prompt cấm tuyệt đối: suy đoán khi evidence không nói · cam kết thay mặt DSA · nhắc tới hồ sơ cá nhân của sinh viên.
