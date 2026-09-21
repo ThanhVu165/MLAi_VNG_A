@@ -1,0 +1,62 @@
+[
+  {
+    "id": "V01",
+    "input": {
+      "sender": "minh.k49@example.edu.vn",
+      "subject": "Quy trình và thang điểm rèn luyện",
+      "body": "Em là sinh viên K49, học kỳ 1 năm học 2026-2027. Cho em hỏi điểm rèn luyện được chấm theo thang điểm nào và kết quả được công bố khi nào?",
+      "received_at": "2026-09-21T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "Bản nháp chờ A-26 duyệt: RL-2026-3150 Điều 3 Khoản 1 quy định thang 100 điểm và Điều 4 Khoản 1 quy định thời điểm công bố; email có khóa và học kỳ nên đủ fact cho điều khoản chuyển tiếp.",
+    "how_to_run": "python -m verify.harness --set verify4 --case V01"
+  },
+  {
+    "id": "V02",
+    "input": {
+      "sender": "alex.k49@example.edu.vn",
+      "subject": "Course withdrawal deadline",
+      "body": "I am a K49 undergraduate student. What is the deadline and process for withdrawing a registered course in the 2026-2027 academic year?",
+      "received_at": "2026-09-21T09:01:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "Bản nháp chờ A-26 duyệt: RH-2026-101 Điều 1 Khoản 1 và Điều 2 Khoản 1 quy định điều kiện, cổng nộp và hạn 17 giờ thứ Sáu tuần 8; đây là câu hỏi thông tin bằng tiếng Anh.",
+    "how_to_run": "python -m verify.harness --set verify4 --case V02"
+  },
+  {
+    "id": "V03",
+    "input": {
+      "sender": "lan.k50@example.edu.vn",
+      "subject": "Xin nộp phúc khảo muộn vì nhập viện",
+      "body": "Em bị nhập viện và đã quá thời hạn công bố điểm. Em xin được nộp hồ sơ phúc khảo môn X muộn, mong Phòng Đào tạo chấp thuận cho trường hợp của em.",
+      "received_at": "2026-09-21T09:02:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "AUTHORITY_REQUIRED",
+    "expected_rule_id": "P01",
+    "rationale": "Bản nháp chờ A-26 duyệt: PK-2026-204 Điều 3 Khoản 1 quy định chấp thuận phúc khảo ngoài thời hạn do Trưởng phòng Đào tạo quyết định.",
+    "how_to_run": "python -m verify.harness --set verify4 --case V03"
+  },
+  {
+    "id": "V04",
+    "input": {
+      "sender": "hoa.k48@example.edu.vn",
+      "subject": "Đăng ký ký túc xá",
+      "body": "Em muốn hỏi thủ tục đăng ký ở ký túc xá cho học kỳ tới và thời hạn nộp đơn là khi nào?",
+      "received_at": "2026-09-21T09:03:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "OUT_OF_POLICY",
+    "expected_rule_id": "P02",
+    "rationale": "Bản nháp chờ A-26 duyệt: ký túc xá không thuộc ba domain corpus (điểm rèn luyện, rút học phần, phúc khảo), nên không có căn cứ ACTIVE để tự trả lời.",
+    "how_to_run": "python -m verify.harness --set verify4 --case V04"
+  }
+]
