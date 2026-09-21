@@ -20,6 +20,7 @@ from corpus.intake import (
     recheck_url_sources,
 )
 from corpus.metadata import METADATA_SCHEMA, MetadataDraft, propose_metadata, save_metadata
+from corpus.seed import EXPECTED_CHUNK_COUNT, EXPECTED_DOCUMENT_COUNT, ensure_seeded
 from corpus.store import (
     ChunkRecord,
     CorpusVersionRecord,
@@ -42,6 +43,34 @@ from corpus.store import (
     update_source,
 )
 from infra.audit import recent_events
+from infra.db import fetch_all
+
+
+def test_seed_corpus_loads_once_with_human_approved_labels_and_conflicts(tmp_path: Path) -> None:
+    database_path = tmp_path / "corpus.db"
+
+    first = ensure_seeded(database_path=database_path)
+    second = ensure_seeded(database_path=database_path)
+    sources = fetch_all("SELECT status, is_synthetic FROM sources", database_path=database_path)
+    chunks = fetch_all(
+        "SELECT doc_id, article_no, label, conflict_flag FROM chunks ORDER BY doc_id, ord",
+        database_path=database_path,
+    )
+
+    assert first.seeded is True
+    assert second.seeded is False
+    assert len(sources) == EXPECTED_DOCUMENT_COUNT
+    assert len(chunks) == EXPECTED_CHUNK_COUNT
+    assert all(row["is_synthetic"] == 1 for row in sources)
+    assert sum(row["status"] == "ACTIVE" for row in sources) == 5
+    assert sum(row["label"] == "auto_answerable" for row in chunks) == 42
+    assert sum(row["label"] == "human_only" for row in chunks) == 30
+    assert all(
+        row["conflict_flag"] == 0
+        for row in chunks
+        if (row["doc_id"], row["article_no"]) in {("RH-2026-101", "2"), ("HP-2026-1", "2")}
+    )
+    assert sum(row["conflict_flag"] == 1 for row in chunks) == 6
 
 
 def test_stub_corpus_api_exposes_contract_chunks() -> None:
