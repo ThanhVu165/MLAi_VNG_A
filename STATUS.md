@@ -10,3 +10,4 @@
 [H+00][Agent A] đang làm A-01 · chặn bởi `make check` chưa khả dụng (thiếu Makefile, mypy).
 [H+00][Agent A] xong A-14 · ba YAML chính sách đã kiểm tra xanh.
 [H+00][Agent A] xong A-01 · pipeline fail-safe đã kiểm tra xanh.
+[H+00][Agent C] bắt đầu C-05 · hoàn thiện API audit và kiểm tra chuỗi event · không bị chặn
