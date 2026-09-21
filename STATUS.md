@@ -4,3 +4,4 @@
 [H+00][Agent C] C-03 đã đặt đủ ngưỡng trong settings · chặn bởi thiếu Python/Make và core/corpus chưa có để kiểm tra
 [H+00][Agent C] đang duy trì S-09 · đã tạo sổ giới hạn với các quan sát thực tế ban đầu · không bị chặn
 [H+00][Agent A] đang làm A-01 · chặn bởi `make check` chưa khả dụng (thiếu Makefile, mypy).
+[H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
