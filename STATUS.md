@@ -15,3 +15,4 @@
 [H+00][Agent C] bắt đầu C-06 · tính telemetry trực tiếp từ SQLite, không lưu bản sao · không bị chặn
 [H+00][Agent C] xong C-06 · 15 case kiểm chứng các tỷ lệ, latency và thời gian duyệt từ SQLite · không bị chặn
 [H+00][Agent C] bắt đầu C-16 · trang tra cứu audit có lọc và liên kết theo case_id · không bị chặn
+[H+00][Agent C] xong C-16 · bảng audit lọc được đầy đủ event và xem chi tiết theo múi giờ +07:00 · không bị chặn

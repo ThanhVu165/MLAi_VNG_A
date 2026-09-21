@@ -144,13 +144,19 @@ def events_for_case(case_id: str, *, database_path: str | None = None) -> list[A
     return [_event_from_row(row) for row in rows]
 
 
-def recent_events(limit: int = 200, *, database_path: str | None = None) -> list[AuditEvent]:
+def recent_events(limit: int | None = 200, *, database_path: str | None = None) -> list[AuditEvent]:
     """Trả về các event mới nhất, tối đa theo limit."""
-    if limit < 0:
+    if limit is not None and limit < 0:
         raise ValueError("limit phải không âm.")
-    rows = fetch_all(
-        "SELECT * FROM audit_events ORDER BY ts DESC, rowid DESC LIMIT ?",
-        (limit,),
-        database_path=database_path,
-    )
+    if limit is None:
+        rows = fetch_all(
+            "SELECT * FROM audit_events ORDER BY ts DESC, rowid DESC",
+            database_path=database_path,
+        )
+    else:
+        rows = fetch_all(
+            "SELECT * FROM audit_events ORDER BY ts DESC, rowid DESC LIMIT ?",
+            (limit,),
+            database_path=database_path,
+        )
     return [_event_from_row(row) for row in rows]
