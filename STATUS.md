@@ -22,3 +22,4 @@
 [H+00][Agent B] B-06 đã hoàn tất form metadata, validate và audit diff trường đã sửa · 21 test xanh
 [H+00][Agent B] B-08 đã ghi cờ conflict và lịch supersede; chờ B-12/A-12 nối runtime OUT_OF_POLICY · 22 test xanh
 [H+00][Agent B] B-09 đã hoàn tất gán nhãn thẩm quyền từng chunk, con người chủ động đổi và có audit · 23 test xanh
+[H+00][Agent B] B-12 đã hoàn tất index hybrid BM25/vector chỉ trên nguồn ACTIVE, cache Streamlit và loại ngay tài liệu hạ cấp · 26 test xanh
