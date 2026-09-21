@@ -398,12 +398,14 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 1 (tốc độ live URL) · 2
 
 ### B-13 · K10 Supersede
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 1h · **Phụ thuộc:** B-11
 - **File:** `corpus/lifecycle.py`
 - **Việc phải làm:** Tài liệu bị thay chuyển `SUPERSEDED`, ghi `superseded_by` và `superseded_at`, loại khỏi index, giữ nguyên trong DB. Audit `SUPERSEDE_SOURCE`.
 - **Xong khi:** Sau khi kích hoạt tài liệu #1, tài liệu #2 không còn xuất hiện trong kết quả retrieval nhưng vẫn tra được trong audit của các case cũ.
 
 ### B-14 · K11 Rollback và quét `NEEDS_RECHECK`
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 2h · **Phụ thuộc:** B-13
 - **File:** `corpus/lifecycle.py`
 - **Việc phải làm:** Khi một tài liệu rời trạng thái ACTIVE (bị thay thế hoặc bị rollback), hệ thống **tự liệt kê mọi case đã dùng tài liệu đó làm căn cứ trong 30 ngày** và gắn `NEEDS_RECHECK`, ghi audit `FLAG_NEEDS_RECHECK`. Có nút rollback đưa tài liệu về ACTIVE kèm lý do.
@@ -426,6 +428,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Xong khi:** Bấm nút cho ra danh sách "không đổi / đã đổi" trong dưới 10 giây. Crawler định kỳ để Sprint 2; runtime xử lý email **không chạm Internet**.
 
 ### B-17 · Ráp trang Quản trị quy định
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 2.5h · **Phụ thuộc:** B-06, B-09, B-10, B-16
 - **File:** `pages/3_Quan_tri_quy_dinh.py`
 - **Việc phải làm:** Bốn tab: **Nạp tài liệu** · **Chờ duyệt** · **Đang hiệu lực** · **Lịch sử**. Tab "Đang hiệu lực" hiển thị `corpus_version` hiện tại và số chunk theo từng nhãn. Mọi hành động ghi audit đúng danh mục. Tiếng Việt toàn bộ, nút viết bằng động từ.
