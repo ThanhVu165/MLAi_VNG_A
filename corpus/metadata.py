@@ -12,7 +12,9 @@ from infra.audit import log_event
 from corpus.store import DatabasePath, SourceRecord, create_source, get_source, update_source
 
 METADATA_EXCERPT_LENGTH = 3_000
-SUPPORTED_DOMAIN_VALUES = frozenset(domain.value for domain in Domain if domain is not Domain.UNKNOWN)
+SUPPORTED_DOMAIN_VALUES = frozenset(
+    domain.value for domain in Domain if domain is not Domain.UNKNOWN
+)
 METADATA_PROMPT_V1 = """Bạn trích xuất metadata từ văn bản quy định bên dưới.
 Chỉ dùng thông tin hiện diện trong văn bản; không suy đoán. Trường không chắc phải là null.
 `transitional_clause` chỉ true khi văn bản có điều khoản chuyển tiếp rõ ràng.
@@ -224,9 +226,11 @@ def _changed_fields(previous: SourceRecord | None, stored: SourceRecord) -> list
         "transitional_clause",
         "content_hash",
     ]
-    return fields if previous is None else [
-        field for field in fields if getattr(previous, field) != getattr(stored, field)
-    ]
+    return (
+        fields
+        if previous is None
+        else [field for field in fields if getattr(previous, field) != getattr(stored, field)]
+    )
 
 
 def _nullable_string(data: JsonObject, key: str) -> str | None:
