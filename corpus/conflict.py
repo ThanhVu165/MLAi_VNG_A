@@ -24,6 +24,7 @@ STOP_WORDS = frozenset(
     {"các", "cho", "của", "được", "học", "khi", "là", "này", "theo", "trong", "và"}
 )
 MIN_SHARED_TOPIC_WORDS = 2
+MIN_TOPIC_OVERLAP = 0.5
 
 
 @dataclass(frozen=True)
@@ -76,13 +77,19 @@ def flag_active_conflicts(
 def _conflicts(first: ChunkRecord, second: ChunkRecord) -> bool:
     return (
         first.domain == second.domain
+        and first.article_no == second.article_no
+        and first.clause_no == second.clause_no
         and _same_topic(first.text, second.text)
         and _numbers(first.text) != _numbers(second.text)
     )
 
 
 def _same_topic(first: str, second: str) -> bool:
-    return len(_topic_words(first) & _topic_words(second)) >= MIN_SHARED_TOPIC_WORDS
+    first_words, second_words = _topic_words(first), _topic_words(second)
+    shared_words = first_words & second_words
+    return len(shared_words) >= MIN_SHARED_TOPIC_WORDS and (
+        len(shared_words) / min(len(first_words), len(second_words)) >= MIN_TOPIC_OVERLAP
+    )
 
 
 def _topic_words(text: str) -> set[str]:

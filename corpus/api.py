@@ -76,6 +76,8 @@ def _evidence_chunk(chunk: ChunkRecord, score: float) -> EvidenceChunk | None:
     if source is None:
         LOGGER.warning("Chunk %s không có nguồn tương ứng.", chunk.chunk_id)
         return None
+    if source.status is not SourceStatus.ACTIVE:
+        return None
     try:
         effective_from = _date(source.effective_from, "effective_from")
         effective_to = _optional_date(source.effective_to)
