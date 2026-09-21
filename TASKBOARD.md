@@ -244,6 +244,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 7 (6đ) — **guard này chính là thứ bảo vệ 6 điểm đó**
 
 ### A-19 · R9a/R13 Vòng đời gửi và Correction Email
+- **Trạng thái:** WIP
 - **Khối:** B3 · **Ước lượng:** 2h · **Phụ thuộc:** A-16
 - **File:** `core/dispatch.py`
 - **Việc phải làm:** `AUTO_REPLY` → `PENDING_SEND` với mốc hết hạn 60 giây lưu trong DB (không dựa vào timer của UI). Hai hành động: `cancel_send()` và `escalate_from_pending()`. Hết giờ → `SENT` (mô phỏng). Case `SENT` **không sửa được**; chỉ tạo `Correction Email` mới liên kết ngược `parent_case_id`. Ghi audit `SEND_SCHEDULED`, `SEND_DISPATCHED`, `CANCEL_SEND`, `CORRECTION_CREATED`.
