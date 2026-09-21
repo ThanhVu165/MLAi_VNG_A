@@ -31,6 +31,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 - **Xong khi:** `main` có `core/types.py`, test contract xanh, cả ba agent đã ACK. Từ đây mọi sửa đổi phải theo quy trình CONTRACT-CHANGE ở AGENT.md Mục 3.
 
 ### S-02 · Chốt lược đồ SQLite và danh mục `action`
+- **Trạng thái:** BLOCKED
 - **Khối:** B0 · **Ước lượng:** 1h · **Phụ thuộc:** — · **Người làm:** C cầm bút, A và B duyệt
 - **File:** `infra/migrations/001_init.sql`, `PROJECT_SPEC.md` Mục 6–7
 - **Việc phải làm:**
@@ -82,6 +83,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 - **Xong khi:** Có 3 tên + 3 chức danh + lịch hẹn, và `measurement_plan.md` nêu rõ phương pháp trước/sau. **Tiêu chí 5 là 20 điểm; Sprint 1 không có số liệu nhưng bắt buộc có phương pháp.**
 
 ### S-09 · `docs/known_failures.md` — duy trì liên tục
+- **Trạng thái:** WIP
 - **Khối:** B1 → B7 · **Ước lượng:** 1h rải rác · **Phụ thuộc:** —
 - **Việc phải làm:** Mỗi agent, mỗi khi phát hiện một trường hợp hệ thống xử lý sai hoặc một hạn chế thiết kế, thêm ngay một dòng: *hiện tượng · điều kiện tái hiện · vì sao chưa sửa · hướng xử lý*. Không xóa dòng nào, kể cả khi đã sửa — đánh dấu `[đã sửa]`.
 - **Xong khi:** Có tối thiểu 8 mục thật tại H62, đủ nuôi Slide 5. **Trả lời "không có bất cập nào" là 0 điểm cho tiêu chí 5.**
@@ -408,6 +410,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia chờ) → C-07..C-12 → C-13..C-17 → C-18..C-22 (Verify) → C-23..C-25 → C-26..C-29.
 
 ### C-01 · Dựng repo và công cụ
+- **Trạng thái:** BLOCKED
 - **Khối:** B0 · **Ước lượng:** 1.5h · **Phụ thuộc:** —
 - **File:** `README.md`, `requirements.txt`, `Makefile`, `.gitignore`, `.env.example`, `.streamlit/config.toml`
 - **Việc phải làm:** Tạo repo **công khai** ngay từ đầu; bật branch protection cho `main` (**chặn force-push**); `requirements.txt` ghim phiên bản; `Makefile` có `make check` = black + ruff + mypy + pytest; `.gitignore` loại `data/app.db`, `.env`, cache embedding; tạo ba nhánh `agent-a/`, `agent-b/`, `agent-c/`.
@@ -421,6 +424,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Xong khi:** Xóa `app.db` rồi khởi động lại tạo đủ bảng; hai tiến trình đọc ghi đồng thời không lỗi `database is locked`.
 
 ### C-03 · `infra/settings.py` — mọi ngưỡng ở một chỗ
+- **Trạng thái:** BLOCKED
 - **Khối:** B0 · **Ước lượng:** 45ph · **Phụ thuộc:** —
 - **File:** `infra/settings.py`
 - **Việc phải làm:** Khai báo có tên và comment: `SIMILARITY_THRESHOLD=0.35`, `CITATION_RATIO_MIN=0.6`, `PENDING_SEND_SECONDS=60`, `MIN_WORDS_GUARD=15`, `LLM_TIMEOUT_S=20`, `LLM_RETRIES=1`, `RETRIEVAL_TOP_K=6`, `QUESTION_WORDS_MIN/MAX=8/45`, `RECHECK_WINDOW_DAYS=30`. Đọc override từ biến môi trường.
