@@ -136,3 +136,14 @@ def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:
         "missing_critical_facts",
         "injection_suspected",
     }
+
+
+def test_extraction_schema_uses_gemini_supported_fields() -> None:
+    """SDK 0.8.3 chỉ nhận OpenAPI Schema subset cho response_schema."""
+    assert "additionalProperties" not in EXTRACTION_SCHEMA
+    requests = EXTRACTION_SCHEMA["properties"]
+    assert isinstance(requests, dict)
+    request_items = requests["requests"]
+    assert isinstance(request_items, dict)
+    assert "additionalProperties" not in request_items["items"]
+    assert "additionalProperties" not in requests["critical_facts"]

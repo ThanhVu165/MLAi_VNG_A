@@ -21,7 +21,6 @@ Email:
 
 EXTRACTION_SCHEMA: dict[str, object] = {
     "type": "object",
-    "additionalProperties": False,
     "required": [
         "language",
         "requests",
@@ -35,7 +34,6 @@ EXTRACTION_SCHEMA: dict[str, object] = {
             "type": "array",
             "items": {
                 "type": "object",
-                "additionalProperties": False,
                 "required": [
                     "domain",
                     "intent",
@@ -64,7 +62,7 @@ EXTRACTION_SCHEMA: dict[str, object] = {
                 },
             },
         },
-        "critical_facts": {"type": "object", "additionalProperties": {"type": "string"}},
+        "critical_facts": {"type": "object"},
         "missing_critical_facts": {"type": "array", "items": {"type": "string"}},
         "injection_suspected": {"type": "boolean"},
     },
