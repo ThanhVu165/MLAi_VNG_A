@@ -5,6 +5,13 @@ import json
 import core.pipeline as pipeline
 import pytest
 from core.extract import EXTRACTION_SCHEMA, extract_facts
+from core.dispatch import (
+    cancel_send,
+    create_correction_email,
+    dispatch_due,
+    escalate_from_pending,
+    schedule_auto_reply,
+)
 from core.prepolicy import decision_lock
 from core.evidence import validate_evidence
 from core.generate import generate_reply
@@ -26,11 +33,13 @@ from core.types import (
     EscalationCard,
     EscalationType,
     Extraction,
+    PolicyDecision,
     RequestItem,
 )
 from infra import db
 from infra.audit import events_for_case
 from infra.llm import LLMResult
+from infra.settings import PENDING_SEND_SECONDS
 
 
 def _input(
@@ -902,3 +911,93 @@ def test_multi_intent_card_keeps_routine_draft_and_asks_only_locked_part(monkeyp
     assert question_extraction.requests[0].intent == "xin nộp phúc khảo trễ"
     assert seen["partial_draft"] is partial and card.partial_draft is partial
     assert "Phần A đã soạn sẵn, phần B cần anh/chị quyết" in card.facts
+
+
+def _stored_case(case_id: str, *, status: CaseStatus = CaseStatus.RECEIVED) -> None:
+    db.execute(
+        """
+        INSERT INTO cases (
+            case_id, trace_id, channel, sender, subject, body_raw, body_masked, received_at,
+            created_at, status, corpus_version
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            case_id,
+            f"trace-{case_id}",
+            "paste",
+            "student@example.edu",
+            "Hỏi quy trình",
+            "Nội dung email.",
+            "Nội dung email.",
+            db.now_iso(),
+            db.now_iso(),
+            status,
+            "cv_test",
+        ),
+    )
+
+
+def _auto_decision() -> PolicyDecision:
+    return PolicyDecision(Decision.AUTO_REPLY, None, "P05", "Đủ căn cứ", [], "cv_test")
+
+
+def test_pending_send_can_be_cancelled_by_human_before_deadline(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    _stored_case("case-send-cancel")
+
+    schedule_auto_reply("case-send-cancel", decision=_auto_decision(), actor="SYSTEM")
+    cancel_send("case-send-cancel", actor="HUMAN:reviewer", reason="Cần kiểm tra thêm.")
+
+    row = db.fetch_one(
+        "SELECT status, send_deadline FROM cases WHERE case_id = ?", ("case-send-cancel",)
+    )
+    events = events_for_case("case-send-cancel", database_path=str(database_path))
+    assert row is not None
+    assert row["status"] == CaseStatus.CANCELLED and row["send_deadline"] is None
+    assert [(event.action, event.actor) for event in events] == [
+        ("SEND_SCHEDULED", "SYSTEM"),
+        ("CANCEL_SEND", "HUMAN:reviewer"),
+    ]
+
+
+def test_pending_send_dispatches_after_deadline_and_cannot_be_rescheduled(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    _stored_case("case-send-due")
+    schedule_auto_reply("case-send-due", decision=_auto_decision(), actor="SYSTEM")
+
+    assert dispatch_due(
+        "case-send-due",
+        now=datetime.now(timezone.utc) + timedelta(seconds=PENDING_SEND_SECONDS + 1),
+    )
+    row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", ("case-send-due",))
+    assert row is not None and row["status"] == CaseStatus.SENT
+    with pytest.raises(ValueError, match="SENT"):
+        schedule_auto_reply("case-send-due", decision=_auto_decision(), actor="SYSTEM")
+
+
+def test_pending_send_can_escalate_and_sent_case_creates_linked_correction(
+    monkeypatch, tmp_path
+) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    _stored_case("case-send-escalate")
+    schedule_auto_reply("case-send-escalate", decision=_auto_decision(), actor="SYSTEM")
+    escalate_from_pending("case-send-escalate", actor="HUMAN:reviewer", reason="Cần quyết định.")
+    row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", ("case-send-escalate",))
+    assert row is not None and row["status"] == CaseStatus.AWAITING_HUMAN
+
+    _stored_case("case-sent-parent", status=CaseStatus.SENT)
+    child_id = create_correction_email(
+        "case-sent-parent",
+        actor="HUMAN:reviewer",
+        draft=DraftReply("Đính chính", "Nội dung đã đính chính.", [], True, []),
+    )
+    child = db.fetch_one("SELECT parent_case_id, status FROM cases WHERE case_id = ?", (child_id,))
+    events = events_for_case("case-sent-parent", database_path=str(database_path))
+    assert child is not None
+    assert child["parent_case_id"] == "case-sent-parent"
+    assert child["status"] == CaseStatus.PENDING_APPROVAL
+    assert events[-1].action == "CORRECTION_CREATED"
