@@ -17,3 +17,4 @@
 [H+00][Agent C] bắt đầu C-16 · trang tra cứu audit có lọc và liên kết theo case_id · không bị chặn
 [H+00][Agent C] xong C-16 · bảng audit lọc được đầy đủ event và xem chi tiết theo múi giờ +07:00 · không bị chặn
 [H+00][Agent C] bắt đầu C-23 · trang đo lường nội bộ với công thức cạnh từng chỉ số · không bị chặn
+[H+00][Agent C] xong C-23 · tám nhóm chỉ số và công thức hiển thị trực tiếp cho Slide 3/5 · không bị chặn
