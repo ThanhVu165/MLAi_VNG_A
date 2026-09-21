@@ -412,6 +412,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 1 · 6
 
 ### B-18 · Test làn B
+- **Trạng thái:** WIP
 - **Khối:** B4 · **Ước lượng:** 1.5h · **Phụ thuộc:** B-07, B-08
 - **File:** `tests/test_chunker.py`, `tests/test_conflict.py`, `tests/test_corpus_api.py`
 - **Việc phải làm:** Chunker giữ đúng Điều/Khoản; conflict phát hiện đúng cặp seed #3/#5; `corpus.api` giữ đúng chữ ký contract và **không trả chunk của tài liệu không ACTIVE**.
