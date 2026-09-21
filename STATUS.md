@@ -13,6 +13,9 @@
 [H+00][Agent A] xong A-14 · ba YAML chính sách đã kiểm tra xanh.
 [H+00][Agent A] xong A-01 · pipeline fail-safe đã kiểm tra xanh.
 [H+00][Agent A] đang làm A-02 · chặn bởi 17 lỗi mypy có sẵn ở page 4 của Agent C.
+[H+00][Agent A] xong A-02 · intake lưu case/audit và khóa corpus_version · full check xanh.
+[H+00][Agent A] xong A-03 · sanitize HTML, quote, chữ ký và NFC đã kiểm tra xanh.
+[H+00][Agent A] A-08 · prompt/schema và mapper xanh; schema tương thích SDK, nhưng chờ Agent C cấu hình model Gemini khả dụng để kiểm chứng 8 email LLM.
 [H+00][Agent C] bắt đầu C-05 · hoàn thiện API audit và kiểm tra chuỗi event · không bị chặn
 [H+00][Agent C] xong C-05 · audit validate action/reason, lưu UTC và truy vấn chuỗi event đã kiểm tra · không bị chặn
 [H+00][Agent C] bắt đầu C-06 · tính telemetry trực tiếp từ SQLite, không lưu bản sao · không bị chặn
@@ -24,3 +27,9 @@
 [H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
 [H+00][Agent B] B-02 đã hoàn tất CRUD nguồn/chunk/version · 7 test xanh · full check còn lỗi format/cấu hình Mypy ngoài phạm vi B
 [H+00][Agent B] B-03 đã hoàn tất nạp file/text/URL, chống trùng SHA-256 và audit · full check 15 test xanh
+[H+00][Agent B] B-04 đã hoàn tất trích xuất PDF/DOCX, bỏ lề lặp và giữ Điều/Khoản/Điểm · 17 test xanh
+[H+00][Agent B] B-16 đã hoàn tất kiểm tra thủ công URL nguồn, tạo bản PENDING_REVIEW khi đổi và ghi audit · 18 test xanh
+[H+00][Agent B] B-05 đã hoàn tất đề xuất metadata LLM từ 3.000 ký tự đầu, giữ dữ liệu không chắc là null · 19 test xanh
+[H+00][Agent B] B-07 đã hoàn tất chunk theo Điều/Khoản/Điểm, giữ breadcrumb và tách Khoản dài trên 800 token · 20 test xanh
+[H+00][Agent B] B-06 đã hoàn tất form metadata, validate và audit diff trường đã sửa · 21 test xanh
+[H+00][Agent B] B-08 đã ghi cờ conflict và lịch supersede; chờ B-12/A-12 nối runtime OUT_OF_POLICY · 22 test xanh

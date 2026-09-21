@@ -112,7 +112,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Xong khi:** Gọi `process_case()` với input mẫu trả về `PipelineResult` hợp lệ, không ném exception dù bước con ném lỗi.
 
 ### A-02 · R0 Intake
-- **Trạng thái:** BLOCKED
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 1h · **Phụ thuộc:** A-01, C-02
 - **File:** `core/pipeline.py`
 - **Việc phải làm:** Sinh `case_id` (`c_` + ULID) và `trace_id`; lấy `corpus_version` qua `corpus.api.get_corpus_version()` và **đóng băng cho suốt case**; ghi hàng vào `cases` với status `RECEIVED`; ghi audit `CASE_RECEIVED`; kiểm tra trường bắt buộc, thiếu thì `INVALID_INPUT`.
@@ -120,6 +120,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 6 (truy xuất được xử lý trên dữ liệu nào)
 
 ### A-03 · R1 Sanitize — bóc chữ ký, quote, HTML
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 2h · **Phụ thuộc:** A-01
 - **File:** `core/sanitize.py`
 - **Việc phải làm:** Gỡ thẻ HTML; cắt phần trích dẫn email cũ (`On ... wrote:`, `Vào ... đã viết:`, dòng bắt đầu bằng `>`, `-----Original Message-----`); cắt chữ ký (`--`, `Trân trọng`, `Best regards`, khối thông tin liên hệ cuối thư); chuẩn hóa NFC; gộp khoảng trắng thừa. Giữ `body_raw` nguyên vẹn.
@@ -153,6 +154,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 3 (8đ) · tránh mất điểm over-escalation
 
 ### A-08 · R2 Prompt và schema trích xuất
+- **Trạng thái:** WIP
 - **Khối:** B1 · **Ước lượng:** 2.5h · **Phụ thuộc:** A-01, C-04
 - **File:** `core/extract.py`
 - **Việc phải làm:** Viết `EXTRACT_PROMPT_V1` và JSON schema đúng Mục 5.2 spec (`Extraction` + `RequestItem`). Prompt nói rõ: chỉ trích xuất, không suy đoán, không trả lời; trường nào không chắc thì để trống và thêm vào `missing_critical_facts`. Gọi qua `infra.llm.call_json(step="R2_extract")`, `temperature=0`.
@@ -311,24 +313,28 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Xong khi:** Nạp cùng một file hai lần chỉ tạo một hàng `sources`.
 
 ### B-04 · K2 Trích xuất và chuẩn hóa văn bản
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 3h · **Phụ thuộc:** B-03
 - **File:** `corpus/extract_doc.py`
 - **Việc phải làm:** PDF → text (`pdfplumber`), DOCX → text (`python-docx`); bỏ header/footer lặp bằng cách đếm dòng xuất hiện trên đa số trang; **giữ nguyên đánh số Điều / Khoản / Điểm**; chuẩn hóa dấu tiếng Việt về NFC; gộp dòng bị ngắt giữa câu.
 - **Xong khi:** Với 6 tài liệu seed, mọi tiêu đề `Điều N.` đều còn nguyên và nằm đầu dòng. **Mất đánh số là hỏng toàn bộ breadcrumb, kéo theo mất điểm chất lượng câu hỏi.**
 
 ### B-05 · K3 LLM đề xuất metadata
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 2h · **Phụ thuộc:** B-04, C-04
 - **File:** `corpus/metadata.py`
 - **Việc phải làm:** Prompt `METADATA_PROMPT_V1` sinh bản nháp đúng schema Mục 9.1 spec từ 3000 ký tự đầu của tài liệu. Trường không suy ra được thì để `null`, **không bịa**. Đặc biệt chú ý `supersedes`, `effective_from`, `cohorts`, `transitional_clause`.
 - **Xong khi:** Trên 6 tài liệu seed, schema hợp lệ 6/6 và `transitional_clause` đúng với tài liệu số 1.
 
 ### B-06 · K3 Biểu mẫu người sửa và kiểm tra hợp lệ
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 2h · **Phụ thuộc:** B-05
 - **File:** `corpus/metadata.py`, `pages/3_Quan_tri_quy_dinh.py`
 - **Việc phải làm:** Form Streamlit hiển thị bản nháp cho người sửa từng trường; validate: `effective_from` ≤ `effective_to`, `domains` thuộc danh sách hợp lệ, `document_id` duy nhất; lưu với `status=PENDING_REVIEW`; ghi audit `SOURCE_METADATA_EDITED` với diff trường nào đổi.
 - **Xong khi:** Không lưu được metadata sai định dạng; mọi lần sửa đều có dấu vết audit.
 
 ### B-07 · K4 Chunker theo đơn vị pháp lý
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 3.5h · **Phụ thuộc:** B-04
 - **File:** `corpus/chunker.py`
 - **Việc phải làm:** Tách theo **Điều → Khoản → Điểm**, không theo cửa sổ token cố định. Mỗi chunk giữ `doc_id`, `article_no`, `clause_no`, `breadcrumb` dạng `QĐ 3150/2026 · Điều 8 · Khoản 2`, `ord`. Khoản quá dài (> 800 token) thì tách tiếp nhưng giữ nguyên breadcrumb và đánh dấu phần. Gán `domain` theo metadata của tài liệu.
@@ -336,6 +342,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 7 (chất lượng câu hỏi) · 6 (audit truy xuất nguồn)
 
 ### B-08 · K5 Kiểm tra mâu thuẫn và thay thế
+- **Trạng thái:** BLOCKED
 - **Khối:** B3 · **Ước lượng:** 3h · **Phụ thuộc:** B-07
 - **File:** `corpus/conflict.py`
 - **Việc phải làm:** Nếu `supersedes` trỏ tới tài liệu đang ACTIVE → **xếp lịch hạ cấp tài liệu đó khi kích hoạt** (không hạ ngay). Nếu hai tài liệu ACTIVE cùng domain có nội dung mâu thuẫn ở cùng chủ đề (heuristic: cùng chủ đề + hai con số/mốc thời gian khác nhau) → gắn `conflict_flag` và `conflict_with` cho cả hai chunk. Ghi audit.
@@ -390,6 +397,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 1 · 2 · Quy định về dữ liệu
 
 ### B-16 · Nút "Kiểm tra nguồn mới"
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 1h · **Phụ thuộc:** B-03
 - **File:** `corpus/intake.py`, `pages/3_Quan_tri_quy_dinh.py`
 - **Việc phải làm:** Admin bấm thủ công; hệ thống tải lại các URL đã đăng ký, so `sha256`, báo tài liệu nào đã đổi và đề xuất nạp bản mới vào `PENDING_REVIEW`. **Không chạy nền, không định kỳ.** Audit `SOURCE_RECHECKED`.

@@ -1,5 +1,9 @@
 # BLOCKERS.md
 
+- [B-08][Agent B] Đã ghi `conflict_flag`/`conflict_with` cho chunk ACTIVE và test phát hiện cặp nguồn mâu thuẫn. Chưa thể xác minh runtime trả `OUT_OF_POLICY` vì `corpus.api` còn dùng corpus stub; cần B-12 nối retrieval DB và A-12 đọc cờ conflict. Không sửa `core/` vượt phạm vi B-08.
+
+- [B-04][Agent B][đã xử lý 2026-09-21] Đã ghim `pdfplumber==0.11.4`; B-04 trích xuất PDF/DOCX và kiểm thử chuẩn hóa đã hoàn tất.
+
 - [B-02][Agent B] Logic B-02 đã pass 7 pytest; không thể đạt `make check` toàn repo vì `black --check .` báo `infra/db.py` chưa đúng format và `mypy --ignore-missing-imports .` nhận cùng file dưới hai module `db` và `infra.db`. Cả hai đều nằm ngoài phạm vi Agent B. Cần Agent C xử lý rồi B chạy lại full check, commit và chuyển B-02 sang DONE.
 
   - [đã xử lý 2026-09-21] Sau cập nhật C-04/C-05, Black và Mypy toàn repo đã xanh; B-03 xác nhận full check với 15 test pass.
@@ -15,6 +19,8 @@
 - [C-03][Agent C] `infra/settings.py` đã có đủ ngưỡng và override environment. Chưa thể kiểm tra import, chạy `make check`, hoặc quét core/corpus vì môi trường thiếu Python/Make và hai thư mục đó chưa tồn tại.
 # BLOCKERS
 
-- [A-02][Agent A] Full `mypy .` is blocked by 17 existing errors in `pages/4_Nhat_ky_kiem_toan.py:51,58`, owned by Agent C. A-02's Black, Ruff, `mypy core tests/test_guards.py`, and full pytest pass.
+- [A-08][Agent A] `GOOGLE_API_KEY` và SDK đã sẵn sàng; schema Gemini đã tương thích. Nhưng `infra.llm.DEFAULT_MODEL = "gemini-1.5-flash"` trả `NotFound`; thử `gemini-3.5-flash`. Cần Agent C cấu hình model Gemini khả dụng trong `infra/` rồi Agent A chạy lại 8 mẫu thật.
+
+- [A-02][Agent A][đã gỡ] Full `mypy .` was blocked by 17 errors in Agent C's audit page. Black, Ruff, mypy, and pytest now pass.
 
 - [A-01] Full `make check` is unavailable: this repository has no Makefile and Python 3.11 has no `mypy` module. The targeted pytest smoke check plus Black and Ruff pass.
