@@ -1,4 +1,5 @@
 from dataclasses import replace
+from collections.abc import Sequence
 from time import perf_counter
 
 from core.types import Domain, SourceStatus
@@ -13,7 +14,7 @@ from corpus.store import (
 
 
 class FakeEncoder:
-    def encode(self, texts: list[str], **_: object) -> list[list[float]]:
+    def encode(self, texts: Sequence[str], **_: object) -> list[list[float]]:
         return [
             [float("thang" in text.casefold()), float("điểm" in text.casefold())] for text in texts
         ]
