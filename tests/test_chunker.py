@@ -17,6 +17,7 @@ from corpus.intake import (
     ingest_url,
     recheck_url_sources,
 )
+from corpus.metadata import METADATA_SCHEMA, propose_metadata
 from corpus.store import (
     ChunkRecord,
     CorpusVersionRecord,
@@ -194,6 +195,51 @@ def test_recheck_url_sources_reports_changes_and_creates_pending_source(tmp_path
     assert [event.action for event in recent_events(database_path=str(database_path))].count(
         "SOURCE_RECHECKED"
     ) == 2
+
+
+def test_metadata_proposal_uses_excerpt_and_keeps_unknown_fields_null(monkeypatch) -> None:
+    documents = [f"TÀI LIỆU SỐ {number}\nĐiều {number}. Nội dung." for number in range(1, 7)]
+    prompts: list[str] = []
+
+    def fake_call(prompt, *, schema, step, case_id, temperature):
+        prompts.append(prompt)
+        number = next(
+            (number for number in range(1, 7) if f"TÀI LIỆU SỐ {number}" in prompt), 1
+        )
+        assert schema == METADATA_SCHEMA
+        assert step == "K3_metadata"
+        assert temperature == 0.0
+        return SimpleNamespace(
+            ok=True,
+            data={
+                "document_id": f"DOC-{number}",
+                "title": f"Tài liệu {number}",
+                "issuer": None,
+                "published_at": None,
+                "effective_from": None,
+                "effective_to": None,
+                "applies_to": None,
+                "cohorts": None,
+                "supersedes": ["DOC-OLD"] if number == 1 else None,
+                "transitional_clause": number == 1,
+                "domains": ["conduct_score"],
+                "status": "PENDING_REVIEW",
+                "content_hash": None,
+            },
+            error=None,
+        )
+
+    monkeypatch.setattr("corpus.metadata.call_json", fake_call)
+    proposals = [propose_metadata(document, case_id=f"case-{number}") for number, document in enumerate(documents, 1)]
+
+    assert all(proposal.error is None and proposal.draft is not None for proposal in proposals)
+    assert proposals[0].draft.transitional_clause is True
+    assert proposals[0].draft.supersedes == ("DOC-OLD",)
+    assert proposals[1].draft.transitional_clause is False
+    assert proposals[1].draft.issuer is None
+    assert proposals[1].draft.cohorts is None
+    assert propose_metadata("x" * 3_001, case_id="case-long").error is None
+    assert prompts[-1].endswith("x" * 3_000)
 
 
 def test_normalize_pages_removes_repeated_margins_and_keeps_legal_headings() -> None:
