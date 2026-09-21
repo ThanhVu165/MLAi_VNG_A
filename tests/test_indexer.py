@@ -16,8 +16,7 @@ from corpus.store import (
 class FakeEncoder:
     def encode(self, texts: Sequence[str], **_: object) -> list[list[float]]:
         return [
-            [float("thang" in text.casefold()), float("điểm" in text.casefold())]
-            for text in texts
+            [float("thang" in text.casefold()), float("điểm" in text.casefold())] for text in texts
         ]
 
 
@@ -46,9 +45,7 @@ def test_indexes_only_active_sources_and_ranks_hybrid_result(tmp_path) -> None:
         database_path=database_path,
     )
     create_chunk(
-        ChunkRecord(
-            "old", "old", "QĐ cũ · Điều 1", "Thang điểm cũ.", Domain.CONDUCT_SCORE
-        ),
+        ChunkRecord("old", "old", "QĐ cũ · Điều 1", "Thang điểm cũ.", Domain.CONDUCT_SCORE),
         database_path=database_path,
     )
 
@@ -78,16 +75,9 @@ def test_downgrade_removes_document_when_index_rebuilt(tmp_path) -> None:
         ),
         database_path=database_path,
     )
-    assert build_active_index(
-        database_path=database_path, encoder=FakeEncoder()
-    ).search("điểm")
+    assert build_active_index(database_path=database_path, encoder=FakeEncoder()).search("điểm")
 
-    update_source(
-        replace(source, status=SourceStatus.SUPERSEDED), database_path=database_path
-    )
+    update_source(replace(source, status=SourceStatus.SUPERSEDED), database_path=database_path)
     assert (
-        build_active_index(database_path=database_path, encoder=FakeEncoder()).search(
-            "điểm"
-        )
-        == []
+        build_active_index(database_path=database_path, encoder=FakeEncoder()).search("điểm") == []
     )

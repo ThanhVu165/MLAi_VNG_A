@@ -281,11 +281,13 @@ def test_metadata_proposal_uses_excerpt_and_keeps_unknown_fields_null(monkeypatc
     ]
 
     assert all(proposal.error is None and proposal.draft is not None for proposal in proposals)
-    assert proposals[0].draft.transitional_clause is True
-    assert proposals[0].draft.supersedes == ("DOC-OLD",)
-    assert proposals[1].draft.transitional_clause is False
-    assert proposals[1].draft.issuer is None
-    assert proposals[1].draft.cohorts is None
+    first_draft, second_draft = proposals[0].draft, proposals[1].draft
+    assert first_draft is not None and second_draft is not None
+    assert first_draft.transitional_clause is True
+    assert first_draft.supersedes == ("DOC-OLD",)
+    assert second_draft.transitional_clause is False
+    assert second_draft.issuer is None
+    assert second_draft.cohorts is None
     assert propose_metadata("x" * 3_001, case_id="case-long").error is None
     assert prompts[-1].endswith("x" * 3_000)
 
@@ -314,7 +316,7 @@ def test_metadata_save_validates_and_writes_edit_audit(tmp_path: Path) -> None:
     assert [event.action for event in recent_events(database_path=str(database_path))] == [
         "SOURCE_METADATA_EDITED"
     ]
-    assert "domains" in recent_events(database_path=str(database_path))[0].reason
+    assert "domains" in (recent_events(database_path=str(database_path))[0].reason or "")
 
     updated = save_metadata(
         replace(draft, title="Quy định rèn luyện đã sửa", content_hash="hash-2"),
@@ -323,7 +325,7 @@ def test_metadata_save_validates_and_writes_edit_audit(tmp_path: Path) -> None:
         database_path=database_path,
     )
     assert updated.status is SourceStatus.PENDING_REVIEW
-    assert "title" in recent_events(database_path=str(database_path))[0].reason
+    assert "title" in (recent_events(database_path=str(database_path))[0].reason or "")
 
     invalid_dates = replace(draft, document_id="RL-2026-3151", effective_to="2026-07-06")
     invalid_domain = replace(draft, document_id="RL-2026-3152", domains=("other",))
@@ -364,7 +366,7 @@ def test_chunker_keeps_legal_units_breadcrumbs_and_long_clause_content() -> None
     long_chunks = [chunk for chunk in third if chunk.clause_no == "2"]
     assert len(long_chunks) == 2
     assert {chunk.breadcrumb for chunk in long_chunks} == {"QĐ 5000/2026 · Điều 3 · Khoản 2"}
-    assert all(chunk.token_count <= 800 for chunk in long_chunks)
+    assert all(chunk.token_count is not None and chunk.token_count <= 800 for chunk in long_chunks)
     assert [chunk.ordinal for chunk in first] == list(range(1, len(first) + 1))
 
 
@@ -390,7 +392,7 @@ def test_chunk_labels_default_to_human_only_and_each_change_writes_one_audit(
     events = recent_events(database_path=str(database_path))
     assert len(events) == 1
     assert events[0].action == "CHUNK_LABELLED"
-    assert "human_only sang auto_answerable" in events[0].reason
+    assert "human_only sang auto_answerable" in (events[0].reason or "")
 
     monkeypatch.setattr(
         "corpus.coverage.call_json",
@@ -399,10 +401,8 @@ def test_chunk_labels_default_to_human_only_and_each_change_writes_one_audit(
         ),
     )
     assert suggest_chunk_label(updated, case_id="test").label is ChunkLabel.AUTO_ANSWERABLE
-    assert (
-        get_chunk_record(chunk.chunk_id, database_path=database_path).label
-        is ChunkLabel.AUTO_ANSWERABLE
-    )
+    stored_chunk = get_chunk_record(chunk.chunk_id, database_path=database_path)
+    assert stored_chunk is not None and stored_chunk.label is ChunkLabel.AUTO_ANSWERABLE
 
 
 def test_normalize_pages_removes_repeated_margins_and_keeps_legal_headings() -> None:
