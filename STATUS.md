@@ -8,6 +8,7 @@
 [H+00][Agent C] C-03 đã đặt đủ ngưỡng trong settings · chặn bởi thiếu Python/Make và core/corpus chưa có để kiểm tra
 [H+00][Agent C] đang duy trì S-09 · đã tạo sổ giới hạn với các quan sát thực tế ban đầu · không bị chặn
 [H+00][Agent C] đã thêm infra.db.to_utc_iso · Agent A dùng hàm này cho cases.received_at, không dùng now_iso()
+[H+00][Agent C] đã sửa typing trang Audit · mypy --ignore-missing-imports . xanh (20 file) · Agent A có thể tiếp tục A-02
 [H+00][Agent A] đang làm A-01 · chặn bởi `make check` chưa khả dụng (thiếu Makefile, mypy).
 [H+00][Agent A] xong A-14 · ba YAML chính sách đã kiểm tra xanh.
 [H+00][Agent A] xong A-01 · pipeline fail-safe đã kiểm tra xanh.
