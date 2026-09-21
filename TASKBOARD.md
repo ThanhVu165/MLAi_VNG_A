@@ -20,7 +20,7 @@
 Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 
 ### S-01 · Đóng băng contract `core/types.py`
-- **Trạng thái:** BLOCKED
+- **Trạng thái:** DONE
 - **Khối:** B0 · **Ước lượng:** 2h · **Phụ thuộc:** — · **Người làm:** cả 3, A cầm bút
 - **File:** `core/types.py`
 - **Việc phải làm:**
@@ -103,6 +103,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-14 (trái tim) → A-21 (nối dọc) → A-15..A-18 → A-19, A-20, A-24 → A-22, A-23 → A-25, A-26.
 
 ### A-01 · Khung package `core/` và bộ khung pipeline
+- **Trạng thái:** WIP
 - **Khối:** B0 · **Ước lượng:** 1h · **Phụ thuộc:** S-01
 - **File:** `core/__init__.py`, `core/pipeline.py`
 - **Việc phải làm:** Tạo package; định nghĩa `process_case()` với chữ ký đúng contract; dựng khung 14 bước dưới dạng hàm rỗng gọi tuần tự; mỗi bước bọc trong bộ đo thời gian ghi vào `step_latencies_ms`; bọc toàn bộ trong `try/except` trả `PipelineResult` fail-safe.
