@@ -1,4 +1,7 @@
 version: 1
+limits:
+  options_min: 2
+  options_max: 4
 phrases:
   - "vui lòng xem xét"
   - "kiểm tra lại"

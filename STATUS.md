@@ -56,3 +56,4 @@
 [H+00][Agent A] A-15 đã hoàn tất sinh draft chỉ từ evidence, citation mỗi đoạn và đúng ngôn ngữ · 55 test xanh
 [H+00][Agent A] A-17 đã hoàn tất thẻ escalation bốn khối, facts/evidence và câu hỏi có phương án · 56 test xanh
 [H+00][Agent A] A-16 đã hoàn tất Groundedness Guard, hạ cấp P04 và giữ nguyên draft khi fail · 59 test xanh
+[H+00][Agent A] A-18 đã hoàn tất Question Guard, retry một lần rồi fallback YAML khi vẫn lỗi · 61 test xanh

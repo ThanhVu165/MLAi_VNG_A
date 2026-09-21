@@ -10,6 +10,7 @@ from core.evidence import validate_evidence
 from core.generate import generate_reply
 from core.ground_guard import guard_groundedness
 from core.question_gen import generate_escalation_card
+from core.question_guard import guard_question, question_failures
 from core.retrieval import retrieve_evidence
 from core.sanitize import detect_language, mask_pii, sanitize_body
 from core.types import (
@@ -22,6 +23,7 @@ from core.types import (
     EvidenceChunk,
     EvidenceResult,
     EvidenceStatus,
+    EscalationCard,
     EscalationType,
     Extraction,
     RequestItem,
@@ -784,3 +786,69 @@ def test_ground_guard_covers_citation_authority_and_ratio(monkeypatch, tmp_path)
     assert ratio_result.decision is not None and ratio_result.decision.reason.endswith(
         "citation_ratio"
     )
+
+
+def _card(**changes: object) -> EscalationCard:
+    values: dict[str, object] = {
+        "summary": "Cần xác định số tiền đúng trên hóa đơn mờ.",
+        "facts": ["450.000₫"],
+        "basis": [("Điều 1", "Căn cứ.")],
+        "question": "Anh/chị xác nhận số tiền 450.000₫ có đúng không?",
+        "options": ["Đúng", "Không đúng"],
+        "escalation_type": EscalationType.FACT_UNRESOLVED,
+        "partial_draft": None,
+    }
+    values.update(changes)
+    return EscalationCard(**values)  # type: ignore[arg-type]
+
+
+def test_question_guard_reports_each_quality_rule() -> None:
+    cases = (
+        (_card(question="Anh/chị xác nhận số tiền 450.000₫ có đúng không."), "ends_with_question"),
+        (_card(question="450.000₫?"), "word_count"),
+        (_card(question="Anh/chị xác nhận 450.000₫ không??"), "question_count"),
+        (_card(question="Anh/chị xác nhận số tiền 480.000₫ có đúng không?"), "fact"),
+        (_card(options=["Đúng"]), "options"),
+        (_card(basis=[]), "breadcrumb"),
+        (_card(question="Nhờ anh/chị xem xét lại số tiền 450.000₫ có đúng không?"), "blocklist"),
+    )
+
+    for card, expected_failure in cases:
+        assert expected_failure in question_failures(card)
+
+
+def test_question_guard_regenerates_once_then_uses_yaml_fallback(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    calls = 0
+
+    def regenerate_good() -> EscalationCard:
+        nonlocal calls
+        calls += 1
+        return _card()
+
+    regenerated = guard_question(
+        case_id="case-question-regen",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=_card(question="Nhờ anh/chị xem xét lại trường hợp này."),
+        regenerate=regenerate_good,
+    )
+
+    def regenerate_bad() -> EscalationCard:
+        nonlocal calls
+        calls += 1
+        return _card(question="Nhờ anh/chị xem xét lại trường hợp này.")
+
+    fallback = guard_question(
+        case_id="case-question-fallback",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=_card(question="Nhờ anh/chị xem xét lại trường hợp này."),
+        regenerate=regenerate_bad,
+    )
+
+    assert calls == 2
+    assert regenerated.question == _card().question
+    assert "xem xét lại trường hợp này" not in fallback.question
+    assert len(fallback.options) == 2
