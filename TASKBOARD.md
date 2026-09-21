@@ -570,6 +570,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 2 (bảng có dấu thời gian là yêu cầu tường minh)
 
 ### C-23 · Trang 6 — Đo lường
+- **Trạng thái:** WIP
 - **Khối:** B4 · **Ước lượng:** 2h · **Phụ thuộc:** C-06
 - **File:** `pages/6_Do_luong.py`
 - **Việc phải làm:** Hiển thị 8 chỉ số Mục 11.1 spec kèm **định nghĩa công thức ngay cạnh mỗi con số**. Tách rõ hai nhóm: *chỉ số hiệu quả* và *chỉ số rủi ro* (`pct_approved_under_5s`, `override_rate`, `groundedness_fail_rate`). Ghi rõ dữ liệu hiện tại là từ chạy nội bộ, chưa phải người dùng thật.
