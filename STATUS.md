@@ -50,3 +50,4 @@
 [H+00][Agent A] A-07 đã hoàn tất ba chốt R1: invalid input không vào hàng chờ, ngoài vi/en chuyển OUT_OF_POLICY · 41 test xanh
 [H+00][Agent A] A-11 đã hoàn tất adapter R4 qua corpus.api, audit chunk_id và fail-safe corpus rỗng/lỗi · 44 test xanh
 [H+00][Agent A] A-12 đã hoàn tất bảy kiểm tra evidence theo thứ tự, audit mọi failed_checks · 47 test xanh
+[H+00][Agent A] A-13 đã hoàn tất Policy Engine YAML với parser whitelist, P01–P05 và P04 fail-safe · 53 test xanh
