@@ -30,7 +30,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 - **Xong khi:** `main` có `core/types.py`, test contract xanh, cả ba agent đã ACK. Từ đây mọi sửa đổi phải theo quy trình CONTRACT-CHANGE ở AGENT.md Mục 3.
 
 ### S-02 · Chốt lược đồ SQLite và danh mục `action`
-- **Trạng thái:** WIP
+- **Trạng thái:** BLOCKED
 - **Khối:** B0 · **Ước lượng:** 1h · **Phụ thuộc:** — · **Người làm:** C cầm bút, A và B duyệt
 - **File:** `infra/migrations/001_init.sql`, `PROJECT_SPEC.md` Mục 6–7
 - **Việc phải làm:**
@@ -407,6 +407,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia chờ) → C-07..C-12 → C-13..C-17 → C-18..C-22 (Verify) → C-23..C-25 → C-26..C-29.
 
 ### C-01 · Dựng repo và công cụ
+- **Trạng thái:** WIP
 - **Khối:** B0 · **Ước lượng:** 1.5h · **Phụ thuộc:** —
 - **File:** `README.md`, `requirements.txt`, `Makefile`, `.gitignore`, `.env.example`, `.streamlit/config.toml`
 - **Việc phải làm:** Tạo repo **công khai** ngay từ đầu; bật branch protection cho `main` (**chặn force-push**); `requirements.txt` ghim phiên bản; `Makefile` có `make check` = black + ruff + mypy + pytest; `.gitignore` loại `data/app.db`, `.env`, cache embedding; tạo ba nhánh `agent-a/`, `agent-b/`, `agent-c/`.
