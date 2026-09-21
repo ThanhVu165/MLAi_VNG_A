@@ -20,11 +20,13 @@ from infra.audit import events_for_case
 from infra.llm import LLMResult
 
 
-def _input(*, sender: str = "student@example.edu") -> CaseInput:
+def _input(
+    *, sender: str = "student@example.edu", body: str = "Em cần biết quy trình xử lý yêu cầu này?"
+) -> CaseInput:
     return CaseInput(
         sender=sender,
         subject="Hỏi quy trình",
-        body="Em cần biết quy trình xử lý yêu cầu này.",
+        body=body,
         received_at=datetime(2026, 9, 21, 8, 30, tzinfo=timezone(timedelta(hours=7))),
         channel="paste",
     )
@@ -61,6 +63,25 @@ def test_r0_marks_missing_required_input_invalid(monkeypatch, tmp_path) -> None:
     assert result.decision.decision is Decision.INVALID_INPUT
     assert result.status is CaseStatus.INVALID_INPUT
     assert row is not None and row["status"] == CaseStatus.INVALID_INPUT
+
+
+def test_r1_cheap_guards_keep_invalid_input_out_of_human_queue(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+
+    short_result = pipeline.process_case(_input(body="hi"))
+    empty_result = pipeline.process_case(_input(body=""))
+    foreign_result = pipeline.process_case(_input(body="こんにちは、質問があります"))
+    statuses = db.fetch_all("SELECT status FROM cases", database_path=database_path)
+
+    assert short_result.status is CaseStatus.INVALID_INPUT
+    assert short_result.decision.decision is Decision.INVALID_INPUT
+    assert empty_result.status is CaseStatus.INVALID_INPUT
+    assert empty_result.decision.decision is Decision.INVALID_INPUT
+    assert foreign_result.status is CaseStatus.AWAITING_HUMAN
+    assert foreign_result.decision.decision is Decision.ESCALATE
+    assert foreign_result.decision.escalation_type is EscalationType.OUT_OF_POLICY
+    assert [row["status"] for row in statuses].count(CaseStatus.AWAITING_HUMAN) == 0
 
 
 def test_sanitize_removes_quotes_signatures_html_and_extra_whitespace() -> None:

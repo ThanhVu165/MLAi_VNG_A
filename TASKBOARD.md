@@ -150,7 +150,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 3 (8đ)
 
 ### A-07 · R1 Ba chốt chặn rẻ
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 1h · **Phụ thuộc:** A-03, A-04
 - **File:** `core/sanitize.py`
 - **Việc phải làm:** Cài ba luật ở Mục 8.1 spec: body rỗng → `INVALID_INPUT`; dưới 15 từ và không có dấu hỏi/từ để hỏi → `INVALID_INPUT` kèm câu hỏi lại cụ thể; ngôn ngữ ngoài vi/en → `ESCALATE / OUT_OF_POLICY`. Ba chốt này **không gọi LLM**.

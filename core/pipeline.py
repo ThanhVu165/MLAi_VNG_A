@@ -10,7 +10,7 @@ from typing import TypeVar
 from uuid import uuid4
 
 from corpus.api import get_corpus_version
-from core.sanitize import mask_pii
+from core.sanitize import InputGuardResult, guard_input, mask_pii, sanitize_body
 from core.types import (
     CaseInput,
     CaseStatus,
@@ -41,6 +41,7 @@ class _Intake:
     trace_id: str
     corpus_version: str
     status: CaseStatus
+    input_guard: InputGuardResult
 
 
 def _new_ulid() -> str:
@@ -58,7 +59,12 @@ def _is_missing_required(inp: CaseInput) -> bool:
 
 def _r0_intake(inp: CaseInput, actor: str, case_id: str, trace_id: str) -> _Intake:
     corpus_version = get_corpus_version()
-    status = CaseStatus.INVALID_INPUT if _is_missing_required(inp) else CaseStatus.RECEIVED
+    input_guard = guard_input(sanitize_body(inp.body))
+    status = (
+        CaseStatus.INVALID_INPUT
+        if _is_missing_required(inp) or input_guard.decision is Decision.INVALID_INPUT
+        else CaseStatus.RECEIVED
+    )
     execute(
         """
         INSERT INTO cases (
@@ -85,10 +91,14 @@ def _r0_intake(inp: CaseInput, actor: str, case_id: str, trace_id: str) -> _Inta
         actor=actor,
         action="CASE_RECEIVED",
         input_ref=case_id,
-        reason=INVALID_INPUT_REASON if status is CaseStatus.INVALID_INPUT else RECEIVED_REASON,
+        reason=(
+            (input_guard.reason or INVALID_INPUT_REASON)
+            if status is CaseStatus.INVALID_INPUT
+            else RECEIVED_REASON
+        ),
         corpus_version=corpus_version,
     )
-    return _Intake(case_id, trace_id, corpus_version, status)
+    return _Intake(case_id, trace_id, corpus_version, status, input_guard)
 
 
 def _r1_sanitize() -> None:
@@ -184,12 +194,23 @@ def _fail_safe_decision(corpus_version: str) -> PolicyDecision:
     )
 
 
-def _invalid_input_decision(corpus_version: str) -> PolicyDecision:
+def _invalid_input_decision(corpus_version: str, reason: str | None = None) -> PolicyDecision:
     return PolicyDecision(
         decision=Decision.INVALID_INPUT,
         escalation_type=None,
         rule_id="R0",
-        reason=INVALID_INPUT_REASON,
+        reason=reason or INVALID_INPUT_REASON,
+        evidence_ids=[],
+        corpus_version=corpus_version,
+    )
+
+
+def _out_of_policy_decision(corpus_version: str, reason: str) -> PolicyDecision:
+    return PolicyDecision(
+        decision=Decision.ESCALATE,
+        escalation_type=EscalationType.OUT_OF_POLICY,
+        rule_id="R1",
+        reason=reason,
         evidence_ids=[],
         corpus_version=corpus_version,
     )
@@ -231,11 +252,22 @@ def process_case(inp: CaseInput, *, actor: str = "SYSTEM") -> PipelineResult:
             return _result(
                 intake,
                 intake.status,
-                _invalid_input_decision(intake.corpus_version),
+                _invalid_input_decision(intake.corpus_version, intake.input_guard.reason),
                 latencies,
                 started_at,
             )
-        for name, step in STEPS:
+        input_guard = _run_step("R1", lambda: intake.input_guard, latencies)
+        if input_guard.decision is Decision.ESCALATE:
+            return _result(
+                intake,
+                CaseStatus.AWAITING_HUMAN,
+                _out_of_policy_decision(
+                    intake.corpus_version, input_guard.reason or FAIL_SAFE_REASON
+                ),
+                latencies,
+                started_at,
+            )
+        for name, step in STEPS[1:]:
             _run_step(name, step, latencies)
         return _result(
             intake,
@@ -246,7 +278,9 @@ def process_case(inp: CaseInput, *, actor: str = "SYSTEM") -> PipelineResult:
         )
     except Exception:
         logger.exception("Pipeline failed safely", extra={"case_id": case_id, "trace_id": trace_id})
-        failed_intake = intake or _Intake(case_id, trace_id, "", CaseStatus.ERROR)
+        failed_intake = intake or _Intake(
+            case_id, trace_id, "", CaseStatus.ERROR, InputGuardResult(None, None, None)
+        )
         return _result(
             failed_intake,
             CaseStatus.ERROR,

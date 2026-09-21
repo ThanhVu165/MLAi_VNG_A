@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import Literal
 
+from core.types import Decision, EscalationType
+from infra.settings import MIN_WORDS_GUARD
+
 QUOTE_MARKER = re.compile(
     r"^(?:on .+ wrote:|vào .+ đã viết:|-----original message-----|>)", re.IGNORECASE
 )
@@ -64,6 +67,25 @@ ENGLISH_KEYWORDS = frozenset(
         "my",
         "score",
         "process",
+        "hi",
+    }
+)
+QUESTION_WORDS = frozenset(
+    {
+        "ai",
+        "gì",
+        "gi",
+        "nào",
+        "nao",
+        "khi",
+        "bao",
+        "sao",
+        "how",
+        "what",
+        "when",
+        "where",
+        "why",
+        "who",
     }
 )
 OTHER_SCRIPT_RANGES = (("\u0400", "\u052f"), ("\u3040", "\u30ff"), ("\u3400", "\u9fff"))
@@ -90,6 +112,13 @@ INJECTION_PATTERN = re.compile(
 class InjectionRemoval:
     body: str
     removed: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class InputGuardResult:
+    decision: Decision | None
+    escalation_type: EscalationType | None
+    reason: str | None
 
 
 class _TextExtractor(HTMLParser):
@@ -181,3 +210,28 @@ def detect_language(body: str) -> Literal["vi", "en", "other"]:
     if len(words & ENGLISH_KEYWORDS) >= MIN_ENGLISH_KEYWORDS:
         return "en"
     return "other"
+
+
+def guard_input(body: str) -> InputGuardResult:
+    """Áp dụng ba chốt R1 trước khi email tới LLM hoặc hàng chờ."""
+    if not body.strip():
+        return InputGuardResult(
+            Decision.INVALID_INPUT,
+            None,
+            "Vui lòng gửi nội dung câu hỏi để hệ thống hỗ trợ.",
+        )
+    language = detect_language(body)
+    if language == "other":
+        return InputGuardResult(
+            Decision.ESCALATE,
+            EscalationType.OUT_OF_POLICY,
+            "Email không dùng tiếng Việt hoặc tiếng Anh nên cần chuyên viên hỗ trợ.",
+        )
+    words = set(re.findall(r"[a-zà-ỹđ]+", body.lower()))
+    if len(words) < MIN_WORDS_GUARD and "?" not in body and not words & QUESTION_WORDS:
+        return InputGuardResult(
+            Decision.INVALID_INPUT,
+            None,
+            "Vui lòng nêu rõ nội dung, quy định cần hỏi và học kỳ hoặc hoàn cảnh liên quan.",
+        )
+    return InputGuardResult(None, None, None)
