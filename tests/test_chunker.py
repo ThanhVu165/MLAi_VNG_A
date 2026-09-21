@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from docx import Document
 
 from core.types import ChunkLabel, Domain, SourceStatus
-from corpus.api import get_chunk, get_corpus_version, search, supported_domains
+from corpus import api
 from corpus import extract_doc
 from corpus.chunker import chunk_document
 from corpus.coverage import set_chunk_label, suggest_chunk_label
@@ -19,6 +19,7 @@ from corpus.intake import (
     ingest_url,
     recheck_url_sources,
 )
+from corpus.indexer import SearchResult
 from corpus.metadata import METADATA_SCHEMA, MetadataDraft, propose_metadata, save_metadata
 from corpus.seed import EXPECTED_CHUNK_COUNT, EXPECTED_DOCUMENT_COUNT, ensure_seeded
 from corpus.store import (
@@ -73,28 +74,43 @@ def test_seed_corpus_loads_once_with_human_approved_labels_and_conflicts(tmp_pat
     assert sum(row["conflict_flag"] == 1 for row in chunks) == 6
 
 
-def test_stub_corpus_api_exposes_contract_chunks() -> None:
-    domains = supported_domains()
-    chunks = [chunk for domain in domains for chunk in search("", [domain])]
+def test_corpus_api_reads_active_index_with_contract_types(monkeypatch) -> None:
+    source = SourceRecord(
+        doc_id="source-active",
+        effective_from="2026-01-01",
+        domains=(Domain.COURSE_WITHDRAWAL,),
+        status=SourceStatus.ACTIVE,
+    )
+    chunk = ChunkRecord(
+        "chunk-active",
+        source.doc_id,
+        "QĐ · Điều 2 · Khoản 1",
+        "Hạn chót rút học phần là 17 giờ thứ Sáu tuần 8.",
+        Domain.COURSE_WITHDRAWAL,
+        label=ChunkLabel.AUTO_ANSWERABLE,
+    )
+    result = SearchResult(chunk, 0.8, 0.7, 0.9)
+    monkeypatch.setattr(api, "search_active", lambda *_args, **_kwargs: [result])
+    monkeypatch.setattr(api, "get_source", lambda *_args, **_kwargs: source)
+    monkeypatch.setattr(api, "get_chunk_record", lambda *_args, **_kwargs: chunk)
+    monkeypatch.setattr(api, "list_sources", lambda *_args, **_kwargs: [source])
+    monkeypatch.setattr(api, "get_current_corpus_version", lambda: "cv_active")
 
-    assert domains == [Domain.CONDUCT_SCORE, Domain.COURSE_WITHDRAWAL, Domain.GRADE_APPEAL]
-    assert get_corpus_version() == "stub-v1"
-    assert len(chunks) == 12
-    assert sum(chunk.label is ChunkLabel.HUMAN_ONLY for chunk in chunks) == 2
-    assert sum(chunk.transitional_clause for chunk in chunks) == 1
-    assert get_chunk(chunks[0].chunk_id) == chunks[0]
-
-
-def test_search_filters_domains_and_limits_results() -> None:
-    chunks = search(
+    chunks = api.search(
         "Hạn chót rút học phần là khi nào?",
         [Domain.COURSE_WITHDRAWAL],
-        top_k=2,
+        top_k=1,
         at=datetime(2026, 9, 21, tzinfo=timezone.utc),
     )
 
-    assert len(chunks) == 2
-    assert {chunk.domain for chunk in chunks} == {Domain.COURSE_WITHDRAWAL}
+    assert api.get_corpus_version() == "cv_active"
+    assert api.supported_domains() == [Domain.COURSE_WITHDRAWAL]
+    assert chunks[0].chunk_id == chunk.chunk_id
+    assert chunks[0].score == result.score
+    stored_chunk = api.get_chunk(chunk.chunk_id)
+    assert stored_chunk is not None
+    assert stored_chunk.chunk_id == chunks[0].chunk_id
+    assert api.is_active(chunk.chunk_id) is True
 
 
 def test_store_versions_only_active_sources(tmp_path: Path) -> None:

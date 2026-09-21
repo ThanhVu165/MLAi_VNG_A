@@ -1,6 +1,6 @@
 # BLOCKERS.md
 
-- [B-08][Agent B] Đã ghi `conflict_flag`/`conflict_with` cho chunk ACTIVE và test phát hiện cặp nguồn mâu thuẫn. Chưa thể xác minh runtime trả `OUT_OF_POLICY` vì `corpus.api` còn dùng corpus stub; cần B-12 nối retrieval DB và A-12 đọc cờ conflict. Không sửa `core/` vượt phạm vi B-08.
+- [B-08][Agent B] Đã ghi `conflict_flag`/`conflict_with` cho chunk ACTIVE và test phát hiện cặp nguồn mâu thuẫn. [cập nhật 2026-09-21] `corpus.api` đã đọc index/nguồn ACTIVE thật; còn cần Agent A tiêu thụ `conflict_flag` trong Evidence Validator để xác minh runtime trả `OUT_OF_POLICY`. Không sửa `core/` vượt phạm vi B-08.
 
 - [B-04][Agent B][đã xử lý 2026-09-21] Đã ghim `pdfplumber==0.11.4`; B-04 trích xuất PDF/DOCX và kiểm thử chuẩn hóa đã hoàn tất.
 

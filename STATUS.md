@@ -24,3 +24,4 @@
 [H+00][Agent B] B-09 đã hoàn tất gán nhãn thẩm quyền từng chunk, con người chủ động đổi và có audit · 23 test xanh
 [H+00][Agent B] B-12 đã hoàn tất index hybrid BM25/vector chỉ trên nguồn ACTIVE, cache Streamlit và loại ngay tài liệu hạ cấp · 26 test xanh
 [H+00][Agent B] B-15 đã hoàn tất 6 tài liệu seed (72 chunk, 42 auto/30 human, is_synthetic=true) · Black/Ruff và 14 test chunker xanh; mypy bị chặn ở numpy stub ngoài phạm vi B
+[H+00][Agent B] Đã nối corpus.api vào index/nguồn ACTIVE thật · 16 test, Black/Ruff/Mypy mục tiêu xanh · chờ Agent A dùng conflict_flag để hoàn tất B-08
