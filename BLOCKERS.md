@@ -1,5 +1,9 @@
 # BLOCKERS.md
 
+- [B-02][Agent B] Logic B-02 đã pass 7 pytest; không thể đạt `make check` toàn repo vì `black --check .` báo `infra/db.py` chưa đúng format và `mypy --ignore-missing-imports .` nhận cùng file dưới hai module `db` và `infra.db`. Cả hai đều nằm ngoài phạm vi Agent B. Cần Agent C xử lý rồi B chạy lại full check, commit và chuyển B-02 sang DONE.
+
+  - [đã xử lý 2026-09-21] Sau cập nhật C-04/C-05, Black và Mypy toàn repo đã xanh; B-03 xác nhận full check với 15 test pass.
+
 - [S-02][Agent C][đã gỡ] Migration đã chạy thành công trên SQLite DB trống và xác nhận tạo đủ 12 bảng; `ACTIONS` là `frozenset`. Agent A và B đã ACK rà soát schema.
 
 - [B-01][Agent B] Contract mâu thuẫn: `corpus.api` phải nhận/trả `Domain` và `EvidenceChunk` theo Mục 5.3, nhưng hai type chỉ có trong `core.types` trong khi Mục 5.1 và chỉ dẫn Agent B cấm `corpus/` import `core/`. Không thể tạo instance `EvidenceChunk` hợp contract mà không vi phạm dependency; sao chép dataclass sẽ tạo type khác và phá consumer Runtime. Cần CONTRACT-CHANGE/ACK A+C để chọn: tách types dùng chung ra module trung lập hoặc cho phép riêng `corpus.api` import `core.types`.
