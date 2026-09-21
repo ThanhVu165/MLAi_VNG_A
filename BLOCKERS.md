@@ -1,5 +1,7 @@
 # BLOCKERS.md
 
+- [B-04][Agent B][đã xử lý 2026-09-21] Đã ghim `pdfplumber==0.11.4`; B-04 trích xuất PDF/DOCX và kiểm thử chuẩn hóa đã hoàn tất.
+
 - [B-02][Agent B] Logic B-02 đã pass 7 pytest; không thể đạt `make check` toàn repo vì `black --check .` báo `infra/db.py` chưa đúng format và `mypy --ignore-missing-imports .` nhận cùng file dưới hai module `db` và `infra.db`. Cả hai đều nằm ngoài phạm vi Agent B. Cần Agent C xử lý rồi B chạy lại full check, commit và chuyển B-02 sang DONE.
 
   - [đã xử lý 2026-09-21] Sau cập nhật C-04/C-05, Black và Mypy toàn repo đã xanh; B-03 xác nhận full check với 15 test pass.
