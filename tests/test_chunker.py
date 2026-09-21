@@ -9,6 +9,7 @@ from docx import Document
 from core.types import ChunkLabel, Domain, SourceStatus
 from corpus.api import get_chunk, get_corpus_version, search, supported_domains
 from corpus import extract_doc
+from corpus.chunker import chunk_document
 from corpus.extract_doc import extract_document, normalize_pages
 from corpus.intake import (
     SourceRecheckResult,
@@ -240,6 +241,43 @@ def test_metadata_proposal_uses_excerpt_and_keeps_unknown_fields_null(monkeypatc
     assert proposals[1].draft.cohorts is None
     assert propose_metadata("x" * 3_001, case_id="case-long").error is None
     assert prompts[-1].endswith("x" * 3_000)
+
+
+def test_chunker_keeps_legal_units_breadcrumbs_and_long_clause_content() -> None:
+    first = chunk_document(
+        "Điều 8. Rút học phần\nKhoản 2. Sinh viên nộp đơn.\nĐiểm a) Nộp trước hạn.",
+        doc_id="QD-3150",
+        document_title="QĐ 3150/2026",
+        domain=Domain.COURSE_WITHDRAWAL,
+    )
+    second = chunk_document(
+        "Điều 4. Phúc khảo\nKhoản 1. Chuyên viên tiếp nhận hồ sơ.",
+        doc_id="QD-4000",
+        document_title="QĐ 4000/2026",
+        domain=Domain.GRADE_APPEAL,
+    )
+    long_clause = " ".join(["nội_dung"] * 801)
+    third = chunk_document(
+        f"Điều 3. Điểm rèn luyện\nKhoản 2. {long_clause}",
+        doc_id="QD-5000",
+        document_title="QĐ 5000/2026",
+        domain=Domain.CONDUCT_SCORE,
+    )
+
+    assert all(chunk.text.strip() for chunk in first + second + third)
+    assert "QĐ 3150/2026 · Điều 8 · Khoản 2" in {
+        chunk.breadcrumb for chunk in first
+    }
+    assert "QĐ 3150/2026 · Điều 8 · Khoản 2 · Điểm a" in {
+        chunk.breadcrumb for chunk in first
+    }
+    assert "Điểm a) Nộp trước hạn." in "\n".join(chunk.text for chunk in first)
+    assert "Chuyên viên tiếp nhận hồ sơ." in "\n".join(chunk.text for chunk in second)
+    long_chunks = [chunk for chunk in third if chunk.clause_no == "2"]
+    assert len(long_chunks) == 2
+    assert {chunk.breadcrumb for chunk in long_chunks} == {"QĐ 5000/2026 · Điều 3 · Khoản 2"}
+    assert all(chunk.token_count <= 800 for chunk in long_chunks)
+    assert [chunk.ordinal for chunk in first] == list(range(1, len(first) + 1))
 
 
 def test_normalize_pages_removes_repeated_margins_and_keeps_legal_headings() -> None:
