@@ -426,7 +426,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Xong khi:** Xóa `app.db` rồi khởi động lại tạo đủ bảng; hai tiến trình đọc ghi đồng thời không lỗi `database is locked`.
 
 ### C-03 · `infra/settings.py` — mọi ngưỡng ở một chỗ
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B0 · **Ước lượng:** 45ph · **Phụ thuộc:** —
 - **File:** `infra/settings.py`
 - **Việc phải làm:** Khai báo có tên và comment: `SIMILARITY_THRESHOLD=0.35`, `CITATION_RATIO_MIN=0.6`, `PENDING_SEND_SECONDS=60`, `MIN_WORDS_GUARD=15`, `LLM_TIMEOUT_S=20`, `LLM_RETRIES=1`, `RETRIEVAL_TOP_K=6`, `QUESTION_WORDS_MIN/MAX=8/45`, `RECHECK_WINDOW_DAYS=30`. Đọc override từ biến môi trường.
