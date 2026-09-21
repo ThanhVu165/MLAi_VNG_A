@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import core.pipeline as pipeline
 from core.extract import EXTRACTION_SCHEMA, extract_facts
-from core.sanitize import sanitize_body
+from core.sanitize import detect_language, sanitize_body
 from core.types import CaseInput, CaseStatus, Decision
 from infra import db
 from infra.audit import events_for_case
@@ -66,6 +66,23 @@ def test_sanitize_removes_quotes_signatures_html_and_extra_whitespace() -> None:
     )
 
     assert [sanitize_body(raw) for raw, _ in cases] == [expected for _, expected in cases]
+
+
+def test_detect_language_handles_vietnamese_english_and_other() -> None:
+    cases = (
+        ("Em muốn biết hạn rút học phần.", "vi"),
+        ("Xin cho em hỏi quy định phúc khảo điểm.", "vi"),
+        ("Toi muon hoi han rut mon la khi nao", "vi"),
+        ("Cho em biet cach tinh diem ren luyen", "vi"),
+        ("Vui long huong dan thu tuc rut hoc phan", "vi"),
+        ("What is the deadline for course withdrawal?", "en"),
+        ("Please explain the grade appeal process.", "en"),
+        ("Can I see my conduct score?", "en"),
+        ("こんにちは、質問があります", "other"),
+        ("Это вопрос о курсе", "other"),
+    )
+
+    assert [detect_language(body) for body, _ in cases] == [expected for _, expected in cases]
 
 
 def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:

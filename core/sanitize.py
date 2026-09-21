@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from html.parser import HTMLParser
+from typing import Literal
 
 QUOTE_MARKER = re.compile(
     r"^(?:on .+ wrote:|vào .+ đã viết:|-----original message-----|>)", re.IGNORECASE
@@ -10,6 +11,63 @@ QUOTE_MARKER = re.compile(
 SIGNATURE_MARKER = re.compile(r"^(?:--|trân trọng|best regards)[,!]*$", re.IGNORECASE)
 CONTACT_MARKER = re.compile(r"^(?:email|e-mail|điện thoại|sđt|phone|tel)\s*[:|]", re.IGNORECASE)
 BLOCK_TAGS = frozenset({"br", "div", "li", "p", "tr"})
+VIETNAMESE_MARK_RATIO_MIN = 0.02
+VIETNAMESE_MARKS = frozenset("ăâđêôơưáàảãạấầẩẫậắằẳẵặèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ")
+VIETNAMESE_KEYWORDS = frozenset(
+    {
+        "em",
+        "toi",
+        "tôi",
+        "xin",
+        "hoi",
+        "hỏi",
+        "han",
+        "hạn",
+        "rut",
+        "rút",
+        "mon",
+        "môn",
+        "hoc",
+        "học",
+        "diem",
+        "điểm",
+        "quy",
+        "dinh",
+        "định",
+        "phuc",
+        "phúc",
+        "khao",
+        "khảo",
+        "vui",
+        "long",
+        "cach",
+        "thuc",
+        "tuc",
+    }
+)
+ENGLISH_KEYWORDS = frozenset(
+    {
+        "what",
+        "when",
+        "where",
+        "how",
+        "please",
+        "the",
+        "is",
+        "for",
+        "course",
+        "withdrawal",
+        "grade",
+        "appeal",
+        "can",
+        "my",
+        "score",
+        "process",
+    }
+)
+OTHER_SCRIPT_RANGES = (("\u0400", "\u052f"), ("\u3040", "\u30ff"), ("\u3400", "\u9fff"))
+MIN_VIETNAMESE_KEYWORDS = 2
+MIN_ENGLISH_KEYWORDS = 1
 
 
 class _TextExtractor(HTMLParser):
@@ -60,3 +118,25 @@ def sanitize_body(body: str) -> str:
     normalized = unicodedata.normalize("NFC", body)
     lines = _without_signature(_without_quote(_strip_html(normalized).splitlines()))
     return " ".join(" ".join(lines).split())
+
+
+def detect_language(body: str) -> Literal["vi", "en", "other"]:
+    """Nhận diện vi/en/other bằng ký tự và từ khóa, không gọi LLM."""
+    normalized = unicodedata.normalize("NFC", body).lower()
+    if any(
+        start <= character <= end for start, end in OTHER_SCRIPT_RANGES for character in normalized
+    ):
+        return "other"
+    letters = [character for character in normalized if character.isalpha()]
+    if (
+        letters
+        and sum(character in VIETNAMESE_MARKS for character in letters) / len(letters)
+        >= VIETNAMESE_MARK_RATIO_MIN
+    ):
+        return "vi"
+    words = set(re.findall(r"[a-zđ]+", normalized))
+    if len(words & VIETNAMESE_KEYWORDS) >= MIN_VIETNAMESE_KEYWORDS:
+        return "vi"
+    if len(words & ENGLISH_KEYWORDS) >= MIN_ENGLISH_KEYWORDS:
+        return "en"
+    return "other"
