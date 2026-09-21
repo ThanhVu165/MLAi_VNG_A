@@ -196,6 +196,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 7
 
 ### A-13 · R6 Policy Engine
+- **Trạng thái:** WIP
 - **Khối:** B2 · **Ước lượng:** 3h · **Phụ thuộc:** A-12, A-14
 - **File:** `core/policy_engine.py`
 - **Việc phải làm:** Đọc `policies/policy.yaml`; đánh giá `when` bằng **bộ giải biểu thức giới hạn** tự viết (whitelist `==`, `!=`, `in`, `and`, `or`, `not`, tên biến trong danh sách cho phép) — **cấm `eval()` trần**; duyệt theo thứ tự, dừng ở luật đầu khớp; trả `PolicyDecision` đủ `decision`, `escalation_type`, `rule_id`, `reason`, `evidence_ids`, `corpus_version`; ghi audit `POLICY_DECIDED`. Không khớp luật nào → coi là bug, ép về `P04`.
