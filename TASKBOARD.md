@@ -520,6 +520,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6 (4đ)
 
 ### C-16 · Trang 4 — Nhật ký kiểm toán
+- **Trạng thái:** WIP
 - **Khối:** B3 · **Ước lượng:** 3h · **Phụ thuộc:** C-05
 - **File:** `pages/4_Nhat_ky_kiem_toan.py`
 - **Việc phải làm:** Bảng mọi event sắp theo thời gian giảm dần, lọc theo `case_id`, `actor`, `action`, khoảng thời gian. Mỗi dòng mở rộng hiện đủ: **làm gì · lúc nào (+07:00) · trên dữ liệu nào (input_ref, sources) · vì lý do gì (reason) · theo luật nào (rule_id) · trên phiên bản corpus nào**. Bao gồm cả hành động quản trị và hành động corpus. Liên kết sâu từ mọi màn hình khác về đây.

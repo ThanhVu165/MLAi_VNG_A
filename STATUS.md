@@ -14,3 +14,4 @@
 [H+00][Agent C] xong C-05 · audit validate action/reason, lưu UTC và truy vấn chuỗi event đã kiểm tra · không bị chặn
 [H+00][Agent C] bắt đầu C-06 · tính telemetry trực tiếp từ SQLite, không lưu bản sao · không bị chặn
 [H+00][Agent C] xong C-06 · 15 case kiểm chứng các tỷ lệ, latency và thời gian duyệt từ SQLite · không bị chặn
+[H+00][Agent C] bắt đầu C-16 · trang tra cứu audit có lọc và liên kết theo case_id · không bị chặn
