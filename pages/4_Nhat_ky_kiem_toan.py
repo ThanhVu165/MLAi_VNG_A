@@ -45,9 +45,15 @@ case_id = st.text_input("Case ID", value=query_case_id, placeholder="Ví dụ: c
 actor = st.text_input("Actor", placeholder="SYSTEM, HUMAN: hoặc ADMIN:")
 action = st.selectbox("Hành động", ("Tất cả", *sorted(ACTIONS)))
 start_column, end_column = st.columns(2)
-start_date = start_column.date_input("Từ ngày", value=date.min)
-end_date = end_column.date_input("Đến ngày", value=date.today())
+start_value = start_column.date_input("Từ ngày", value=date.min)
+end_value = end_column.date_input("Đến ngày", value=date.today())
 
+if not isinstance(start_value, date) or not isinstance(end_value, date):
+    st.error("Bộ lọc ngày phải chọn đúng một ngày bắt đầu và một ngày kết thúc.")
+    st.stop()
+
+start_date = start_value
+end_date = end_value
 if start_date > end_date:
     st.error("Khoảng thời gian không hợp lệ: ngày bắt đầu phải không muộn hơn ngày kết thúc.")
     st.stop()
