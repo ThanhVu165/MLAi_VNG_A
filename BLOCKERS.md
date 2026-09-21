@@ -1,5 +1,7 @@
 # BLOCKERS.md
 
+- [B-08][Agent B] Đã ghi `conflict_flag`/`conflict_with` cho chunk ACTIVE và test phát hiện cặp nguồn mâu thuẫn. Chưa thể xác minh runtime trả `OUT_OF_POLICY` vì `corpus.api` còn dùng corpus stub; cần B-12 nối retrieval DB và A-12 đọc cờ conflict. Không sửa `core/` vượt phạm vi B-08.
+
 - [B-04][Agent B][đã xử lý 2026-09-21] Đã ghim `pdfplumber==0.11.4`; B-04 trích xuất PDF/DOCX và kiểm thử chuẩn hóa đã hoàn tất.
 
 - [B-02][Agent B] Logic B-02 đã pass 7 pytest; không thể đạt `make check` toàn repo vì `black --check .` báo `infra/db.py` chưa đúng format và `mypy --ignore-missing-imports .` nhận cùng file dưới hai module `db` và `infra.db`. Cả hai đều nằm ngoài phạm vi Agent B. Cần Agent C xử lý rồi B chạy lại full check, commit và chuyển B-02 sang DONE.

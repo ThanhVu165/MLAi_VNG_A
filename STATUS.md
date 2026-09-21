@@ -20,3 +20,4 @@
 [H+00][Agent B] B-05 đã hoàn tất đề xuất metadata LLM từ 3.000 ký tự đầu, giữ dữ liệu không chắc là null · 19 test xanh
 [H+00][Agent B] B-07 đã hoàn tất chunk theo Điều/Khoản/Điểm, giữ breadcrumb và tách Khoản dài trên 800 token · 20 test xanh
 [H+00][Agent B] B-06 đã hoàn tất form metadata, validate và audit diff trường đã sửa · 21 test xanh
+[H+00][Agent B] B-08 đã ghi cờ conflict và lịch supersede; chờ B-12/A-12 nối runtime OUT_OF_POLICY · 22 test xanh

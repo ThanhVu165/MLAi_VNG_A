@@ -339,7 +339,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 7 (chất lượng câu hỏi) · 6 (audit truy xuất nguồn)
 
 ### B-08 · K5 Kiểm tra mâu thuẫn và thay thế
-- **Trạng thái:** WIP
+- **Trạng thái:** BLOCKED
 - **Khối:** B3 · **Ước lượng:** 3h · **Phụ thuộc:** B-07
 - **File:** `corpus/conflict.py`
 - **Việc phải làm:** Nếu `supersedes` trỏ tới tài liệu đang ACTIVE → **xếp lịch hạ cấp tài liệu đó khi kích hoạt** (không hạ ngay). Nếu hai tài liệu ACTIVE cùng domain có nội dung mâu thuẫn ở cùng chủ đề (heuristic: cùng chủ đề + hai con số/mốc thời gian khác nhau) → gắn `conflict_flag` và `conflict_with` cho cả hai chunk. Ghi audit.
