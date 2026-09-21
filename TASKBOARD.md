@@ -392,6 +392,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 6 · phỏng vấn phản biện vòng chung kết
 
 ### B-15 · Bộ corpus seed 6 tài liệu
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 4h · **Phụ thuộc:** B-07
 - **File:** `data/seed_docs/`, `corpus/seed.py`
 - **Việc phải làm:** Soạn 6 tài liệu theo bảng Mục 9.2 spec, tối thiểu 45 chunk, **văn phong và cấu trúc giống văn bản hành chính thật** (có Điều, Khoản, Điểm). Gán nhãn đạt tỷ lệ khoảng 60% `auto_answerable` / 40% `human_only`. Viết `seed.py` tự nạp khi DB trống lúc khởi động. Đánh dấu rõ `is_synthetic: true` trong metadata.
