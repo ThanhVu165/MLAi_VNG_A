@@ -10,6 +10,7 @@ from core.types import ChunkLabel, Domain, SourceStatus
 from corpus.api import get_chunk, get_corpus_version, search, supported_domains
 from corpus import extract_doc
 from corpus.chunker import chunk_document
+from corpus.coverage import set_chunk_label, suggest_chunk_label
 from corpus.extract_doc import extract_document, normalize_pages
 from corpus.intake import (
     SourceRecheckResult,
@@ -323,6 +324,33 @@ def test_chunker_keeps_legal_units_breadcrumbs_and_long_clause_content() -> None
     assert {chunk.breadcrumb for chunk in long_chunks} == {"QĐ 5000/2026 · Điều 3 · Khoản 2"}
     assert all(chunk.token_count <= 800 for chunk in long_chunks)
     assert [chunk.ordinal for chunk in first] == list(range(1, len(first) + 1))
+
+
+def test_chunk_labels_default_to_human_only_and_each_change_writes_one_audit(tmp_path: Path, monkeypatch) -> None:
+    database_path = tmp_path / "corpus.db"
+    chunk = ChunkRecord(
+        "chunk-label", "source-label", "QĐ · Điều 1", "Nội dung thông thường.", Domain.CONDUCT_SCORE
+    )
+    create_source(SourceRecord(doc_id=chunk.doc_id), database_path=database_path)
+    create_chunk(chunk, database_path=database_path)
+
+    updated = set_chunk_label(
+        chunk.chunk_id, ChunkLabel.AUTO_ANSWERABLE, actor="ADMIN:tester", database_path=database_path
+    )
+
+    assert chunk.label is ChunkLabel.HUMAN_ONLY
+    assert updated.label is ChunkLabel.AUTO_ANSWERABLE
+    events = recent_events(database_path=str(database_path))
+    assert len(events) == 1
+    assert events[0].action == "CHUNK_LABELLED"
+    assert "human_only sang auto_answerable" in events[0].reason
+
+    monkeypatch.setattr(
+        "corpus.coverage.call_json",
+        lambda *args, **kwargs: SimpleNamespace(ok=True, data={"label": "auto_answerable"}, error=None),
+    )
+    assert suggest_chunk_label(updated, case_id="test").label is ChunkLabel.AUTO_ANSWERABLE
+    assert get_chunk_record(chunk.chunk_id, database_path=database_path).label is ChunkLabel.AUTO_ANSWERABLE
 
 
 def test_normalize_pages_removes_repeated_margins_and_keeps_legal_headings() -> None:

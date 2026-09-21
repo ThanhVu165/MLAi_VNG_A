@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from core.types import ChunkLabel
+from corpus.coverage import chunks_for_coverage, set_chunk_label, suggest_chunk_label
 from corpus.intake import recheck_url_sources
 from corpus.metadata import MetadataDraft, SUPPORTED_DOMAIN_VALUES, save_metadata
 from corpus.store import SourceRecord, list_sources
@@ -97,3 +99,26 @@ if submitted:
         st.error(str(error))
     else:
         st.success("Đã lưu metadata ở trạng thái chờ duyệt.")
+
+
+st.divider()
+st.subheader("Gán nhãn thẩm quyền từng điều khoản")
+coverage_source_id = st.selectbox("Nguồn có chunk cần gán nhãn", ["", *source_by_id])
+if coverage_source_id:
+    for chunk in chunks_for_coverage(coverage_source_id):
+        st.caption(f"{chunk.breadcrumb} — {chunk.text[:180]}")
+        if st.button("Lấy gợi ý nhãn", key=f"suggest-label:{chunk.chunk_id}"):
+            suggestion = suggest_chunk_label(chunk, case_id=f"label:{chunk.chunk_id}")
+            if suggestion.label is not None:
+                st.info(f"Gợi ý (chưa áp dụng): {suggestion.label.value}")
+            else:
+                st.warning(suggestion.error or "Chưa có gợi ý nhãn.")
+        current = st.selectbox(
+            "Nhãn hiện tại",
+            [label.value for label in ChunkLabel],
+            index=list(ChunkLabel).index(chunk.label),
+            key=f"label:{chunk.chunk_id}",
+        )
+        if st.button("Lưu nhãn", key=f"save-label:{chunk.chunk_id}"):
+            set_chunk_label(chunk.chunk_id, ChunkLabel(current), actor="ADMIN:local")
+            st.success("Đã lưu nhãn do người quản trị chọn.")

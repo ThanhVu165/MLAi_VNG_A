@@ -350,6 +350,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 7 · 3
 
 ### B-09 · K6 Gán nhãn thẩm quyền cho từng chunk
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 3h · **Phụ thuộc:** B-07 · **Đây là bước quan trọng nhất của làn B**
 - **File:** `corpus/coverage.py`, `pages/3_Quan_tri_quy_dinh.py`
 - **Việc phải làm:** Bảng liệt kê mọi chunk của tài liệu, mỗi dòng có breadcrumb, trích đoạn và một công tắc hai trạng thái `auto_answerable` / `human_only`. **Mặc định mọi chunk mới là `human_only`** — con người phải chủ động mở quyền. Có gợi ý tự động (LLM đề xuất nhãn) nhưng **không được tự áp dụng**. Ghi audit `CHUNK_LABELLED` cho từng lần đổi, kèm actor và nhãn cũ/mới.
@@ -370,6 +371,7 @@ Thứ tự khuyến nghị: B-01 (sớm nhất, mở khóa làn A) → B-02 → 
 - **Tiêu chí:** 6 (6đ audit)
 
 ### B-12 · K9 Lập chỉ mục
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 3h · **Phụ thuộc:** B-07
 - **File:** `corpus/indexer.py`
 - **Việc phải làm:** BM25 (`rank_bm25`) trên chunk đã tokenize tiếng Việt + vector (`sentence-transformers`, model đa ngữ nhẹ, cache trên đĩa). **Chỉ index chunk thuộc tài liệu ACTIVE.** Chunk `SUPERSEDED` giữ trong SQLite để truy vết audit nhưng loại khỏi vector store. Hợp nhất điểm hybrid, chuẩn hóa về `[0,1]`. Nạp index một lần khi khởi động, cache bằng `st.cache_resource`.
