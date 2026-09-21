@@ -112,6 +112,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Xong khi:** Gọi `process_case()` với input mẫu trả về `PipelineResult` hợp lệ, không ném exception dù bước con ném lỗi.
 
 ### A-02 · R0 Intake
+- **Trạng thái:** WIP
 - **Khối:** B1 · **Ước lượng:** 1h · **Phụ thuộc:** A-01, C-02
 - **File:** `core/pipeline.py`
 - **Việc phải làm:** Sinh `case_id` (`c_` + ULID) và `trace_id`; lấy `corpus_version` qua `corpus.api.get_corpus_version()` và **đóng băng cho suốt case**; ghi hàng vào `cases` với status `RECEIVED`; ghi audit `CASE_RECEIVED`; kiểm tra trường bắt buộc, thiếu thì `INVALID_INPUT`.
