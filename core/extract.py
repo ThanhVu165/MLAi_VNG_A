@@ -69,6 +69,7 @@ EXTRACTION_SCHEMA: dict[str, object] = {
         "injection_suspected": {"type": "boolean"},
     },
 }
+EXTRACTION_PARSE_ATTEMPTS = 2
 
 
 def _mapping(value: object, field: str) -> Mapping[str, object]:
@@ -130,6 +131,16 @@ def _facts(value: object) -> dict[str, str]:
     return {key: _string(item, f"critical_facts.{key}") for key, item in facts.items()}
 
 
+def _failed_extraction(case_id: str, error: str) -> Extraction:
+    log_event(
+        case_id=case_id,
+        actor="SYSTEM",
+        action="CASE_ERROR",
+        reason=f"Trích xuất dữ kiện thất bại: {mask_pii(error)}",
+    )
+    return Extraction("other", [], {}, [], False, "{}", error)
+
+
 def extract_facts(body: str, case_id: str) -> Extraction:
     """Trích xuất cấu trúc R2 qua LLM wrapper duy nhất."""
     injection = strip_prompt_injection(body)
@@ -140,28 +151,39 @@ def extract_facts(body: str, case_id: str) -> Extraction:
             action="CASE_SANITIZED",
             reason=f"Đã tước chỉ dẫn nhắm vào hệ thống: {mask_pii(' '.join(injection.removed))}",
         )
-    result = call_json(
-        EXTRACT_PROMPT_V1.format(body=injection.body),
-        schema=EXTRACTION_SCHEMA,
-        step="R2_extract",
-        case_id=case_id,
-        temperature=0.0,
-    )
-    if not result.ok:
-        return Extraction(
-            "other", [], {}, [], False, "{}", result.error or "Lỗi LLM không xác định."
+    for attempt in range(EXTRACTION_PARSE_ATTEMPTS):
+        result = call_json(
+            EXTRACT_PROMPT_V1.format(body=injection.body),
+            schema=EXTRACTION_SCHEMA,
+            step="R2_extract",
+            case_id=case_id,
+            temperature=0.0,
         )
-
-    data = _mapping(result.data, "response")
-    requests = _items(data.get("requests"), "requests")
-    return Extraction(
-        language=_language(data.get("language")),
-        requests=[_request(request) for request in requests],
-        critical_facts=_facts(data.get("critical_facts")),
-        missing_critical_facts=_strings(
-            data.get("missing_critical_facts"), "missing_critical_facts"
-        ),
-        injection_suspected=bool(injection.removed)
-        or _boolean(data.get("injection_suspected"), "injection_suspected"),
-        raw_json=json.dumps(result.data, ensure_ascii=False),
-    )
+        if not result.ok:
+            return _failed_extraction(case_id, result.error or "Lỗi LLM không xác định.")
+        try:
+            data = _mapping(result.data, "response")
+            requests = _items(data.get("requests"), "requests")
+            extraction = Extraction(
+                language=_language(data.get("language")),
+                requests=[_request(request) for request in requests],
+                critical_facts=_facts(data.get("critical_facts")),
+                missing_critical_facts=_strings(
+                    data.get("missing_critical_facts"), "missing_critical_facts"
+                ),
+                injection_suspected=bool(injection.removed)
+                or _boolean(data.get("injection_suspected"), "injection_suspected"),
+                raw_json=json.dumps(result.data, ensure_ascii=False),
+            )
+        except (TypeError, ValueError) as error:
+            if attempt + 1 == EXTRACTION_PARSE_ATTEMPTS:
+                return _failed_extraction(case_id, f"Phản hồi LLM không hợp lệ: {error}")
+        else:
+            log_event(
+                case_id=case_id,
+                actor="SYSTEM",
+                action="FACTS_EXTRACTED",
+                reason="Đã trích xuất dữ kiện có cấu trúc.",
+            )
+            return extraction
+    return _failed_extraction(case_id, "Phản hồi LLM không hợp lệ.")

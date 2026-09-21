@@ -151,7 +151,7 @@ def test_extract_strips_injection_before_llm_and_audits_removed_text(monkeypatch
 
     events = events_for_case("case-injection", database_path=str(database_path))
     assert extraction.injection_suspected is True
-    assert len(events) == 1 and events[0].action == "CASE_SANITIZED"
+    assert [event.action for event in events] == ["CASE_SANITIZED", "FACTS_EXTRACTED"]
     assert events[0].reason is not None and masked_removed in events[0].reason
     assert "12345678901" not in events[0].reason and "[MSSV]" in events[0].reason
 
@@ -235,3 +235,43 @@ def test_extraction_schema_uses_gemini_supported_fields() -> None:
     assert isinstance(request_items, dict)
     assert "additionalProperties" not in request_items["items"]
     assert "additionalProperties" not in requests["critical_facts"]
+
+
+def test_extract_retries_invalid_payload_once_then_records_error(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    calls = 0
+
+    def fake_call(prompt: str, **kwargs: object) -> LLMResult:
+        nonlocal calls
+        del prompt, kwargs
+        calls += 1
+        return LLMResult(True, {}, None, 0, "test", "replay")
+
+    monkeypatch.setattr("core.extract.call_json", fake_call)
+    extraction = extract_facts("Cho em hỏi hạn rút học phần.", "case-parse-fail")
+
+    events = events_for_case("case-parse-fail", database_path=str(database_path))
+    assert calls == 2
+    assert extraction.llm_error is not None and extraction.requests == []
+    assert len(events) == 1 and events[0].action == "CASE_ERROR"
+
+
+def test_extract_timeout_is_fail_safe_and_records_error(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    calls = 0
+
+    def fake_call(prompt: str, **kwargs: object) -> LLMResult:
+        nonlocal calls
+        del prompt, kwargs
+        calls += 1
+        return LLMResult(False, {}, "Timeout sau 20 giây.", 0, "test", "replay")
+
+    monkeypatch.setattr("core.extract.call_json", fake_call)
+    extraction = extract_facts("Cho em hỏi hạn rút học phần.", "case-timeout")
+
+    events = events_for_case("case-timeout", database_path=str(database_path))
+    assert calls == 1
+    assert extraction.llm_error == "Timeout sau 20 giây."
+    assert len(events) == 1 and events[0].action == "CASE_ERROR"
