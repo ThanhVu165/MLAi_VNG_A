@@ -61,15 +61,23 @@ selected = source_by_id.get(selected_id)
 draft = _draft_from_source(selected)
 
 with st.form("metadata-form"):
-    document_id = st.text_input("Mã tài liệu", value=draft.document_id or "", disabled=selected is not None)
+    document_id = st.text_input(
+        "Mã tài liệu", value=draft.document_id or "", disabled=selected is not None
+    )
     title = st.text_input("Tiêu đề", value=draft.title or "")
     issuer = st.text_input("Đơn vị ban hành", value=draft.issuer or "")
     published_at = st.text_input("Ngày ban hành (YYYY-MM-DD)", value=draft.published_at or "")
     effective_from = st.text_input("Hiệu lực từ (YYYY-MM-DD)", value=draft.effective_from or "")
     effective_to = st.text_input("Hiệu lực đến (YYYY-MM-DD)", value=draft.effective_to or "")
-    applies_to = st.text_input("Đối tượng áp dụng (cách nhau bằng dấu phẩy)", value=_csv(draft.applies_to or ()))
-    cohorts = st.text_input("Khóa áp dụng (cách nhau bằng dấu phẩy)", value=_csv(draft.cohorts or ()))
-    supersedes = st.text_input("Tài liệu thay thế (cách nhau bằng dấu phẩy)", value=_csv(draft.supersedes or ()))
+    applies_to = st.text_input(
+        "Đối tượng áp dụng (cách nhau bằng dấu phẩy)", value=_csv(draft.applies_to or ())
+    )
+    cohorts = st.text_input(
+        "Khóa áp dụng (cách nhau bằng dấu phẩy)", value=_csv(draft.cohorts or ())
+    )
+    supersedes = st.text_input(
+        "Tài liệu thay thế (cách nhau bằng dấu phẩy)", value=_csv(draft.supersedes or ())
+    )
     domains = st.multiselect(
         "Lĩnh vực", sorted(SUPPORTED_DOMAIN_VALUES), default=list(draft.domains or ())
     )

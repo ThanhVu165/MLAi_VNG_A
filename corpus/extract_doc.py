@@ -13,9 +13,7 @@ from docx import Document
 
 try:
     import pdfplumber
-except (
-    ModuleNotFoundError
-):  # pragma: no cover - phụ thuộc được ghim trong requirements.
+except ModuleNotFoundError:  # pragma: no cover - phụ thuộc được ghim trong requirements.
     pdfplumber = None  # type: ignore[assignment]
 
 if TYPE_CHECKING:
@@ -34,32 +32,21 @@ def extract_document(content: bytes, filename: str) -> str:
         return normalize_pages(_extract_pdf_pages(content))
     if suffix == ".docx":
         document = Document(BytesIO(content))
-        return normalize_pages(
-            ["\n".join(paragraph.text for paragraph in document.paragraphs)]
-        )
+        return normalize_pages(["\n".join(paragraph.text for paragraph in document.paragraphs)])
     raise ValueError("Chỉ hỗ trợ tệp PDF hoặc DOCX.")
 
 
 def normalize_pages(pages: Sequence[str]) -> str:
     """Bỏ lề lặp, chuẩn hóa NFC và nối các dòng bị ngắt giữa câu."""
-    normalized_pages = [
-        [_clean_line(line) for line in page.splitlines()] for page in pages
-    ]
+    normalized_pages = [[_clean_line(line) for line in page.splitlines()] for page in pages]
     repeated = _repeated_margins(normalized_pages)
-    lines = [
-        line
-        for page in normalized_pages
-        for line in page
-        if line and line not in repeated
-    ]
+    lines = [line for page in normalized_pages for line in page if line and line not in repeated]
     return _join_wrapped_lines(lines)
 
 
 def _extract_pdf_pages(content: bytes) -> list[str]:
     if pdfplumber is None:
-        raise RuntimeError(
-            "Thiếu pdfplumber; hãy cài dependencies từ requirements.txt."
-        )
+        raise RuntimeError("Thiếu pdfplumber; hãy cài dependencies từ requirements.txt.")
     with pdfplumber.open(BytesIO(content)) as document:
         return [page.extract_text() or "" for page in document.pages]
 
