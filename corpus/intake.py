@@ -20,6 +20,7 @@ URL_SOURCE_KIND = "url"
 DEFAULT_TEXT_TITLE = "Văn bản dán trực tiếp"
 SUPPORTED_FILE_KINDS = frozenset({".pdf", ".docx"})
 FetchBytes = Callable[[str], bytes]
+RECHECK_TIMEOUT_SECONDS = 8
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,15 @@ class IntakeResult:
     created: bool
     message: str
     content: bytes
+
+
+@dataclass(frozen=True)
+class SourceRecheckResult:
+    source: SourceRecord
+    changed: bool
+    message: str
+    proposed_source: SourceRecord | None = None
+    error: str | None = None
 
 
 def _source_kind(filename: str) -> str:
@@ -160,6 +170,86 @@ def ingest_url(
     )
 
 
+def recheck_url_sources(
+    *,
+    actor: str,
+    fetch: FetchBytes | None = None,
+    database_path: DatabasePath = None,
+) -> list[SourceRecheckResult]:
+    """Kiểm tra thủ công từng URL đã đăng ký; không tạo lịch chạy nền."""
+    downloader = fetch or _download_once
+    return [
+        _recheck_source(source, actor=actor, fetch=downloader, database_path=database_path)
+        for source in list_sources(database_path=database_path)
+        if source.source_kind == URL_SOURCE_KIND and source.source_url
+    ]
+
+
+def _recheck_source(
+    source: SourceRecord,
+    *,
+    actor: str,
+    fetch: FetchBytes,
+    database_path: DatabasePath,
+) -> SourceRecheckResult:
+    try:
+        content = fetch(source.source_url or "")
+    except OSError as error:
+        message = f"Không tải được nguồn: {error}"
+        _log_recheck(source, actor=actor, reason=message, database_path=database_path)
+        return SourceRecheckResult(source, False, message, error=message)
+
+    digest = hashlib.sha256(content).hexdigest()
+    if digest == source.sha256:
+        message = "Không đổi"
+        _log_recheck(source, actor=actor, reason=message, database_path=database_path)
+        return SourceRecheckResult(source, False, message)
+
+    intake = _ingest(
+        content,
+        title=source.title or source.source_url or DEFAULT_TEXT_TITLE,
+        source_kind=URL_SOURCE_KIND,
+        actor=actor,
+        source_url=source.source_url,
+        fetched_at=now_iso(),
+        database_path=database_path,
+    )
+    message = "Đã đổi; bản mới đang chờ duyệt"
+    _log_recheck(
+        source,
+        actor=actor,
+        reason=message,
+        proposed_source=intake.source,
+        database_path=database_path,
+    )
+    return SourceRecheckResult(source, True, message, proposed_source=intake.source)
+
+
+def _log_recheck(
+    source: SourceRecord,
+    *,
+    actor: str,
+    reason: str,
+    database_path: DatabasePath,
+    proposed_source: SourceRecord | None = None,
+) -> None:
+    sources = [source.doc_id]
+    if proposed_source is not None:
+        sources.append(proposed_source.doc_id)
+    log_event(
+        case_id=None,
+        actor=actor,
+        action="SOURCE_RECHECKED",
+        input_ref=source.sha256,
+        output_ref=proposed_source.doc_id if proposed_source else source.doc_id,
+        reason=reason,
+        sources=sources,
+        database_path=_audit_database_path(database_path),
+    )
+
+
 def _download_once(url: str) -> bytes:
-    with urlopen(url) as response:  # nosec B310: chỉ gọi từ thao tác admin thủ công.
+    with urlopen(  # nosec B310: chỉ gọi từ thao tác admin thủ công.
+        url, timeout=RECHECK_TIMEOUT_SECONDS
+    ) as response:
         return response.read()

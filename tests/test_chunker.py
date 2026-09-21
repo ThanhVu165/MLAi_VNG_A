@@ -10,7 +10,13 @@ from core.types import ChunkLabel, Domain, SourceStatus
 from corpus.api import get_chunk, get_corpus_version, search, supported_domains
 from corpus import extract_doc
 from corpus.extract_doc import extract_document, normalize_pages
-from corpus.intake import ingest_file, ingest_text, ingest_url
+from corpus.intake import (
+    SourceRecheckResult,
+    ingest_file,
+    ingest_text,
+    ingest_url,
+    recheck_url_sources,
+)
 from corpus.store import (
     ChunkRecord,
     CorpusVersionRecord,
@@ -162,6 +168,32 @@ def test_intake_accepts_supported_files_and_manual_url(tmp_path: Path) -> None:
     assert uploaded.source.source_kind == "pdf"
     assert downloaded.source.source_kind == "url"
     assert downloaded.source.source_url == "https://example.edu/quy-dinh.docx"
+
+
+def test_recheck_url_sources_reports_changes_and_creates_pending_source(tmp_path: Path) -> None:
+    database_path = tmp_path / "corpus.db"
+    original = ingest_url(
+        "https://example.edu/quy-dinh.docx",
+        actor="ADMIN:tester",
+        fetch=lambda _: b"ban dau",
+        database_path=database_path,
+    ).source
+
+    unchanged = recheck_url_sources(
+        actor="ADMIN:tester", fetch=lambda _: b"ban dau", database_path=database_path
+    )
+    changed = recheck_url_sources(
+        actor="ADMIN:tester", fetch=lambda _: b"ban moi", database_path=database_path
+    )
+
+    assert unchanged == [SourceRecheckResult(original, False, "Không đổi")]
+    assert changed[0].changed is True
+    assert changed[0].proposed_source is not None
+    assert changed[0].proposed_source.status is SourceStatus.PENDING_REVIEW
+    assert len(list_sources(database_path=database_path)) == 2
+    assert [event.action for event in recent_events(database_path=str(database_path))].count(
+        "SOURCE_RECHECKED"
+    ) == 2
 
 
 def test_normalize_pages_removes_repeated_margins_and_keeps_legal_headings() -> None:

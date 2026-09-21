@@ -16,3 +16,4 @@
 [H+00][Agent B] B-02 đã hoàn tất CRUD nguồn/chunk/version · 7 test xanh · full check còn lỗi format/cấu hình Mypy ngoài phạm vi B
 [H+00][Agent B] B-03 đã hoàn tất nạp file/text/URL, chống trùng SHA-256 và audit · full check 15 test xanh
 [H+00][Agent B] B-04 đã hoàn tất trích xuất PDF/DOCX, bỏ lề lặp và giữ Điều/Khoản/Điểm · 17 test xanh
+[H+00][Agent B] B-16 đã hoàn tất kiểm tra thủ công URL nguồn, tạo bản PENDING_REVIEW khi đổi và ghi audit · 18 test xanh
