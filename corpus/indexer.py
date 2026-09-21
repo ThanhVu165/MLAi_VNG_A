@@ -6,6 +6,7 @@ import hashlib
 import re
 import unicodedata
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Protocol, Sequence
 
@@ -17,17 +18,6 @@ from corpus.store import ChunkRecord, DatabasePath, list_chunks, list_sources
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 EMBEDDING_CACHE_DIR = Path("data/embedding-cache")
 _TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
-
-try:
-    import streamlit as st
-except (
-    ModuleNotFoundError
-):  # allows offline worker and unit tests to import this module
-
-    def cache_resource(**_: object):  # type: ignore[no-untyped-def]
-        return lambda function: function
-else:
-    cache_resource = st.cache_resource
 
 
 class Encoder(Protocol):
@@ -49,13 +39,10 @@ def tokenize(text: str) -> list[str]:
 
 def active_chunks(*, database_path: DatabasePath = None) -> list[ChunkRecord]:
     active_ids = {
-        source.doc_id
-        for source in list_sources(SourceStatus.ACTIVE, database_path=database_path)
+        source.doc_id for source in list_sources(SourceStatus.ACTIVE, database_path=database_path)
     }
     return [
-        chunk
-        for chunk in list_chunks(database_path=database_path)
-        if chunk.doc_id in active_ids
+        chunk for chunk in list_chunks(database_path=database_path) if chunk.doc_id in active_ids
     ]
 
 
@@ -71,7 +58,14 @@ def active_index_signature(*, database_path: DatabasePath = None) -> str:
 def _rows(value: object) -> list[list[float]]:
     if hasattr(value, "tolist"):
         value = value.tolist()  # type: ignore[union-attr]
-    return [[float(cell) for cell in row] for row in value]  # type: ignore[union-attr]
+    if not isinstance(value, list):
+        raise ValueError("Embedding phải là danh sách các vector.")
+    rows: list[list[float]] = []
+    for row in value:
+        if not isinstance(row, list):
+            raise ValueError("Mỗi embedding phải là một vector.")
+        rows.append([float(cell) for cell in row])
+    return rows
 
 
 def _normalise(scores: Sequence[float]) -> list[float]:
@@ -113,9 +107,7 @@ class HybridIndex:
             return []
         bm25 = [float(score) for score in self.bm25.get_scores(tokenize(query))]
         query_vector = _rows(
-            self.encoder.encode(
-                [query], normalize_embeddings=True, show_progress_bar=False
-            )
+            self.encoder.encode([query], normalize_embeddings=True, show_progress_bar=False)
         )[0]
         vector = [sum(a * b for a, b in zip(query_vector, row)) for row in self.vectors]
         bm25_normalised, vector_normalised = _normalise(bm25), _normalise(vector)
@@ -128,13 +120,11 @@ class HybridIndex:
         return sorted(results, key=lambda result: result.score, reverse=True)[:top_k]
 
 
-def build_active_index(
-    *, database_path: DatabasePath = None, encoder: Encoder
-) -> HybridIndex:
+def build_active_index(*, database_path: DatabasePath = None, encoder: Encoder) -> HybridIndex:
     return HybridIndex.build(active_chunks(database_path=database_path), encoder)
 
 
-@cache_resource(show_spinner=False)
+@lru_cache(maxsize=1)
 def _load_encoder() -> Encoder:
     """Load once; Sentence Transformers stores downloaded model files on disk."""
     from sentence_transformers import SentenceTransformer
@@ -142,7 +132,7 @@ def _load_encoder() -> Encoder:
     return SentenceTransformer(MODEL_NAME, cache_folder=str(EMBEDDING_CACHE_DIR))
 
 
-@cache_resource(show_spinner=False)
+@lru_cache(maxsize=16)
 def _cached_index(database_path: str, signature: str) -> HybridIndex:
     del signature
     return build_active_index(database_path=database_path, encoder=_load_encoder())
@@ -153,6 +143,6 @@ def search_active(
 ) -> list[SearchResult]:
     """Search active chunks. The changing signature removes downgraded docs immediately."""
     path = str(Path(database_path or "data/app.db").resolve())
-    return _cached_index(
-        path, active_index_signature(database_path=database_path)
-    ).search(query, top_k=top_k)
+    return _cached_index(path, active_index_signature(database_path=database_path)).search(
+        query, top_k=top_k
+    )

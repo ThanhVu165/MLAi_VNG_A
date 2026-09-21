@@ -1,138 +1,28 @@
-"""Facade đọc corpus; B-01 dùng dữ liệu giả để mở khóa Runtime."""
+"""Facade đọc corpus ACTIVE cho Runtime."""
 
+from __future__ import annotations
+
+import logging
 from datetime import date, datetime
 
-from core.types import ChunkLabel, Domain, EvidenceChunk
-
-CORPUS_VERSION = "stub-v1"
-_ACTIVE_DOMAINS = [Domain.CONDUCT_SCORE, Domain.COURSE_WITHDRAWAL, Domain.GRADE_APPEAL]
-_EFFECTIVE_FROM = date(2026, 1, 1)
-_APPLIES_TO = ["undergraduate"]
-_COHORTS = ["K48", "K49", "K50"]
-
-
-def _chunk(
-    chunk_id: str,
-    doc_id: str,
-    breadcrumb: str,
-    text: str,
-    domain: Domain,
-    *,
-    label: ChunkLabel = ChunkLabel.AUTO_ANSWERABLE,
-    transitional_clause: bool = False,
-) -> EvidenceChunk:
-    return EvidenceChunk(
-        chunk_id=chunk_id,
-        doc_id=doc_id,
-        breadcrumb=breadcrumb,
-        text=text,
-        domain=domain,
-        label=label,
-        score=0.9,
-        effective_from=_EFFECTIVE_FROM,
-        effective_to=None,
-        applies_to=list(_APPLIES_TO),
-        cohorts=list(_COHORTS),
-        transitional_clause=transitional_clause,
-        conflict_flag=False,
-    )
-
-
-# ponytail: static corpus unlocks Runtime; replace with the B-12 active index when available.
-_CHUNKS: tuple[EvidenceChunk, ...] = (
-    _chunk(
-        "rl-2026-d08-k02",
-        "RL-2026-3150",
-        "QĐ 3150/2026 · Điều 8 · Khoản 2",
-        "Điểm rèn luyện được đánh giá theo thang điểm 100 cho từng học kỳ.",
-        Domain.CONDUCT_SCORE,
-        transitional_clause=True,
-    ),
-    _chunk(
-        "rl-2026-d09-k01",
-        "RL-2026-3150",
-        "QĐ 3150/2026 · Điều 9 · Khoản 1",
-        "Sinh viên tra cứu kết quả điểm rèn luyện trên cổng thông tin đào tạo.",
-        Domain.CONDUCT_SCORE,
-    ),
-    _chunk(
-        "rl-2026-d10-k01",
-        "RL-2026-3150",
-        "QĐ 3150/2026 · Điều 10 · Khoản 1",
-        "Kết quả được công bố sau khi hoàn thành quy trình đánh giá của học kỳ.",
-        Domain.CONDUCT_SCORE,
-    ),
-    _chunk(
-        "rl-2026-d11-k02",
-        "RL-2026-3150",
-        "QĐ 3150/2026 · Điều 11 · Khoản 2",
-        "Điểm rèn luyện được dùng để đánh giá kết quả rèn luyện của sinh viên.",
-        Domain.CONDUCT_SCORE,
-    ),
-    _chunk(
-        "rh-2026-d05-k01",
-        "RH-2026-101",
-        "QC Rút học phần 2026 · Điều 5 · Khoản 1",
-        "Sinh viên được gửi yêu cầu rút học phần trước 17 giờ ngày thứ Sáu của tuần 8.",
-        Domain.COURSE_WITHDRAWAL,
-    ),
-    _chunk(
-        "rh-2026-d06-k02",
-        "RH-2026-101",
-        "QC Rút học phần 2026 · Điều 6 · Khoản 2",
-        "Học phí được hoàn 70 phần trăm khi rút học phần trong tuần 4 đến tuần 6.",
-        Domain.COURSE_WITHDRAWAL,
-    ),
-    _chunk(
-        "rh-2026-d07-k01",
-        "RH-2026-101",
-        "QC Rút học phần 2026 · Điều 7 · Khoản 1",
-        "Yêu cầu rút học phần được nộp trên cổng dịch vụ sinh viên.",
-        Domain.COURSE_WITHDRAWAL,
-    ),
-    _chunk(
-        "rh-2026-d08-k01",
-        "RH-2026-101",
-        "QC Rút học phần 2026 · Điều 8 · Khoản 1",
-        "Sinh viên cần kiểm tra thời khóa biểu trước khi gửi yêu cầu rút học phần.",
-        Domain.COURSE_WITHDRAWAL,
-    ),
-    _chunk(
-        "pk-2026-d04-k01",
-        "PK-2026-204",
-        "HD Phúc khảo 2026 · Điều 4 · Khoản 1",
-        "Lệ phí phúc khảo là 150.000 đồng cho mỗi học phần.",
-        Domain.GRADE_APPEAL,
-    ),
-    _chunk(
-        "pk-2026-d05-k01",
-        "PK-2026-204",
-        "HD Phúc khảo 2026 · Điều 5 · Khoản 1",
-        "Sinh viên nộp đơn phúc khảo theo biểu mẫu PK-01 trong thời hạn công bố.",
-        Domain.GRADE_APPEAL,
-    ),
-    _chunk(
-        "pk-2026-d06-k02",
-        "PK-2026-204",
-        "HD Phúc khảo 2026 · Điều 6 · Khoản 2",
-        "Gia hạn hoặc chấp thuận trường hợp đặc biệt do người có thẩm quyền quyết định.",
-        Domain.GRADE_APPEAL,
-        label=ChunkLabel.HUMAN_ONLY,
-    ),
-    _chunk(
-        "pk-2026-d07-k01",
-        "PK-2026-204",
-        "HD Phúc khảo 2026 · Điều 7 · Khoản 1",
-        "Kết quả phúc khảo được thông báo theo quy trình của đơn vị phụ trách.",
-        Domain.GRADE_APPEAL,
-        label=ChunkLabel.HUMAN_ONLY,
-    ),
+from core.types import Domain, EvidenceChunk, SourceStatus
+from corpus.indexer import search_active
+from corpus.store import (
+    ChunkRecord,
+    compute_corpus_version,
+    get_chunk_record,
+    get_current_corpus_version,
+    get_source,
+    list_sources,
 )
-_CHUNKS_BY_ID = {chunk.chunk_id: chunk for chunk in _CHUNKS}
+
+LOGGER = logging.getLogger(__name__)
+RETRIEVAL_CANDIDATE_MULTIPLIER = 3
 
 
 def get_corpus_version() -> str:
-    return CORPUS_VERSION
+    """Trả phiên bản corpus đang hiệu lực, kể cả trước lần bump đầu tiên."""
+    return get_current_corpus_version() or compute_corpus_version()
 
 
 def search(
@@ -141,18 +31,85 @@ def search(
     top_k: int = 6,
     at: datetime | None = None,
 ) -> list[EvidenceChunk]:
-    """Trả các chunk stub theo domain cho tới khi B-12 thay bằng retrieval thật."""
-    del query, at
-    return [chunk for chunk in _CHUNKS if chunk.domain in domains][: max(top_k, 0)]
+    """Tìm trong index ACTIVE, lọc domain và ngày hiệu lực trước khi trả evidence."""
+    if top_k <= 0 or not domains:
+        return []
+    try:
+        records = search_active(query, top_k=top_k * RETRIEVAL_CANDIDATE_MULTIPLIER)
+    except (OSError, RuntimeError, ValueError) as error:
+        LOGGER.warning("Không thể truy vấn index corpus: %s", error)
+        return []
+    requested_at = at.date() if at is not None else None
+    chunks = [
+        evidence
+        for result in records
+        if result.chunk.domain in domains
+        if (evidence := _evidence_chunk(result.chunk, result.score)) is not None
+        if _is_effective(evidence, requested_at)
+    ]
+    return chunks[:top_k]
 
 
 def get_chunk(chunk_id: str) -> EvidenceChunk | None:
-    return _CHUNKS_BY_ID.get(chunk_id)
+    """Trả evidence theo ID để UI và Ground Guard đọc breadcrumb gốc."""
+    chunk = get_chunk_record(chunk_id)
+    return _evidence_chunk(chunk, 1.0) if chunk is not None else None
 
 
 def is_active(chunk_id: str) -> bool:
-    return chunk_id in _CHUNKS_BY_ID
+    """Chỉ chunk thuộc nguồn ACTIVE mới có thể là căn cứ trả lời tự động."""
+    chunk = get_chunk_record(chunk_id)
+    if chunk is None:
+        return False
+    source = get_source(chunk.doc_id)
+    return source is not None and source.status is SourceStatus.ACTIVE
 
 
 def supported_domains() -> list[Domain]:
-    return list(_ACTIVE_DOMAINS)
+    """Liệt kê domain có ít nhất một nguồn ACTIVE."""
+    domains = {domain for source in list_sources(SourceStatus.ACTIVE) for domain in source.domains}
+    return sorted(domains, key=lambda domain: domain.value)
+
+
+def _evidence_chunk(chunk: ChunkRecord, score: float) -> EvidenceChunk | None:
+    source = get_source(chunk.doc_id)
+    if source is None:
+        LOGGER.warning("Chunk %s không có nguồn tương ứng.", chunk.chunk_id)
+        return None
+    try:
+        effective_from = _date(source.effective_from, "effective_from")
+        effective_to = _optional_date(source.effective_to)
+    except ValueError as error:
+        LOGGER.warning("Không thể dùng chunk %s: %s", chunk.chunk_id, error)
+        return None
+    return EvidenceChunk(
+        chunk_id=chunk.chunk_id,
+        doc_id=chunk.doc_id,
+        breadcrumb=chunk.breadcrumb,
+        text=chunk.text,
+        domain=chunk.domain,
+        label=chunk.label,
+        score=score,
+        effective_from=effective_from,
+        effective_to=effective_to,
+        applies_to=list(source.applies_to),
+        cohorts=list(source.cohorts),
+        transitional_clause=source.transitional_clause,
+        conflict_flag=chunk.conflict_flag,
+    )
+
+
+def _date(value: str | None, field: str) -> date:
+    if value is None:
+        raise ValueError(f"Nguồn thiếu {field}.")
+    return date.fromisoformat(value)
+
+
+def _optional_date(value: str | None) -> date | None:
+    return date.fromisoformat(value) if value is not None else None
+
+
+def _is_effective(chunk: EvidenceChunk, at: date | None) -> bool:
+    return at is None or (
+        chunk.effective_from <= at and (chunk.effective_to is None or at <= chunk.effective_to)
+    )
