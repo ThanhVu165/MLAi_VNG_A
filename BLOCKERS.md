@@ -19,7 +19,7 @@
 - [C-03][Agent C] `infra/settings.py` đã có đủ ngưỡng và override environment. Chưa thể kiểm tra import, chạy `make check`, hoặc quét core/corpus vì môi trường thiếu Python/Make và hai thư mục đó chưa tồn tại.
 # BLOCKERS
 
-- [A-21][Agent A][2026-09-22] Tiêu chí hoàn thành bắt buộc `tests/test_harness.py` chứng minh mọi đường vào gọi duy nhất `core.pipeline.process_case()`, nhưng file này ngoài phạm vi Agent A và thuộc Verify/Agent C. Không tự sửa. Cần Agent C tạo/cập nhật test đó (và harness nếu cần); Agent A sẽ tiếp tục nối pipeline sau khi có xác nhận.
+- [A-21][Agent A][đã gỡ 2026-09-22] Theo ủy quyền trực tiếp của người dùng, đã tạo `tests/test_harness.py` kiểm chứng paste/inbox/verify dùng chung `core.pipeline.process_case()` và lỗi bước trả P04.
 
 - [A-08][Agent A][đã gỡ 2026-09-21] Model `gemini-3.5-flash` hoạt động; xác thực thật đạt schema 8/8 và domain 8/8.
 

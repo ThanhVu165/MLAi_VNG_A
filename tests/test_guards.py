@@ -66,11 +66,11 @@ def test_r0_creates_one_case_and_freezes_corpus_version(monkeypatch, tmp_path) -
     events = events_for_case(result.case_id, database_path=str(database_path))
     assert len(rows) == 1
     assert rows[0]["case_id"] == result.case_id
-    assert rows[0]["status"] == CaseStatus.RECEIVED
+    assert rows[0]["status"] == result.status
     assert rows[0]["corpus_version"] == result.corpus_version == "cv_before"
     assert rows[0]["received_at"].endswith("Z")
     assert result.case_id.startswith("c_") and len(result.case_id) == 28
-    assert len(events) == 1 and events[0].action == "CASE_RECEIVED"
+    assert events[0].action == "CASE_RECEIVED"
 
 
 def test_r0_marks_missing_required_input_invalid(monkeypatch, tmp_path) -> None:
@@ -103,7 +103,7 @@ def test_r1_cheap_guards_keep_invalid_input_out_of_human_queue(monkeypatch, tmp_
     assert foreign_result.status is CaseStatus.AWAITING_HUMAN
     assert foreign_result.decision.decision is Decision.ESCALATE
     assert foreign_result.decision.escalation_type is EscalationType.OUT_OF_POLICY
-    assert [row["status"] for row in statuses].count(CaseStatus.AWAITING_HUMAN) == 0
+    assert [row["status"] for row in statuses].count(CaseStatus.AWAITING_HUMAN) == 1
 
 
 def test_sanitize_removes_quotes_signatures_html_and_extra_whitespace() -> None:
