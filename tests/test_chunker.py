@@ -234,9 +234,7 @@ def test_metadata_proposal_uses_excerpt_and_keeps_unknown_fields_null(monkeypatc
 
     def fake_call(prompt, *, schema, step, case_id, temperature):
         prompts.append(prompt)
-        number = next(
-            (number for number in range(1, 7) if f"TÀI LIỆU SỐ {number}" in prompt), 1
-        )
+        number = next((number for number in range(1, 7) if f"TÀI LIỆU SỐ {number}" in prompt), 1)
         assert schema == METADATA_SCHEMA
         assert step == "K3_metadata"
         assert temperature == 0.0
@@ -261,7 +259,10 @@ def test_metadata_proposal_uses_excerpt_and_keeps_unknown_fields_null(monkeypatc
         )
 
     monkeypatch.setattr("corpus.metadata.call_json", fake_call)
-    proposals = [propose_metadata(document, case_id=f"case-{number}") for number, document in enumerate(documents, 1)]
+    proposals = [
+        propose_metadata(document, case_id=f"case-{number}")
+        for number, document in enumerate(documents, 1)
+    ]
 
     assert all(proposal.error is None and proposal.draft is not None for proposal in proposals)
     assert proposals[0].draft.transitional_clause is True
@@ -340,12 +341,8 @@ def test_chunker_keeps_legal_units_breadcrumbs_and_long_clause_content() -> None
     )
 
     assert all(chunk.text.strip() for chunk in first + second + third)
-    assert "QĐ 3150/2026 · Điều 8 · Khoản 2" in {
-        chunk.breadcrumb for chunk in first
-    }
-    assert "QĐ 3150/2026 · Điều 8 · Khoản 2 · Điểm a" in {
-        chunk.breadcrumb for chunk in first
-    }
+    assert "QĐ 3150/2026 · Điều 8 · Khoản 2" in {chunk.breadcrumb for chunk in first}
+    assert "QĐ 3150/2026 · Điều 8 · Khoản 2 · Điểm a" in {chunk.breadcrumb for chunk in first}
     assert "Điểm a) Nộp trước hạn." in "\n".join(chunk.text for chunk in first)
     assert "Chuyên viên tiếp nhận hồ sơ." in "\n".join(chunk.text for chunk in second)
     long_chunks = [chunk for chunk in third if chunk.clause_no == "2"]
@@ -355,7 +352,9 @@ def test_chunker_keeps_legal_units_breadcrumbs_and_long_clause_content() -> None
     assert [chunk.ordinal for chunk in first] == list(range(1, len(first) + 1))
 
 
-def test_chunk_labels_default_to_human_only_and_each_change_writes_one_audit(tmp_path: Path, monkeypatch) -> None:
+def test_chunk_labels_default_to_human_only_and_each_change_writes_one_audit(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_path = tmp_path / "corpus.db"
     chunk = ChunkRecord(
         "chunk-label", "source-label", "QĐ · Điều 1", "Nội dung thông thường.", Domain.CONDUCT_SCORE
@@ -364,7 +363,10 @@ def test_chunk_labels_default_to_human_only_and_each_change_writes_one_audit(tmp
     create_chunk(chunk, database_path=database_path)
 
     updated = set_chunk_label(
-        chunk.chunk_id, ChunkLabel.AUTO_ANSWERABLE, actor="ADMIN:tester", database_path=database_path
+        chunk.chunk_id,
+        ChunkLabel.AUTO_ANSWERABLE,
+        actor="ADMIN:tester",
+        database_path=database_path,
     )
 
     assert chunk.label is ChunkLabel.HUMAN_ONLY
@@ -376,10 +378,15 @@ def test_chunk_labels_default_to_human_only_and_each_change_writes_one_audit(tmp
 
     monkeypatch.setattr(
         "corpus.coverage.call_json",
-        lambda *args, **kwargs: SimpleNamespace(ok=True, data={"label": "auto_answerable"}, error=None),
+        lambda *args, **kwargs: SimpleNamespace(
+            ok=True, data={"label": "auto_answerable"}, error=None
+        ),
     )
     assert suggest_chunk_label(updated, case_id="test").label is ChunkLabel.AUTO_ANSWERABLE
-    assert get_chunk_record(chunk.chunk_id, database_path=database_path).label is ChunkLabel.AUTO_ANSWERABLE
+    assert (
+        get_chunk_record(chunk.chunk_id, database_path=database_path).label
+        is ChunkLabel.AUTO_ANSWERABLE
+    )
 
 
 def test_normalize_pages_removes_repeated_margins_and_keeps_legal_headings() -> None:
@@ -421,7 +428,5 @@ def test_extract_document_reads_docx_and_pdf_pages(monkeypatch) -> None:
         def __exit__(self, *_):
             return None
 
-    monkeypatch.setattr(
-        extract_doc, "pdfplumber", SimpleNamespace(open=lambda _: FakePdf())
-    )
+    monkeypatch.setattr(extract_doc, "pdfplumber", SimpleNamespace(open=lambda _: FakePdf()))
     assert extract_document(b"%PDF", "quy_dinh.pdf") == "Điều 3. Thủ tục"

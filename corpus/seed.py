@@ -221,9 +221,11 @@ def _with_refund_conflicts(chunks: list[_SeedChunk]) -> list[_SeedChunk]:
     if len(candidates) != REFUND_CONFLICT_CHUNK_COUNT:
         raise RuntimeError("Cặp mâu thuẫn hoàn học phí phải có đủ sáu chunk.")
     return [
-        replace(chunk, conflict_flag=True, conflict_with=_conflict_with(chunk))
-        if chunk in candidates
-        else chunk
+        (
+            replace(chunk, conflict_flag=True, conflict_with=_conflict_with(chunk))
+            if chunk in candidates
+            else chunk
+        )
         for chunk in chunks
     ]
 
