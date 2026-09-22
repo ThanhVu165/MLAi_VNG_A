@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 import streamlit as st
 
+from core.types import Decision, EscalationType
 from ui.presentation import decision_label, local_time
 from verify.harness import CASE_SETS, VerifyResult, run_cases
 
@@ -68,16 +69,42 @@ st.caption(
     "Mỗi email đi qua cùng cách xử lý với trang Email. Kết quả kiểm tra cả quyết định, lý do chuyển tiếp, quy tắc và căn cứ."
 )
 st.caption("Bài kiểm tra tạo lịch sử xử lý thật trong dữ liệu local; không gửi email ra ngoài.")
-sets = {
-    "full15": "Toàn bộ 15 tình huống",
-    "verify4": "Bốn tình huống sơ khảo",
-    "escalation5": "Năm tình huống chuyển tiếp",
-}
-case_set = st.selectbox("Bài kiểm tra", list(sets), format_func=lambda value: sets[value])
-if st.button("Chạy kiểm tra", type="primary"):
+
+st.subheader("Verify harness: 4 tình huống bắt buộc")
+st.caption("Bấm một lần để chạy tuần tự 4 ca sơ khảo: 2 phản hồi tự động và 2 chuyển tiếp.")
+verify4_cases = json.loads(CASE_SETS["verify4"].read_text(encoding="utf-8"))
+st.dataframe(
+    [
+        {
+            "Mã": case["id"],
+            "Dữ liệu đầu vào": f'{case["input"]["subject"]}: {case["input"]["body"]}',
+            "Hành vi kỳ vọng": decision_label(
+                Decision(case["expected_decision"]),
+                EscalationType(case["expected_type"]) if case["expected_type"] else None,
+            ),
+            "Cách thực thi": case["how_to_run"],
+        }
+        for case in verify4_cases
+    ],
+    hide_index=True,
+    use_container_width=True,
+)
+
+
+def run_verify(case_set: str) -> None:
     with st.spinner("Đang xử lý lần lượt các email. Bạn có thể mở lịch sử ở tab khác."):
         started = perf_counter()
         results = run_cases(CASE_SETS[case_set], run_name=case_set)
         st.session_state["verification_result"] = (results, perf_counter() - started, case_set)
+
+
+if st.button("Chạy 4 tình huống Verify", type="primary"):
+    run_verify("verify4")
+
+with st.expander("Bộ kiểm thử mở rộng"):
+    sets = {"escalation5": "Năm tình huống chuyển tiếp", "full15": "Toàn bộ 15 tình huống"}
+    case_set = st.selectbox("Bài kiểm tra mở rộng", list(sets), format_func=lambda value: sets[value])
+    if st.button("Chạy kiểm tra mở rộng"):
+        run_verify(case_set)
 if "verification_result" in st.session_state:
     render_results(*st.session_state["verification_result"])
