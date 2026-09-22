@@ -2,17 +2,24 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
-from collections.abc import Sequence
-from contextlib import closing
+from collections.abc import Iterator, Sequence
+from contextlib import closing, contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from math import ceil
 from pathlib import Path
+from threading import RLock
+from uuid import uuid4
 
 from infra.settings import DATABASE_BUSY_TIMEOUT_MS
 
-DEFAULT_DATABASE_PATH = Path("data/app.db")
+DEFAULT_DATABASE_PATH = Path(os.getenv("DATABASE_PATH", "data/app.db"))
 MIGRATION_PATH = Path(__file__).parent / "migrations" / "001_init.sql"
+WORKFLOW_MIGRATION_PATH = MIGRATION_PATH.with_name("002_workflow.sql")
+SCHEMA_VERSION = 2
+_MIGRATION_LOCK = RLock()
 EXPECTED_TABLES = frozenset(
     {
         "cases",
@@ -31,6 +38,9 @@ EXPECTED_TABLES = frozenset(
 )
 LOCAL_TIMEZONE = timezone(timedelta(hours=7), "Asia/Ho_Chi_Minh")
 SqlValue = str | int | float | bytes | None
+_TRANSACTION: ContextVar[tuple[Path, sqlite3.Connection] | None] = ContextVar(
+    "database_transaction", default=None
+)
 
 
 def now_iso() -> str:
@@ -79,23 +89,89 @@ def _connect(database_path: str | Path | None = None) -> sqlite3.Connection:
 
 
 def initialize_database(database_path: str | Path | None = None) -> None:
-    """Tạo đủ bảng của migration duy nhất khi cơ sở dữ liệu còn trống."""
-    with closing(_connect(database_path)) as connection:
+    """Nâng schema có phiên bản; sao lưu dữ liệu cũ trước khi sửa cấu trúc."""
+    with _MIGRATION_LOCK, closing(_connect(database_path)) as connection:
+        tables = {
+            row["name"]
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        if tables and not EXPECTED_TABLES <= tables:
+            raise RuntimeError("Cơ sở dữ liệu có cấu trúc chưa hoàn tất; không tự sửa dữ liệu.")
+        version = connection.execute("PRAGMA user_version").fetchone()[0]
+        if version > SCHEMA_VERSION:
+            raise RuntimeError("Dữ liệu thuộc phiên bản ứng dụng mới hơn; hãy cập nhật ứng dụng.")
+        if version == SCHEMA_VERSION:
+            if not {"source_contents", "case_results", "case_jobs"} <= tables:
+                raise RuntimeError(
+                    "Dữ liệu thiếu bảng công việc hoặc bản gốc. Hãy phục hồi từ bản sao lưu; không khởi tạo đè."
+                )
+            return
+        if tables:
+            _backup_database(connection, _database_path(database_path))
+        else:
+            connection.executescript(MIGRATION_PATH.read_text(encoding="utf-8"))
         with connection:
-            rows = connection.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-            tables = {row["name"] for row in rows}
-            if not tables:
-                connection.executescript(MIGRATION_PATH.read_text(encoding="utf-8"))
-            elif not EXPECTED_TABLES <= tables:
-                raise RuntimeError("Cơ sở dữ liệu có migration chưa hoàn tất.")
+            connection.execute("BEGIN IMMEDIATE")
+            if connection.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION:
+                return
+            for statement in WORKFLOW_MIGRATION_PATH.read_text(encoding="utf-8").split(";"):
+                if statement.strip():
+                    connection.execute(statement)
+            columns = {
+                row["name"] for row in connection.execute("PRAGMA table_info(source_contents)")
+            }
+            for column in ("extracted_text", "filename"):
+                if column not in columns:
+                    connection.execute(
+                        f"ALTER TABLE source_contents ADD COLUMN {column} TEXT NOT NULL DEFAULT ''"
+                    )
+            case_columns = {row["name"] for row in connection.execute("PRAGMA table_info(cases)")}
+            if "external_id" not in case_columns:
+                connection.execute("ALTER TABLE cases ADD COLUMN external_id TEXT")
+            connection.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS cases_external_id "
+                "ON cases(channel, external_id) WHERE external_id IS NOT NULL"
+            )
+            connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+
+
+def _backup_database(connection: sqlite3.Connection, path: Path) -> None:
+    directory = path.parent / "backups"
+    directory.mkdir(parents=True, exist_ok=True)
+    backup_path = directory / f"{path.stem}.pre-v{SCHEMA_VERSION}-{uuid4().hex}.db"
+    with closing(sqlite3.connect(backup_path)) as backup:
+        connection.backup(backup)
 
 
 def get_connection(database_path: str | Path | None = None) -> sqlite3.Connection:
     """Mở kết nối SQLite đã bật WAL cho truy vấn thủ công ngắn hạn."""
     initialize_database(database_path)
     return _connect(database_path)
+
+
+def _transaction_connection(database_path: str | Path | None) -> sqlite3.Connection | None:
+    current = _TRANSACTION.get()
+    if current is None:
+        return None
+    if current[0] != _database_path(database_path).resolve():
+        raise ValueError("Không ghi hai cơ sở dữ liệu trong cùng một giao dịch.")
+    return current[1]
+
+
+@contextmanager
+def transaction(database_path: str | Path | None = None) -> Iterator[sqlite3.Connection]:
+    """Gom các lời gọi execute/fetch và audit vào một giao dịch, không giữ qua lời gọi AI."""
+    current = _transaction_connection(database_path)
+    if current is not None:
+        yield current
+        return
+    with closing(get_connection(database_path)) as connection, connection:
+        connection.execute("BEGIN IMMEDIATE")
+        token = _TRANSACTION.set((_database_path(database_path).resolve(), connection))
+        try:
+            yield connection
+        finally:
+            _TRANSACTION.reset(token)
 
 
 def execute(
@@ -105,6 +181,9 @@ def execute(
     database_path: str | Path | None = None,
 ) -> int:
     """Chạy một lệnh ghi và trả về số hàng bị ảnh hưởng."""
+    current = _transaction_connection(database_path)
+    if current is not None:
+        return current.execute(statement, parameters).rowcount
     with closing(get_connection(database_path)) as connection:
         with connection:
             cursor = connection.execute(statement, parameters)
@@ -118,6 +197,9 @@ def fetch_one(
     database_path: str | Path | None = None,
 ) -> sqlite3.Row | None:
     """Lấy tối đa một hàng SQLite dạng ``sqlite3.Row``."""
+    current = _transaction_connection(database_path)
+    if current is not None:
+        return current.execute(statement, parameters).fetchone()
     with closing(get_connection(database_path)) as connection:
         return connection.execute(statement, parameters).fetchone()
 
@@ -129,8 +211,8 @@ def fetch_all(
     database_path: str | Path | None = None,
 ) -> list[sqlite3.Row]:
     """Lấy mọi hàng SQLite dạng ``sqlite3.Row``."""
+    current = _transaction_connection(database_path)
+    if current is not None:
+        return current.execute(statement, parameters).fetchall()
     with closing(get_connection(database_path)) as connection:
         return connection.execute(statement, parameters).fetchall()
-
-
-initialize_database()

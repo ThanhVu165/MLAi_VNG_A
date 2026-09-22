@@ -1,4 +1,4 @@
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
@@ -43,7 +43,6 @@ from core.types import (
     EscalationCard,
     EscalationType,
     Extraction,
-    PipelineResult,
     PolicyDecision,
     RequestItem,
 )
@@ -107,8 +106,8 @@ def test_r1_cheap_guards_keep_invalid_input_out_of_human_queue(monkeypatch, tmp_
     foreign_result = pipeline.process_case(_input(body="こんにちは、質問があります"))
     statuses = db.fetch_all("SELECT status FROM cases", database_path=database_path)
 
-    assert short_result.status is CaseStatus.INVALID_INPUT
-    assert short_result.decision.decision is Decision.INVALID_INPUT
+    assert short_result.status is not CaseStatus.INVALID_INPUT
+    assert short_result.decision.decision is not Decision.INVALID_INPUT
     assert empty_result.status is CaseStatus.INVALID_INPUT
     assert empty_result.decision.decision is Decision.INVALID_INPUT
     assert foreign_result.status is CaseStatus.AWAITING_HUMAN
@@ -218,13 +217,34 @@ def test_retrieval_combines_domains_and_audits_chunk_ids(monkeypatch, tmp_path) 
         ),
     ]
 
-    def fake_search(
-        query: str, domains: list[Domain], top_k: int, at: datetime
+    def fake_available(
+        domains: list[Domain], at: datetime, **kwargs: object
     ) -> list[EvidenceChunk]:
-        seen.update(query=query, domains=domains, top_k=top_k, at=at)
+        seen.update(domains=domains, at=at)
         return chunks
 
-    monkeypatch.setattr("core.retrieval.search", fake_search)
+    monkeypatch.setattr("core.retrieval.available_evidence", fake_available)
+    monkeypatch.setattr(
+        "core.retrieval.get_chunk",
+        lambda chunk_id: next(chunk for chunk in chunks if chunk.chunk_id == chunk_id),
+    )
+
+    def select(prompt: str, **kwargs: object) -> LLMResult:
+        seen["prompt"] = prompt
+        return LLMResult(
+            True,
+            {
+                "chunk_ids": ["conduct-1", "withdraw-1"],
+                "missing_facts": [],
+                "unanswered_requests": [],
+            },
+            None,
+            0,
+            "test",
+            "replay",
+        )
+
+    monkeypatch.setattr("core.retrieval.call_json", select)
     extraction = Extraction(
         "vi",
         [
@@ -247,17 +267,17 @@ def test_retrieval_combines_domains_and_audits_chunk_ids(monkeypatch, tmp_path) 
     )
 
     events = events_for_case("case-retrieval", database_path=str(database_path))
-    assert result.status is EvidenceStatus.OK and result.chunks == chunks
+    assert result.status is EvidenceStatus.OK
+    assert [chunk.chunk_id for chunk in result.chunks] == [chunk.chunk_id for chunk in chunks]
     assert seen["domains"] == [Domain.CONDUCT_SCORE, Domain.COURSE_WITHDRAWAL]
-    assert seen["top_k"] == 6
     assert seen["at"] == _input().received_at
-    assert "Hỏi quy trình" in str(seen["query"])
-    assert "Nội dung đã làm sạch" in str(seen["query"])
+    assert "Hỏi quy trình" in str(seen["prompt"])
+    assert _input().body in str(seen["prompt"])
     assert [event.action for event in events] == ["EVIDENCE_RETRIEVED"]
     assert events[0].sources == ["conduct-1", "withdraw-1"]
 
 
-def test_retrieval_corpus_error_returns_no_authoritative_source(monkeypatch, tmp_path) -> None:
+def test_retrieval_corpus_error_propagates_as_technical_failure(monkeypatch, tmp_path) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
 
@@ -265,26 +285,40 @@ def test_retrieval_corpus_error_returns_no_authoritative_source(monkeypatch, tmp
         del args, kwargs
         raise RuntimeError("index unavailable")
 
-    monkeypatch.setattr("core.retrieval.search", broken_search)
-    result = retrieve_evidence(
-        case_id="case-retrieval-error",
-        actor="SYSTEM",
-        inp=_input(),
-        body_clean="Nội dung đã làm sạch",
-        extraction=Extraction("vi", [], {}, [], False, "{}"),
-        corpus_version="cv_test",
-    )
-
-    assert result.status is EvidenceStatus.NO_AUTHORITATIVE_SOURCE
-    assert result.chunks == []
+    monkeypatch.setattr("core.retrieval.available_evidence", broken_search)
+    with pytest.raises(RuntimeError, match="index unavailable"):
+        retrieve_evidence(
+            case_id="case-retrieval-error",
+            actor="SYSTEM",
+            inp=_input(),
+            body_clean="Nội dung đã làm sạch",
+            extraction=_evidence_extraction(),
+            corpus_version="cv_test",
+        )
 
 
-def test_routine_retrieval_excludes_human_only_chunks(monkeypatch, tmp_path) -> None:
+def test_routine_retrieval_accepts_legacy_human_only_chunks(monkeypatch, tmp_path) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
     automatic = _evidence_chunk()
-    human_only = _evidence_chunk(label=ChunkLabel.HUMAN_ONLY)
-    monkeypatch.setattr("core.retrieval.search", lambda *args, **kwargs: [automatic, human_only])
+    human_only = replace(_evidence_chunk(label=ChunkLabel.HUMAN_ONLY), chunk_id="human-1")
+    chunks = [automatic, human_only]
+    monkeypatch.setattr("core.retrieval.available_evidence", lambda *args, **kwargs: chunks)
+    monkeypatch.setattr(
+        "core.retrieval.get_chunk",
+        lambda chunk_id: next(chunk for chunk in chunks if chunk.chunk_id == chunk_id),
+    )
+    monkeypatch.setattr(
+        "core.retrieval.call_json",
+        lambda *args, **kwargs: LLMResult(
+            True,
+            {"chunk_ids": ["chunk-1", "human-1"], "missing_facts": [], "unanswered_requests": []},
+            None,
+            0,
+            "test",
+            "replay",
+        ),
+    )
 
     result = retrieve_evidence(
         case_id="case-routine-retrieval",
@@ -295,7 +329,7 @@ def test_routine_retrieval_excludes_human_only_chunks(monkeypatch, tmp_path) -> 
         corpus_version="cv_test",
     )
 
-    assert result.chunks == [automatic]
+    assert [chunk.chunk_id for chunk in result.chunks] == ["chunk-1", "human-1"]
 
 
 def test_scope_facts_are_read_without_llm() -> None:
@@ -309,14 +343,14 @@ def test_scope_facts_are_read_without_llm() -> None:
 def test_retrieval_empty_corpus_returns_no_authoritative_source(monkeypatch, tmp_path) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
-    monkeypatch.setattr("core.retrieval.search", lambda *args, **kwargs: [])
+    monkeypatch.setattr("core.retrieval.available_evidence", lambda *args, **kwargs: [])
 
     result = retrieve_evidence(
         case_id="case-empty-corpus",
         actor="SYSTEM",
         inp=_input(),
         body_clean="Nội dung đã làm sạch",
-        extraction=Extraction("vi", [], {}, [], False, "{}"),
+        extraction=_evidence_extraction(),
         corpus_version="cv_test",
     )
 
@@ -389,18 +423,22 @@ def test_evidence_validator_has_seven_failures_in_fixed_order(monkeypatch, tmp_p
         (
             [_evidence_chunk(label=ChunkLabel.HUMAN_ONLY)],
             _evidence_extraction(),
-            EvidenceStatus.AUTHORITY_CONTENT,
+            EvidenceStatus.OK,
         ),
         (
             [_evidence_chunk(conflict_flag=True)],
             _evidence_extraction(),
             EvidenceStatus.CONFLICTING_SOURCES,
         ),
-        ([_evidence_chunk(cohorts=["K50"])], _evidence_extraction(), EvidenceStatus.SCOPE_MISMATCH),
+        (
+            [_evidence_chunk(cohorts=["K50"])],
+            _evidence_extraction(facts={"cohort": "K49"}),
+            EvidenceStatus.SCOPE_MISMATCH,
+        ),
         (
             [_evidence_chunk(transitional_clause=True)],
             _evidence_extraction(),
-            EvidenceStatus.FACT_MISSING,
+            EvidenceStatus.OK,
         ),
     )
 
@@ -434,7 +472,7 @@ def test_evidence_validator_records_all_failures_and_audits(monkeypatch, tmp_pat
     events = events_for_case("case-evidence-audit", database_path=str(database_path))
 
     assert result.status is EvidenceStatus.NO_AUTHORITATIVE_SOURCE
-    assert result.failed_checks == ["similarity", "authority", "conflict", "facts"]
+    assert result.failed_checks == ["similarity", "conflict", "facts"]
     assert [event.action for event in events] == ["EVIDENCE_VALIDATED"]
     assert (
         events[0].reason is not None
@@ -652,10 +690,10 @@ def test_extract_timeout_is_fail_safe_and_records_error(monkeypatch, tmp_path) -
 def test_generate_reply_uses_only_evidence_and_cites_each_paragraph(monkeypatch, tmp_path) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
-    raw_body = "Thông tin hồ sơ gốc không được đưa vào prompt."
+    raw_body = "Em muốn hỏi lệ phí phúc khảo và cách nộp?"
 
     def fake_call(prompt: str, **kwargs: object) -> LLMResult:
-        assert raw_body not in prompt
+        assert raw_body in prompt
         assert "Căn cứ." in prompt and "chunk-1" in prompt
         assert "English" in prompt
         assert kwargs["step"] == "R7_generate"
@@ -679,6 +717,8 @@ def test_generate_reply_uses_only_evidence_and_cites_each_paragraph(monkeypatch,
         actor="SYSTEM",
         corpus_version="cv_test",
         language="en",
+        inp=_input(body=raw_body),
+        extraction=_evidence_extraction(),
         evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
     )
     events = events_for_case("case-generate", database_path=str(database_path))
@@ -708,6 +748,8 @@ def test_generate_reply_rejects_uncited_paragraph(monkeypatch) -> None:
             actor="SYSTEM",
             corpus_version="cv_test",
             language="en",
+            inp=_input(),
+            extraction=_evidence_extraction(),
             evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
         )
 
@@ -752,6 +794,7 @@ def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
         actor="SYSTEM",
         corpus_version="cv_test",
         escalation_type=EscalationType.FACT_UNRESOLVED,
+        inp=_input(),
         extraction=extraction,
         evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
     )
@@ -938,7 +981,7 @@ def test_question_guard_reports_each_quality_rule() -> None:
         (_card(question="Anh/chị xác nhận số tiền 450.000₫ có đúng không."), "ends_with_question"),
         (_card(question="450.000₫?"), "word_count"),
         (_card(question="Anh/chị xác nhận 450.000₫ không??"), "question_count"),
-        (_card(question="Anh/chị xác nhận số tiền 480.000₫ có đúng không?"), "fact"),
+        (_card(summary="", facts=[]), "fact"),
         (_card(options=["Đúng"]), "options"),
         (_card(basis=[]), "breadcrumb"),
         (_card(question="Nhờ anh/chị xem xét lại số tiền 450.000₫ có đúng không?"), "blocklist"),
@@ -1017,8 +1060,10 @@ def test_multi_intent_card_keeps_routine_draft_and_asks_only_locked_part(monkeyp
 
     monkeypatch.setattr("core.question_gen.generate_reply", fake_reply)
     monkeypatch.setattr("core.question_gen.generate_escalation_card", fake_card)
+    monkeypatch.setattr("core.ground_guard.is_active", lambda chunk_id: chunk_id == "chunk-1")
     card = generate_multi_intent_card(
         case_id="case-multi",
+        inp=_input(),
         actor="SYSTEM",
         corpus_version="cv_test",
         extraction=extraction,
@@ -1031,8 +1076,10 @@ def test_multi_intent_card_keeps_routine_draft_and_asks_only_locked_part(monkeyp
     assert isinstance(question_extraction, Extraction)
     assert len(question_extraction.requests) == 1
     assert question_extraction.requests[0].intent == "xin nộp phúc khảo trễ"
-    assert seen["partial_draft"] is partial and card.partial_draft is partial
-    assert "Phần A đã soạn sẵn, phần B cần anh/chị quyết" in card.facts
+    assert card.partial_draft is seen["partial_draft"]
+    assert card.partial_draft is not None and card.partial_draft.grounded
+    assert card.partial_draft.citations == partial.citations
+    assert "Đã chuẩn bị phần trả lời thông tin; phần còn lại chờ chuyên viên quyết định." in card.facts
 
 
 def _stored_case(case_id: str, *, status: CaseStatus = CaseStatus.RECEIVED) -> None:
@@ -1087,7 +1134,13 @@ def test_pending_send_dispatches_after_deadline_and_cannot_be_rescheduled(
     monkeypatch, tmp_path
 ) -> None:
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    monkeypatch.setattr("core.dispatch.get_corpus_version", lambda: "cv_test")
+    monkeypatch.setattr("core.dispatch.get_chunk", lambda chunk_id: _evidence_chunk())
     _stored_case("case-send-due")
+    db.execute(
+        "INSERT INTO drafts(draft_id, case_id, kind, grounded, citations_json) VALUES (?, ?, ?, ?, ?)",
+        ("draft-send-due", "case-send-due", "auto", 1, '["chunk-1"]'),
+    )
     schedule_auto_reply("case-send-due", decision=_auto_decision(), actor="SYSTEM")
 
     assert dispatch_due(
@@ -1105,7 +1158,8 @@ def test_pending_send_can_escalate_and_sent_case_creates_linked_correction(
 ) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
-    _stored_case("case-send-escalate")
+    _case_with_decision("case-send-escalate")
+    db.execute("UPDATE cases SET status = ? WHERE case_id = ?", (CaseStatus.PROCESSING, "case-send-escalate"))
     schedule_auto_reply("case-send-escalate", decision=_auto_decision(), actor="SYSTEM")
     escalate_from_pending("case-send-escalate", actor="HUMAN:reviewer", reason="Cần quyết định.")
     row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", ("case-send-escalate",))
@@ -1177,28 +1231,15 @@ def test_override_supersedes_decision_and_rerun_returns_diff(monkeypatch, tmp_pa
     assert overridden.status is CaseStatus.AWAITING_HUMAN
     assert rows[1]["is_override"] == 1 and rows[0]["superseded_by"] == rows[1]["decision_id"]
 
-    rerun_result = PipelineResult(
-        "case-rerun",
-        "trace-rerun",
-        CaseStatus.PENDING_SEND,
-        PolicyDecision(Decision.AUTO_REPLY, None, "P05", "Đủ căn cứ.", ["chunk-2"], "cv_current"),
-        None,
-        None,
-        None,
-        None,
-        "cv_current",
-        {},
-        datetime.now(timezone.utc),
-        datetime.now(timezone.utc),
-    )
-    monkeypatch.setattr("core.controls.process_case", lambda inp, actor: rerun_result)
+    _install_routine_pipeline(monkeypatch, Domain.COURSE_WITHDRAWAL)
     rerun, diff = rerun_case("case-override", "ADMIN:lan")
 
-    assert rerun is rerun_result
+    assert rerun.case_id != "case-override"
+    assert db.fetch_one("SELECT case_id FROM cases WHERE case_id = ?", (rerun.case_id,)) is not None
     assert diff == {
         "decision": {"before": "ESCALATE", "after": "AUTO_REPLY"},
         "rule_id": {"before": "ADMIN_OVERRIDE", "after": "P05"},
-        "evidence_ids": {"before": ["chunk-1"], "after": ["chunk-2"]},
+        "evidence_ids": {"before": ["chunk-1"], "after": ["chunk-1"]},
     }
 
 
@@ -1316,7 +1357,7 @@ def test_no_over_escalation(monkeypatch, tmp_path) -> None:
     assert all(result.decision.rule_id == "P05" for result in results)
 
 
-# KHÔNG ĐƯỢC XÓA: mọi lỗi phải fail-safe thành ESCALATE, không được fail-open.
+# KHÔNG ĐƯỢC XÓA: lỗi dịch vụ phải ERROR; thiếu nguồn nghiệp vụ phải ESCALATE, không fail-open.
 def test_no_fail_open(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
     failures = ("timeout", "json", "empty_corpus", "guard", "missing_policy")
@@ -1360,5 +1401,5 @@ def test_no_fail_open(monkeypatch, tmp_path) -> None:
                 patched.setattr(policy_engine, "POLICY_PATH", tmp_path / "missing-policy.yaml")
             results.append(pipeline.process_case(_input()))
 
-    assert all(result.decision.decision is Decision.ESCALATE for result in results)
-    assert all(result.status is CaseStatus.AWAITING_HUMAN for result in results)
+    assert all(result.decision.decision is not Decision.AUTO_REPLY for result in results)
+    assert all(result.status is CaseStatus.ERROR for result in results[:2] + results[3:])

@@ -94,7 +94,7 @@ def test_corpus_api_reads_active_index_with_contract_types(monkeypatch) -> None:
     monkeypatch.setattr(api, "get_source", lambda *_args, **_kwargs: source)
     monkeypatch.setattr(api, "get_chunk_record", lambda *_args, **_kwargs: chunk)
     monkeypatch.setattr(api, "list_sources", lambda *_args, **_kwargs: [source])
-    monkeypatch.setattr(api, "get_current_corpus_version", lambda: "cv_active")
+    monkeypatch.setattr(api, "compute_corpus_version", lambda: "cv_active")
 
     chunks = api.search(
         "Hạn chót rút học phần là khi nào?",

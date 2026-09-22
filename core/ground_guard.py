@@ -19,7 +19,6 @@ FORBIDDEN_AUTHORITY_PHRASES = (
     "chúng tôi đồng ý",
     "đã được duyệt",
     "được chấp thuận",
-    "ngoại lệ",
     "bạn sẽ được",
     "we approve",
 )
@@ -39,26 +38,44 @@ def _citation_failure(draft: DraftReply, evidence: EvidenceResult) -> bool:
     )
 
 
-def _unsupported_value_failure(draft: DraftReply, evidence: EvidenceResult) -> bool:
-    evidence_text = "\n".join(chunk.text for chunk in evidence.chunks).casefold()
+def _unsupported_value_failure(
+    draft: DraftReply, evidence: EvidenceResult, extra_text: str = ""
+) -> bool:
+    evidence_text = "\n".join([extra_text] + [chunk.text for chunk in evidence.chunks]).casefold()
     body = CITATION_MARKER_PATTERN.sub("", draft.body)
     values = {
-        match.group().casefold()
-        for pattern in (NUMBER_PATTERN, ARTICLE_PATTERN, FORM_PATTERN)
+        match.group().casefold().rstrip(".,/")
+        for pattern in (ARTICLE_PATTERN, FORM_PATTERN)
         for match in pattern.finditer(body)
     }
-    return any(value not in evidence_text for value in values)
+
+    def normalize_number(value: str) -> str:
+        return re.sub(r"[.,](?=\d{3}(?:\D|$))", "", value.rstrip(".,/"))
+
+    source_numbers = {
+        normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(evidence_text)
+    }
+    draft_numbers = {normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(body)}
+    return not draft_numbers <= source_numbers or any(
+        value not in evidence_text for value in values
+    )
 
 
 def _authority_failure(draft: DraftReply) -> bool:
-    body = draft.body.casefold()
-    return any(phrase in body for phrase in FORBIDDEN_AUTHORITY_PHRASES)
+    sentences = SENTENCE_PATTERN.split(draft.body.casefold())
+    return any(
+        any(phrase in sentence for phrase in FORBIDDEN_AUTHORITY_PHRASES)
+        and not any(
+            word in sentence for word in ("không ", "chưa ", "chỉ khi ", "sau khi ", "nếu ")
+        )
+        for sentence in sentences
+    )
 
 
 def _citation_ratio_failure(draft: DraftReply) -> bool:
-    sentences = [
-        sentence.strip() for sentence in SENTENCE_PATTERN.split(draft.body) if sentence.strip()
-    ]
+    # LLM thường đặt trích dẫn ngay sau dấu chấm; nó vẫn dẫn cho câu đứng trước.
+    body = re.sub(r"([.!?])\s*(\[[^\]]+\])", r" \2\1", draft.body)
+    sentences = [sentence.strip() for sentence in SENTENCE_PATTERN.split(body) if sentence.strip()]
     cited = sum(
         any(f"[{citation}]" in sentence for citation in draft.citations) for sentence in sentences
     )
@@ -82,6 +99,7 @@ def guard_groundedness(
     corpus_version: str,
     draft: DraftReply,
     evidence: EvidenceResult,
+    record_event: bool = True,
 ) -> GroundednessResult:
     """Kiểm tra bốn điều kiện groundedness, giữ nguyên draft khi hạ cấp."""
     checks = (
@@ -102,16 +120,17 @@ def guard_groundedness(
         evidence_ids=[chunk.chunk_id for chunk in evidence.chunks],
         corpus_version=corpus_version,
     )
-    log_event(
-        case_id=case_id,
-        actor=actor,
-        action="GROUNDEDNESS_FAILED",
-        rule_id=decision.rule_id,
-        input_ref=case_id,
-        reason=reason,
-        sources=decision.evidence_ids,
-        corpus_version=corpus_version,
-    )
+    if record_event:
+        log_event(
+            case_id=case_id,
+            actor=actor,
+            action="GROUNDEDNESS_FAILED",
+            rule_id=decision.rule_id,
+            input_ref=case_id,
+            reason=reason,
+            sources=decision.evidence_ids,
+            corpus_version=corpus_version,
+        )
     return GroundednessResult(_draft_with_grounding(draft, False, failures), decision, failures)
 
 

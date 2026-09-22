@@ -175,9 +175,9 @@ def _record(inp: PolicyInput, decision: PolicyDecision) -> PolicyDecision:
 
 def _fallback(inp: PolicyInput) -> PolicyDecision:
     return PolicyDecision(
-        decision=Decision.ESCALATE,
-        escalation_type=EscalationType.FACT_UNRESOLVED,
-        rule_id="P04",
+        decision=Decision.ERROR,
+        escalation_type=None,
+        rule_id="TECHNICAL_ERROR",
         reason=P04_REASON,
         evidence_ids=[chunk.chunk_id for chunk in inp.evidence.chunks],
         corpus_version=inp.corpus_version,
@@ -187,6 +187,8 @@ def _fallback(inp: PolicyInput) -> PolicyDecision:
 def decide_policy(inp: PolicyInput) -> PolicyDecision:
     """Áp dụng luật YAML đầu tiên khớp; lỗi cấu hình luôn hạ về P04."""
     try:
+        if inp.llm_error or inp.parse_error or inp.timeout:
+            return _record(inp, _fallback(inp))
         context = _context(inp)
         for rule in _load_rules():
             when = rule.get("when")

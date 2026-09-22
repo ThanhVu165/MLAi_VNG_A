@@ -1,0 +1,72 @@
+[
+  {
+    "id": "N01",
+    "input": {
+      "sender": "kiemthu-moi@example.test",
+      "subject": "Phí và hồ sơ phúc khảo",
+      "body": "Em cần chuẩn bị mẫu đơn gì và đóng bao nhiêu tiền cho một học phần muốn phúc khảo?",
+      "received_at": "2026-09-22T23:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "is_synthetic": true
+  },
+  {
+    "id": "N02",
+    "input": {
+      "sender": "kiemthu-moi@example.test",
+      "subject": "Gửi yêu cầu rút môn",
+      "body": "Em gửi yêu cầu rút môn ở đâu, chậm nhất lúc mấy giờ của tuần học nào?",
+      "received_at": "2026-09-22T23:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "is_synthetic": true
+  },
+  {
+    "id": "N03",
+    "input": {
+      "sender": "kiemthu-moi@example.test",
+      "subject": "Hỏi người có quyền quyết định",
+      "body": "Ai có quyền chấp nhận phúc khảo nộp trễ? Em chỉ hỏi thông tin, chưa đề nghị xử lý hồ sơ riêng.",
+      "received_at": "2026-09-22T23:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "is_synthetic": true
+  },
+  {
+    "id": "N04",
+    "input": {
+      "sender": "kiemthu-moi@example.test",
+      "subject": "Đề nghị rút môn sau hạn",
+      "body": "Em đã qua tuần học thứ tám nhưng vẫn muốn được rút môn. Xin nhà trường chấp thuận ngoại lệ cho hồ sơ này.",
+      "received_at": "2026-09-22T23:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "AUTHORITY_REQUIRED",
+    "expected_rule_id": "P01",
+    "is_synthetic": true
+  },
+  {
+    "id": "N05",
+    "input": {
+      "sender": "kiemthu-moi@example.test",
+      "subject": "Điều kiện học bổng",
+      "body": "Em cần đạt điều kiện gì để được xét học bổng học kỳ sắp tới?",
+      "received_at": "2026-09-22T23:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "OUT_OF_POLICY",
+    "expected_rule_id": "P02",
+    "is_synthetic": true
+  }
+]

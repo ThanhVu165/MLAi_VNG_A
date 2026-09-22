@@ -3,12 +3,13 @@ from collections.abc import Sequence
 from time import perf_counter
 
 from core.types import Domain, SourceStatus
-from corpus.indexer import build_active_index, tokenize
+from corpus.indexer import active_index_signature, build_active_index, tokenize
 from corpus.store import (
     ChunkRecord,
     SourceRecord,
     create_chunk,
     create_source,
+    update_chunk,
     update_source,
 )
 
@@ -81,3 +82,16 @@ def test_downgrade_removes_document_when_index_rebuilt(tmp_path) -> None:
     assert (
         build_active_index(database_path=database_path, encoder=FakeEncoder()).search("điểm") == []
     )
+
+
+def test_signature_changes_when_scope_or_conflict_changes_without_text(tmp_path) -> None:
+    path = tmp_path / "cache.db"
+    source = create_source(SourceRecord("source", status=SourceStatus.ACTIVE), database_path=path)
+    chunk = ChunkRecord("chunk", source.doc_id, "Điều 1", "Lệ phí 100 đồng.", Domain.GRADE_APPEAL)
+    create_chunk(chunk, database_path=path)
+    first = active_index_signature(database_path=path)
+    update_chunk(replace(chunk, conflict_flag=True, conflict_with="other"), database_path=path)
+    second = active_index_signature(database_path=path)
+    assert first != second
+    update_source(replace(source, effective_to="2026-12-31", cohorts=("K49",)), database_path=path)
+    assert active_index_signature(database_path=path) != second

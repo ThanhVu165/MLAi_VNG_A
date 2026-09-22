@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import inspect
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 
-import core.pipeline as pipeline
+from core import pipeline
 from core.ground_guard import GroundednessResult
 from core.types import (
     CaseInput,
@@ -20,6 +22,7 @@ from core.types import (
     RequestItem,
 )
 from infra import db
+from infra.settings import load_local_env
 
 
 def _input(channel: str) -> CaseInput:
@@ -103,7 +106,9 @@ def test_paste_inbox_and_verify_share_the_same_pipeline(monkeypatch, tmp_path) -
     assert "if inp.channel" not in inspect.getsource(pipeline.process_case)
 
 
-def test_pipeline_step_failure_returns_p04_without_raising(monkeypatch, tmp_path) -> None:
+def test_pipeline_step_failure_returns_error_without_business_escalation(
+    monkeypatch, tmp_path
+) -> None:
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
     monkeypatch.setattr(pipeline, "get_corpus_version", lambda: "cv")
     monkeypatch.setattr(
@@ -114,6 +119,20 @@ def test_pipeline_step_failure_returns_p04_without_raising(monkeypatch, tmp_path
 
     result = pipeline.process_case(_input("verify"))
 
-    assert result.decision.decision is Decision.ESCALATE
-    assert result.decision.rule_id == "P04"
-    assert result.status is CaseStatus.AWAITING_HUMAN
+    assert result.decision.decision is Decision.ERROR
+    assert result.decision.rule_id == "TECHNICAL_ERROR"
+    assert result.status is CaseStatus.ERROR
+    assert result.card is None
+    assert not db.fetch_one("SELECT case_id FROM escalations WHERE case_id = ?", (result.case_id,))
+
+
+def test_local_env_does_not_override_existing_environment(monkeypatch, tmp_path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("GOOGLE_API_KEY=from-file\nLLM_MODE=replay\n", encoding="utf-8")
+    monkeypatch.setenv("GOOGLE_API_KEY", "from-shell")
+    monkeypatch.delenv("LLM_MODE", raising=False)
+
+    load_local_env(Path(env_file))
+
+    assert os.environ["GOOGLE_API_KEY"] == "from-shell"
+    assert os.environ["LLM_MODE"] == "replay"

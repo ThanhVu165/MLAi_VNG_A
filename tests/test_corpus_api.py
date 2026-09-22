@@ -1,17 +1,22 @@
 import inspect
+from pathlib import Path
+
+import pytest
 
 from core.types import Domain, SourceStatus
 from corpus import api
 from corpus.indexer import SearchResult
 from corpus.store import ChunkRecord, SourceRecord
+from infra import db
 
 
-def test_corpus_api_contract_is_available_with_an_empty_database(monkeypatch) -> None:
+def test_corpus_api_contract_is_available_with_an_empty_database(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "empty.db")
+    db.initialize_database()
     monkeypatch.setattr(api, "search_active", lambda *_args, **_kwargs: [])
-    monkeypatch.setattr(api, "get_current_corpus_version", lambda: None)
-    monkeypatch.setattr(api, "compute_corpus_version", lambda: "cv_empty")
-    monkeypatch.setattr(api, "get_chunk_record", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(api, "list_sources", lambda *_args, **_kwargs: [])
+    db.execute("INSERT INTO settings (key, value) VALUES ('current_corpus_version', 'cv_stale')")
 
     assert list(inspect.signature(api.search).parameters) == [
         "query",
@@ -21,11 +26,13 @@ def test_corpus_api_contract_is_available_with_an_empty_database(monkeypatch) ->
     ]
     assert inspect.signature(api.search).parameters["top_k"].default == 6
     assert inspect.signature(api.search).parameters["at"].default is None
-    assert api.get_corpus_version() == "cv_empty"
+    assert api.get_corpus_version() == "cv_e3b0c44298fc"
     assert api.search("câu hỏi", [Domain.CONDUCT_SCORE]) == []
     assert api.get_chunk("missing") is None
     assert api.is_active("missing") is False
     assert api.supported_domains() == []
+    assert api.available_evidence([Domain.CONDUCT_SCORE]) == []
+    assert db.fetch_all("SELECT * FROM sources") == []
 
 
 def test_corpus_api_never_returns_a_non_active_source_chunk(monkeypatch) -> None:

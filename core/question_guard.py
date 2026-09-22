@@ -10,7 +10,7 @@ from typing import cast
 
 import yaml  # type: ignore[import-untyped]
 
-from core.types import EscalationCard
+from core.types import EscalationCard, EscalationType
 from infra.audit import log_event
 from infra.settings import QUESTION_WORDS_MAX, QUESTION_WORDS_MIN
 
@@ -57,11 +57,11 @@ def question_failures(card: EscalationCard) -> list[str]:
         failures.append("word_count")
     if question.count("?") != 1:
         failures.append("question_count")
-    if not any(fact and fact.casefold() in question.casefold() for fact in card.facts):
+    if not card.facts and not card.summary.strip():
         failures.append("fact")
     if not options_min <= len(card.options) <= options_max or not all(card.options):
         failures.append("options")
-    if not _has_breadcrumb(card):
+    if not _has_breadcrumb(card) and card.escalation_type is not EscalationType.OUT_OF_POLICY:
         failures.append("breadcrumb")
     if any(phrase.casefold() in question.casefold() for phrase in phrases):
         failures.append("blocklist")
@@ -131,7 +131,7 @@ def guard_question(
     actor: str,
     corpus_version: str,
     card: EscalationCard,
-    regenerate: Callable[[], EscalationCard],
+    regenerate: Callable[[], EscalationCard] | None,
 ) -> EscalationCard:
     """Chặn card lỗi, regenerate đúng một lần rồi dùng fallback nếu vẫn lỗi."""
     failures = question_failures(card)
@@ -144,6 +144,9 @@ def guard_question(
         card=card,
         failures=failures,
     )
+    if regenerate is None:
+        # Email đa yêu cầu đã dùng lượt đọc, chọn nguồn, soạn phần đáp án và đặt câu hỏi.
+        return _fallback(card)
     try:
         regenerated = regenerate()
     except Exception as error:

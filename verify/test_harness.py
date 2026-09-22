@@ -1,10 +1,62 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 from infra import db
 from infra.audit import recent_events
-from verify.harness import run_cases
+from core.types import (
+    CaseInput,
+    CaseStatus,
+    Decision,
+    EscalationCard,
+    EscalationType,
+    PipelineResult,
+    PolicyDecision,
+)
+from verify import harness
+from verify.harness import VerifyResult, run_cases
+
+
+def test_same_escalation_type_with_wrong_rule_does_not_pass() -> None:
+    now = datetime.now(timezone.utc)
+    case = harness.VerifyCase(
+        "E04",
+        CaseInput(
+            "s@example.test", "Quy định chuyển tiếp", "Quy định nào áp dụng cho em?", now, "verify"
+        ),
+        Decision.ESCALATE,
+        EscalationType.FACT_UNRESOLVED,
+        "P03",
+    )
+    card = EscalationCard(
+        "Cần xác nhận khóa học",
+        [],
+        [],
+        "Sinh viên thuộc khóa học nào để áp dụng quy định chuyển tiếp?",
+        ["Khóa hiện tại", "Khóa trước"],
+        EscalationType.FACT_UNRESOLVED,
+        None,
+    )
+    result = PipelineResult(
+        "test",
+        "trace",
+        CaseStatus.AWAITING_HUMAN,
+        PolicyDecision(
+            Decision.ESCALATE, EscalationType.FACT_UNRESOLVED, "P04", "Sai nguyên nhân", [], "test"
+        ),
+        None,
+        None,
+        None,
+        card,
+        "test",
+        {},
+        now,
+        now,
+    )
+    assert not harness._matches(case, result)
+    result.decision.rule_id = "P03"
+    assert harness._matches(case, result)
 
 
 def test_run_cases_uses_pipeline_and_audits_run(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
@@ -22,8 +74,8 @@ def test_run_cases_uses_pipeline_and_audits_run(monkeypatch, tmp_path) -> None: 
                         "body": "Em cần biết quy trình điểm rèn luyện trong học kỳ một năm học 2026-2027 và thời hạn công bố.",
                         "received_at": "2026-09-22T09:00:00+07:00",
                     },
-                    "expected_decision": "ESCALATE",
-                    "expected_type": "FACT_UNRESOLVED",
+                    "expected_decision": "ERROR",
+                    "expected_type": None,
                 }
             ]
         ),
@@ -39,3 +91,25 @@ def test_run_cases_uses_pipeline_and_audits_run(monkeypatch, tmp_path) -> None: 
         "VERIFY_RUN_STARTED",
         "VERIFY_RUN_FINISHED",
     }
+
+
+def test_main_returns_nonzero_when_any_case_fails(monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
+    failed = VerifyResult(
+        "T01",
+        "Hỏi thông tin",
+        None,
+        Decision.AUTO_REPLY,
+        None,
+        Decision.ESCALATE,
+        EscalationType.FACT_UNRESOLVED,
+        "P04",
+        False,
+        1,
+        "2026-09-22T09:00:00+07:00",
+        "cv_test",
+        "case-test",
+    )
+    monkeypatch.setattr(harness, "run_cases", lambda *_args, **_kwargs: (failed,))
+
+    assert harness.main(["--set", "verify4"]) == 1
+    assert "FAIL" in capsys.readouterr().out

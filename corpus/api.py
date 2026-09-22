@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from datetime import date, datetime
 
 from core.types import Domain, EvidenceChunk, SourceStatus
+from corpus.conflict import relevant_conflict
 from corpus.indexer import search_active
 from corpus.store import (
     ChunkRecord,
     compute_corpus_version,
     get_chunk_record,
-    get_current_corpus_version,
     get_source,
     list_sources,
+    list_chunks,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ RETRIEVAL_CANDIDATE_MULTIPLIER = 3
 
 def get_corpus_version() -> str:
     """Trả phiên bản corpus đang hiệu lực, kể cả trước lần bump đầu tiên."""
-    return get_current_corpus_version() or compute_corpus_version()
+    return compute_corpus_version()
 
 
 def search(
@@ -34,11 +36,7 @@ def search(
     """Tìm trong index ACTIVE, lọc domain và ngày hiệu lực trước khi trả evidence."""
     if top_k <= 0 or not domains:
         return []
-    try:
-        records = search_active(query, top_k=top_k * RETRIEVAL_CANDIDATE_MULTIPLIER)
-    except (OSError, RuntimeError, ValueError) as error:
-        LOGGER.warning("Không thể truy vấn index corpus: %s", error)
-        return []
+    records = search_active(query, top_k=top_k * RETRIEVAL_CANDIDATE_MULTIPLIER)
     requested_at = at.date() if at is not None else None
     chunks = [
         evidence
@@ -48,6 +46,48 @@ def search(
         if _is_effective(evidence, requested_at)
     ]
     return chunks[:top_k]
+
+
+def available_evidence(
+    domains: list[Domain],
+    at: datetime | None = None,
+    *,
+    cohort: str | None = None,
+    applies_to: str | None = None,
+) -> list[EvidenceChunk]:
+    """Các đoạn nguồn đã duyệt để mô hình chọn căn cứ, không lọc nhãn lịch sử."""
+    requested_at = at.date() if at is not None else None
+    sources = {
+        source.doc_id: source
+        for source in list_sources(SourceStatus.ACTIVE)
+        if set(source.domains) & set(domains)
+        if not cohort
+        or not source.cohorts
+        or cohort.casefold() in {item.casefold() for item in source.cohorts}
+        if not applies_to or not source.applies_to or applies_to in source.applies_to
+    }
+    records = [record for record in list_chunks() if record.doc_id in sources]
+    candidates = {
+        record.chunk_id: chunk
+        for record in records
+        if (chunk := _evidence_chunk(record, 1.0, expand=False)) is not None
+        if _is_effective(chunk, requested_at)
+    }
+    relevant_records = [record for record in records if record.chunk_id in candidates]
+    evidence: list[EvidenceChunk] = []
+    for record in relevant_records:
+        chunk = candidates[record.chunk_id]
+        matching_domain = next(
+            domain for domain in domains if domain in sources[record.doc_id].domains
+        )
+        evidence.append(
+            replace(
+                chunk,
+                domain=matching_domain,
+                conflict_flag=relevant_conflict(record, relevant_records),
+            )
+        )
+    return evidence
 
 
 def get_chunk(chunk_id: str) -> EvidenceChunk | None:
@@ -71,7 +111,9 @@ def supported_domains() -> list[Domain]:
     return sorted(domains, key=lambda domain: domain.value)
 
 
-def _evidence_chunk(chunk: ChunkRecord, score: float) -> EvidenceChunk | None:
+def _evidence_chunk(
+    chunk: ChunkRecord, score: float, *, expand: bool = True
+) -> EvidenceChunk | None:
     source = get_source(chunk.doc_id)
     if source is None:
         LOGGER.warning("Chunk %s không có nguồn tương ứng.", chunk.chunk_id)
@@ -88,7 +130,7 @@ def _evidence_chunk(chunk: ChunkRecord, score: float) -> EvidenceChunk | None:
         chunk_id=chunk.chunk_id,
         doc_id=chunk.doc_id,
         breadcrumb=chunk.breadcrumb,
-        text=chunk.text,
+        text=_article_context(chunk) if expand else chunk.text,
         domain=chunk.domain,
         label=chunk.label,
         score=score,
@@ -97,7 +139,26 @@ def _evidence_chunk(chunk: ChunkRecord, score: float) -> EvidenceChunk | None:
         applies_to=list(source.applies_to),
         cohorts=list(source.cohorts),
         transitional_clause=source.transitional_clause,
-        conflict_flag=chunk.conflict_flag,
+        conflict_flag=chunk.conflict_flag or (expand and _article_has_conflict(chunk)),
+    )
+
+
+def _article_context(chunk: ChunkRecord) -> str:
+    if chunk.article_no is None:
+        return chunk.text
+    siblings = [
+        sibling.text
+        for sibling in list_chunks(chunk.doc_id)
+        if sibling.article_no == chunk.article_no
+    ]
+    return "\n".join(siblings) or chunk.text
+
+
+def _article_has_conflict(chunk: ChunkRecord) -> bool:
+    return chunk.article_no is not None and any(
+        sibling.conflict_flag
+        for sibling in list_chunks(chunk.doc_id)
+        if sibling.article_no == chunk.article_no
     )
 
 

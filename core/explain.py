@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from core.types import Decision, EscalationType, PolicyDecision
+from core.types import CaseStatus, Decision, EscalationType, PolicyDecision
 from infra.audit import log_event
 from infra.db import fetch_all, fetch_one
 
@@ -55,7 +55,23 @@ def _reason(decision: PolicyDecision) -> str:
     return "Cần chuyên viên kiểm tra thêm để bảo đảm trả lời đúng."
 
 
-def _next_step(decision: PolicyDecision) -> str:
+def _next_step(decision: PolicyDecision, status: str | None = None) -> str:
+    instructions = {
+        CaseStatus.CANCELLED: "Đã hủy gửi. Bản nháp và lịch sử vẫn được giữ; chỉ chạy lại khi muốn xử lý tiếp.",
+        CaseStatus.NEEDS_RECHECK: "Chưa gửi email. Hãy chạy lại để đối chiếu với quy định hiện tại.",
+        CaseStatus.SENT: "Đã hoàn tất gửi mô phỏng. Nếu cần sửa nội dung, hãy tạo thư đính chính.",
+        CaseStatus.RESOLVED: "Yêu cầu đã được chuyên viên kết thúc; lịch sử được giữ để đối chiếu.",
+        CaseStatus.PENDING_SEND: "Thư đang chờ gửi mô phỏng; bạn có thể hủy hoặc chuyển chuyên viên trong thời gian chờ.",
+        CaseStatus.PENDING_APPROVAL: "Chuyên viên cần đọc bản nháp, lưu mọi chỉnh sửa rồi chủ động duyệt gửi.",
+        CaseStatus.HUMAN_DECIDED: "Quyết định của chuyên viên đã được lưu. Theo dõi bước soạn thư trong mục Cần chuyên viên xử lý; nếu gặp lỗi, yêu cầu soạn lại.",
+        CaseStatus.AWAITING_HUMAN: "Email đã vào hàng chờ. Chuyên viên cần trả lời câu hỏi chuyển tiếp trước khi soạn thư.",
+    }
+    if status is not None and status in instructions:
+        return instructions[CaseStatus(status)]
+    if decision.decision is Decision.ERROR:
+        return (
+            "Chưa gửi thư và chưa chuyển cho chuyên viên. Hãy kiểm tra kết nối rồi chạy lại email."
+        )
     if decision.decision is Decision.AUTO_REPLY:
         return "Bạn có thể đọc bản trả lời và gửi thêm thông tin nếu vẫn cần làm rõ."
     if decision.decision is Decision.INVALID_INPUT:
@@ -71,12 +87,17 @@ def _trim(text: str) -> str:
 def explain_plainly(case_id: str) -> str:
     """Trả lời ngắn hệ thống đã làm gì, vì sao, dựa vào đâu và bước tiếp theo."""
     decision = _decision(case_id)
-    explanation = _trim(
-        "Hệ thống đã đọc nội dung yêu cầu và đối chiếu với quy định hiện có. "
-        f"{_reason(decision)} "
-        f"Thông tin này dựa trên {_titles(decision.evidence_ids)}. "
-        f"{_next_step(decision)}"
-    )
+    case = fetch_one("SELECT status FROM cases WHERE case_id = ?", (case_id,))
+    next_step = _next_step(decision, case["status"] if case else None)
+    if decision.decision in (Decision.ERROR, Decision.INVALID_INPUT):
+        explanation = f"{_reason(decision)} {next_step}"
+    else:
+        explanation = _trim(
+            "Hệ thống đã đọc nội dung yêu cầu và đối chiếu với quy định hiện có. "
+            f"{_reason(decision)} "
+            f"Thông tin này dựa trên {_titles(decision.evidence_ids)}. "
+            f"{next_step}"
+        )
     log_event(
         case_id=case_id,
         actor="HUMAN:viewer",

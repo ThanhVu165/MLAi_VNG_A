@@ -4,23 +4,24 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from difflib import unified_diff
 
-from core.types import SourceStatus
-from corpus.conflict import scheduled_supersede_ids
+from core.types import Domain, SourceStatus
+from corpus.conflict import flag_active_conflicts, scheduled_supersede_ids
 from corpus.store import (
     ChunkRecord,
     DatabasePath,
     SourceRecord,
     bump_corpus_version,
     get_source,
+    get_source_content,
     list_chunks,
     list_sources,
     update_source,
 )
 from infra.audit import log_event
-from infra.db import execute, fetch_all, now_iso
+from infra.db import execute, fetch_all, now_iso, transaction
 
 
 @dataclass(frozen=True)
@@ -44,19 +45,30 @@ def reject_source(
     source: SourceRecord, *, actor: str, reason: str, database_path: DatabasePath = None
 ) -> SourceRecord:
     """Từ chối nguồn chờ duyệt với lý do bắt buộc."""
-    _require_reason(reason)
-    rejected = replace(source, status=SourceStatus.REJECTED)
-    update_source(rejected, database_path=database_path)
-    log_event(
-        case_id=None,
-        actor=actor,
-        action="REJECT_SOURCE",
-        output_ref=source.doc_id,
-        reason=reason,
-        sources=[source.doc_id],
-        database_path=str(database_path) if database_path else None,
-    )
-    return rejected
+    with transaction(database_path):
+        _require_reason(reason)
+        _require_admin_actor(actor)
+        stored = get_source(source.doc_id, database_path=database_path)
+        if stored is None or stored.status is not SourceStatus.PENDING_REVIEW:
+            raise ValueError("Nguồn không còn chờ xác nhận. Hãy tải lại danh sách trước khi thao tác.")
+        affected = execute(
+            "UPDATE sources SET status = ? WHERE doc_id = ? AND status = ?",
+            (SourceStatus.REJECTED, stored.doc_id, SourceStatus.PENDING_REVIEW),
+            database_path=database_path,
+        )
+        if affected != 1:
+            raise ValueError("Nguồn vừa được xử lý ở nơi khác. Hãy tải lại danh sách.")
+        rejected = replace(stored, status=SourceStatus.REJECTED)
+        log_event(
+            case_id=None,
+            actor=actor,
+            action="REJECT_SOURCE",
+            output_ref=source.doc_id,
+            reason=reason,
+            sources=[source.doc_id],
+            database_path=str(database_path) if database_path else None,
+        )
+        return rejected
 
 
 def request_change(
@@ -95,38 +107,60 @@ def activate_source(
     source: SourceRecord, *, actor: str, reason: str, database_path: DatabasePath = None
 ) -> SourceRecord:
     """Kích hoạt nguồn đã duyệt, hạ nguồn bị thay và tăng phiên bản corpus."""
-    _require_reason(reason)
-    _require_admin_actor(actor)
-    stored = get_source(source.doc_id, database_path=database_path)
-    if stored is None:
-        raise KeyError(f"Không tìm thấy nguồn {source.doc_id}.")
-    if stored.status is not SourceStatus.PENDING_REVIEW:
-        raise ValueError("Chỉ nguồn PENDING_REVIEW mới được kích hoạt.")
+    with transaction(database_path):
+        _require_reason(reason)
+        _require_admin_actor(actor)
+        stored = get_source(source.doc_id, database_path=database_path)
+        if stored is None:
+            raise KeyError(f"Không tìm thấy nguồn {source.doc_id}.")
+        if stored.status is not SourceStatus.PENDING_REVIEW:
+            raise ValueError("Chỉ có thể đưa vào sử dụng nguồn đang chờ xác nhận. Hãy tải lại danh sách.")
+        if not list_chunks(stored.doc_id, database_path=database_path):
+            raise ValueError("Tài liệu chưa có nội dung; hãy chuẩn bị bản gốc trước khi duyệt.")
+        _validate_approval(stored, database_path=database_path)
 
-    activated_at = now_iso()
-    activated = replace(
-        stored,
-        status=SourceStatus.ACTIVE,
-        activated_at=activated_at,
-        activated_by=actor,
-    )
-    update_source(activated, database_path=database_path)
-    _supersede_scheduled_sources(activated, activated_at, actor, database_path=database_path)
-    corpus_version = bump_corpus_version(
-        actor, f"Kích hoạt nguồn {activated.doc_id}.", database_path=database_path
-    )
-    log_event(
-        case_id=None,
-        actor=actor,
-        action="ACTIVATE_SOURCE",
-        input_ref=activated.doc_id,
-        output_ref="ACTIVE",
-        reason=reason,
-        sources=[activated.doc_id],
-        corpus_version=corpus_version,
-        database_path=str(database_path) if database_path is not None else None,
-    )
-    return activated
+        activated_at = now_iso()
+        activated = replace(
+            stored,
+            status=SourceStatus.ACTIVE,
+            activated_at=activated_at,
+            activated_by=actor,
+        )
+        update_source(activated, database_path=database_path)
+        _supersede_scheduled_sources(activated, activated_at, actor, database_path=database_path)
+        flag_active_conflicts(actor=actor, database_path=database_path)
+        corpus_version = bump_corpus_version(
+            actor, f"Kích hoạt nguồn {activated.doc_id}.", database_path=database_path
+        )
+        log_event(
+            case_id=None,
+            actor=actor,
+            action="ACTIVATE_SOURCE",
+            input_ref=activated.doc_id,
+            output_ref="ACTIVE",
+            reason=reason,
+            sources=[activated.doc_id],
+            corpus_version=corpus_version,
+            database_path=str(database_path) if database_path is not None else None,
+        )
+        return activated
+
+
+def _validate_approval(source: SourceRecord, *, database_path: DatabasePath) -> None:
+    original = get_source_content(source.doc_id, database_path=database_path)
+    if original is None or not original.content or not original.extracted_text.strip():
+        raise ValueError("Không thể duyệt nguồn thiếu bản gốc hoặc nội dung đã đọc.")
+    if not list_chunks(source.doc_id, database_path=database_path):
+        raise ValueError("Nguồn chưa có đoạn căn cứ; hãy chuẩn bị nội dung trước khi duyệt.")
+    if not source.title or not source.issuer or not source.effective_from or not source.applies_to:
+        raise ValueError("Cần tên nguồn, đơn vị ban hành, ngày hiệu lực và đối tượng áp dụng.")
+    if not source.domains or Domain.UNKNOWN in source.domains:
+        raise ValueError("Hãy xác nhận lĩnh vực được hỗ trợ trước khi duyệt.")
+    start = date.fromisoformat(source.effective_from)
+    if source.effective_to and start > date.fromisoformat(source.effective_to):
+        raise ValueError("Ngày hết hiệu lực phải sau hoặc bằng ngày bắt đầu.")
+    if source.transitional_clause and not source.cohorts:
+        raise ValueError("Nguồn có điều khoản chuyển tiếp cần xác nhận khóa áp dụng.")
 
 
 def _review(source: SourceRecord, *, database_path: DatabasePath) -> PendingReview:
@@ -162,7 +196,7 @@ def _require_reason(reason: str) -> None:
 
 def _require_admin_actor(actor: str) -> None:
     if not actor.startswith("ADMIN:") or not actor.removeprefix("ADMIN:").strip():
-        raise ValueError("Kích hoạt nguồn phải do ADMIN:<người_dùng> thực hiện.")
+        raise ValueError("Hãy nhập tên người quản trị trước khi xác nhận nguồn.")
 
 
 def _supersede_scheduled_sources(
@@ -235,37 +269,40 @@ def rollback_source(
     source: SourceRecord, *, actor: str, reason: str, database_path: DatabasePath = None
 ) -> SourceRecord:
     """Khôi phục nguồn SUPERSEDED và hạ nguồn đang thay thế nó."""
-    _require_reason(reason)
-    _require_admin_actor(actor)
-    stored = get_source(source.doc_id, database_path=database_path)
-    if stored is None or stored.status is not SourceStatus.SUPERSEDED:
-        raise ValueError("Chỉ có thể rollback nguồn SUPERSEDED.")
-    replacement = get_source(stored.superseded_by or "", database_path=database_path)
-    if replacement is not None and replacement.status is SourceStatus.ACTIVE:
-        update_source(
-            replace(
-                replacement,
-                status=SourceStatus.SUPERSEDED,
-                superseded_by=stored.doc_id,
-                superseded_at=now_iso(),
-            ),
-            database_path=database_path,
+    with transaction(database_path):
+        _require_reason(reason)
+        _require_admin_actor(actor)
+        stored = get_source(source.doc_id, database_path=database_path)
+        if stored is None or stored.status is not SourceStatus.SUPERSEDED:
+            raise ValueError("Chỉ có thể rollback nguồn SUPERSEDED.")
+        _validate_approval(stored, database_path=database_path)
+        replacement = get_source(stored.superseded_by or "", database_path=database_path)
+        if replacement is not None and replacement.status is SourceStatus.ACTIVE:
+            update_source(
+                replace(
+                    replacement,
+                    status=SourceStatus.SUPERSEDED,
+                    superseded_by=stored.doc_id,
+                    superseded_at=now_iso(),
+                ),
+                database_path=database_path,
+            )
+            flag_cases_for_recheck(replacement.doc_id, actor=actor, database_path=database_path)
+        restored = replace(stored, status=SourceStatus.ACTIVE, superseded_by=None, superseded_at=None)
+        update_source(restored, database_path=database_path)
+        flag_active_conflicts(actor=actor, database_path=database_path)
+        corpus_version = bump_corpus_version(
+            actor, f"Rollback nguồn {restored.doc_id}.", database_path=database_path
         )
-        flag_cases_for_recheck(replacement.doc_id, actor=actor, database_path=database_path)
-    restored = replace(stored, status=SourceStatus.ACTIVE, superseded_by=None, superseded_at=None)
-    update_source(restored, database_path=database_path)
-    corpus_version = bump_corpus_version(
-        actor, f"Rollback nguồn {restored.doc_id}.", database_path=database_path
-    )
-    log_event(
-        case_id=None,
-        actor=actor,
-        action="ROLLBACK_SOURCE",
-        input_ref=restored.doc_id,
-        output_ref="ACTIVE",
-        reason=reason,
-        sources=[restored.doc_id],
-        corpus_version=corpus_version,
-        database_path=str(database_path) if database_path is not None else None,
-    )
-    return restored
+        log_event(
+            case_id=None,
+            actor=actor,
+            action="ROLLBACK_SOURCE",
+            input_ref=restored.doc_id,
+            output_ref="ACTIVE",
+            reason=reason,
+            sources=[restored.doc_id],
+            corpus_version=corpus_version,
+            database_path=str(database_path) if database_path is not None else None,
+        )
+        return restored

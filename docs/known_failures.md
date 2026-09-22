@@ -2,6 +2,21 @@
 
 Không xóa mục cũ. Khi đã xử lý, giữ nguyên mục và thêm nhãn `[đã sửa]`.
 
+## Hiện trạng sau đợt sửa mã 22/09/2026 — chưa nghiệm thu
+
+- Người dùng chốt hoàn thành tái cấu trúc trước, kiểm thử sau. Không tiếp tục chạy các lượt kiểm chứng đang bị API chặn; các thay đổi cuối chưa chạy Black/Ruff/mypy/pytest hoặc E2E.
+- Mã đã tách lỗi kỹ thuật thành “Chưa xử lý được”, giới hạn lượt gọi/chờ, lưu công việc và soạn sau quyết định trong nền. Thay đổi này thay thế thiết kế cũ biến lỗi LLM thành chuyển tiếp thiếu dữ kiện; chưa đồng nghĩa mô hình live đã xử lý đúng.
+- Giữ `gemini-3.5-flash-lite` theo lựa chọn người dùng. Các lượt gọi trước khi dừng gặp quá tải/hết thời gian; chưa có bằng chứng chạy đủ 15 ca và bài 90 giây với bản cuối. Không suy luận thông báo quá tải là đã xác định đúng giới hạn TPM.
+- Duyệt nguồn và thao tác gửi đã bổ sung bảo vệ giao dịch; regression mới chỉ được viết. Cần kiểm chứng rollback, ngắt/khởi động lại, hủy và duyệt sau đợt tái cấu trúc.
+- Chưa kết nối hộp thư hoặc gửi email ra ngoài, chưa deploy public/xác thực. Kho nguồn còn nhỏ; bộ phát hiện mâu thuẫn dựa vào nội dung tương đồng và số liệu, chưa bảo đảm nhận diện mọi mâu thuẫn diễn đạt bằng lời.
+- Đường nhập nguồn mới đã nối lưu bản gốc, chuẩn bị điều khoản, đề xuất và duyệt nguồn. Chưa hoàn thành thử nguồn mới với LLM live và xác nhận ảnh hưởng câu trả lời trên bản mã cuối.
+
+## Các quan sát lịch sử trước tái cấu trúc
+
+Các mục dưới đây được giữ nguyên để truy vết. Thông số/thiết kế cũ (mô hình, nhãn đoạn,
+đồng bộ UI, migration 001, fallback P04, replay dùng demo) không còn là hướng vận hành hiện tại;
+đối chiếu PROJECT_SPEC và RUNBOOK thay vì áp dụng lại các hướng khắc phục cũ.
+
 - [đã sửa] Hiện tượng: Chưa thể chạy một email từ đầu đến cuối. · Điều kiện tái hiện: Gọi ứng dụng ở trạng thái repository giai đoạn B0. · Vì sao chưa sửa: `core/pipeline.py` và facade corpus chưa được tạo ở các task Agent A/B. · Hướng xử lý: Đã hoàn tất pipeline và facade; tiếp tục kiểm thử tích hợp dọc tại S-05.
 - [đã sửa] Hiện tượng: Chưa thể xác minh migration, settings hoặc toàn bộ build bằng CI cục bộ. · Điều kiện tái hiện: Chạy `python`, `py` hoặc `make check` trong môi trường B0. · Vì sao chưa sửa: Máy chưa có Python 3.11 và Make trên PATH. · Hướng xử lý: Python 3.11 đã có; dùng các lệnh kiểm tra tương đương khi Make vẫn chưa cài.
 - [đã sửa] Hiện tượng: Cấu hình Gemini mặc định lệch model đã xác thực. · Điều kiện tái hiện: Chạy khi không đặt `GEMINI_MODEL`, khiến wrapper dùng `gemini-3.5-flash-lite`. · Vì sao chưa sửa: Cấu hình mặc định không khớp A-08. · Hướng xử lý: Dùng mặc định `gemini-3.5-flash`; vẫn cho phép override qua biến môi trường.
@@ -9,11 +24,13 @@ Không xóa mục cũ. Khi đã xử lý, giữ nguyên mục và thêm nhãn `[
 - Hiện tượng: Verify V01–V04 chạy replay đều hạ cấp P04 và FAIL. · Điều kiện tái hiện: Chạy `LLM_MODE=replay python -m verify.harness --set verify4`. · Vì sao chưa sửa: Chưa có cassette khớp prompt của bốn case C-25, nên pipeline fail-safe thay vì suy đoán. · Hướng xử lý: Hoàn tất cassette replay hợp lệ sau khi A-26 duyệt bộ C-25; không tạo nhánh Verify riêng hoặc hard-code kỳ vọng.
 - Hiện tượng: Nút C-19 không thể đạt 4 PASS trong 60 giây ở chế độ live. · Điều kiện tái hiện: Bấm `Chạy Verify 4 trường hợp` khi `LLM_MODE=live`. · Vì sao chưa sửa: Harness gọi tuần tự pipeline thật; LLM có thể chờ quá 20 giây mỗi case, còn replay chưa có cassette V01–V04. · Hướng xử lý: Bổ sung cassette C-25 đã duyệt để demo chạy replay xác định; không đánh dấu PASS thay cho kết quả thật.
 - Hiện tượng: Nút C-20 chưa hiển thị câu hỏi chuyển tiếp thật cho E04–E05 ở replay. · Điều kiện tái hiện: Chạy `LLM_MODE=replay python -m verify.harness --set escalation5`; E01–E03 và E05 fail-safe P04, E04 không có thẻ câu hỏi. · Vì sao chưa sửa: Chưa có cassette khớp prompt của năm case nên pipeline không được phép suy đoán hay tạo câu hỏi giả. · Hướng xử lý: Bổ sung cassette replay đã được duyệt cho E01–E05, rồi chạy lại nút C-20 để xác nhận đủ năm dòng trong 90 giây.
-<<<<<<< HEAD
 - Hiện tượng: S-05 không đi qua R4 để lấy citation ACTIVE. · Điều kiện tái hiện: Dán email về điểm rèn luyện vào form Paste khi cache model corpus trống. · Vì sao chưa sửa: Tải `paraphrase-multilingual-MiniLM-L12-v2` để lại file `.incomplete` 0 byte và lock. · Hướng xử lý: Agent B/C khôi phục model cache và index corpus, rồi chạy lại S-05.
 - Hiện tượng: `black --check` không xanh toàn repo. · Điều kiện tái hiện: Chạy `py -3.11 -m black --check --line-length 100 .`. · Vì sao chưa sửa: `pages/*`, `streamlit_app.py` và `verify/harness.py` cần định dạng nhưng nằm ngoài phạm vi Agent A. · Hướng xử lý: Agent C định dạng các file sở hữu rồi chạy lại full check.
 - Hiện tượng: Mypy không xanh toàn repo. · Điều kiện tái hiện: Chạy `py -3.11 -m mypy core corpus infra pages verify`. · Vì sao chưa sửa: `infra/llm.py` import `google.generativeai` không có stub/py.typed. · Hướng xử lý: Agent C xử lý typing của dependency hoặc cấu hình kiểm tra import phù hợp.
-=======
 
 - Hiện tượng: Smoke test S-05 với email điểm rèn luyện dừng ở PROCESSING sau khi Gemini trả DeadlineExceeded. · Điều kiện tái hiện: Chạy process_case() với LLM_MODE=live trên corpus hiện tại; sau hơn 30 giây chỉ có 4 event tới PREPOLICY_LOCKED. · Vì sao chưa sửa: Lượt R2 không hoàn tất nên pipeline chưa tạo decision, citation ACTIVE hay sự kiện kết thúc. · Hướng xử lý: Khắc phục độ sẵn sàng Gemini/cassette replay hợp lệ, sau đó chạy lại đúng email qua paste UI và xác nhận đủ 8 event.
->>>>>>> f7aa2a52a2cead0b4d405be2d8363a98f38f5119
+- [đã sửa] Hiện tượng: full15 không nạp được F01 có body rỗng. · Điều kiện tái hiện: chạy full15 hoặc chọn F01. · Hướng xử lý: loader giữ body rỗng để pipeline thật quyết định INVALID_INPUT/R0; test kiểm tra không có escalation. CLI trả exit 1 nếu có FAIL.
+- Hiện tượng: full15 replay trên DB seed mới ngày 22/09/2026 có 3 PASS/12 FAIL; E04 là PASS theo decision/type nhưng thực tế P04 khác P03 kỳ vọng. · Điều kiện tái hiện: LLM_MODE=replay, HF_HUB_OFFLINE=1, seed mới 6 nguồn/72 chunk. · Vì sao chưa sửa: thiếu cassette phù hợp; harness hiện chưa so expected_rule_id theo thiết kế C-18. · Hướng xử lý: giữ kỳ vọng A-26; phải kiểm tra cả rule khi đọc bảng, xác thực runtime/LLM trước khi tuyên bố đáp ứng yêu cầu tự chủ. Không tạo cassette giả để xanh.
+- Hiện tượng: DB local từ lượt sửa trước có thể còn bảng source_contents bổ sung ngoài contract. · Điều kiện tái hiện: đã chạy bản thử sửa trước đợt này. · Hướng xử lý: đã rút migration/action SOURCE_CHUNKED và các lời gọi liên quan khỏi mã; không DROP bảng hoặc xóa dữ liệu của người dùng. DB mới dùng đúng migration 001 đóng băng. Luồng nạp quy định mới đầy đủ vẫn cần sửa trong phạm vi contract; không coi việc rút bản sửa là đã hoàn tất luồng đó.
+- Hiện tượng: thay JSON seed không đổi nội dung corpus trong DB đã có nguồn. · Điều kiện tái hiện: khởi động lại với data/app.db cũ sau B-19. · Vì sao: ensure_seeded cố ý không ghi đè dữ liệu đã quản trị. · Hướng xử lý: demo seed mới trên DB tạm riêng hoặc quy trình cập nhật nguồn có duyệt; không xóa DB để làm mới demo.
+- [đã sửa] Hiện tượng: form paste chỉ nhận body và tự bịa sender/subject; inbox lấy giờ chạy thay vì giờ nhận. · Điều kiện tái hiện: dán email hoặc chọn inbox ở bản trước C-32. · Hướng xử lý: cả trang chủ và page email bắt buộc ba trường; inbox khai báo timestamp có múi giờ và lưu thời điểm tương đương UTC. Chín test UI kiểm tra chặn thiếu trường, dữ liệu nguyên văn, thời điểm và không xử lý lại khi rerun.

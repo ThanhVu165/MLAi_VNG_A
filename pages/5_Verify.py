@@ -1,104 +1,83 @@
-"""Chạy các bộ Verify theo đúng pipeline dùng chung."""
+"""Kiểm tra cùng đường xử lý với email nhập trên giao diện."""
 
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
+from time import perf_counter
 from urllib.parse import quote
 
 import streamlit as st
 
-from core.types import Decision, EscalationType
+from ui.presentation import decision_label, local_time
 from verify.harness import CASE_SETS, VerifyResult, run_cases
 
 
-def _decision_label(decision: Decision, escalation_type: EscalationType | None) -> str:
-    if decision is Decision.AUTO_REPLY:
-        return "Trả lời tự động"
-    if decision is Decision.ESCALATE:
-        labels = {
-            EscalationType.FACT_UNRESOLVED: "Thiếu dữ kiện",
-            EscalationType.OUT_OF_POLICY: "Ngoài phạm vi quy định",
-            EscalationType.AUTHORITY_REQUIRED: "Cần phê duyệt",
-        }
-        label = labels[escalation_type] if escalation_type is not None else "Chưa phân loại"
-        return f"Chuyển tiếp — {label}"
-    return "Dữ liệu đầu vào chưa hợp lệ"
-
-
-def _audit_url(case_id: str) -> str:
-    """Tạo liên kết audit tuyệt đối để DataFrame hiển thị được liên kết."""
-    headers = st.context.headers
-    host = headers.get("host")
-    path = f"/Nhat_ky_kiem_toan?case_id={quote(case_id)}"
-    if not host:
-        return path
-    protocol = headers.get("x-forwarded-proto", "http")
-    return f"{protocol}://{host}{path}"
-
-
-def _row(result: VerifyResult, *, include_question: bool = False) -> dict[str, str | int]:
-    row: dict[str, str | int] = {
-        "Case": result.case_id,
-        "Xem audit log": _audit_url(result.case_ref),
-        "Tóm tắt input": result.subject,
-        "Kỳ vọng": _decision_label(result.expected_decision, result.expected_type),
-        "Thực tế": _decision_label(result.actual_decision, result.actual_type),
-        "Quy tắc": result.rule_id,
-        "Kết quả": "PASS" if result.passed else "FAIL",
-        "Thời gian (ms)": result.elapsed_ms,
-        "Thời điểm (+07:00)": result.timestamp,
-        "Phiên bản corpus": result.corpus_version,
-    }
-    if include_question:
-        row["Câu hỏi chuyển tiếp"] = result.question or "—"
-    return row
-
-
-def _render_results(results: tuple[VerifyResult, ...], *, include_question: bool = False) -> None:
+def render_results(results: tuple[VerifyResult, ...], elapsed: float, case_set: str) -> None:
     st.dataframe(
-        [_row(result, include_question=include_question) for result in results],
-        use_container_width=True,
+        [
+            {
+                "Email": result.subject,
+                "Mong đợi": decision_label(result.expected_decision, result.expected_type),
+                "Thực tế": decision_label(result.actual_decision, result.actual_type),
+                "Kết quả": "Đạt" if result.passed else "Chưa đạt",
+                "Thời gian (giây)": round(result.elapsed_ms / 1000, 2),
+                "Câu hỏi chuyên viên": result.question or "Không cần",
+                "Thời điểm": local_time(result.timestamp),
+            }
+            for result in results
+        ],
         hide_index=True,
-        column_config={
-            "Xem audit log": st.column_config.LinkColumn(
-                "Xem audit log", display_text="Xem audit log"
-            )
-        },
+        use_container_width=True,
     )
+    within_limit = case_set != "escalation5" or elapsed <= 90
+    if all(result.passed for result in results) and within_limit:
+        st.success(
+            f"{len(results)}/{len(results)} tình huống đạt yêu cầu · Tổng thời gian {elapsed:.1f} giây."
+        )
+    else:
+        st.error(
+            f"Còn tình huống chưa đạt hoặc vượt thời gian cho phép · Tổng thời gian {elapsed:.1f} giây."
+        )
+    if case_set == "escalation5":
+        st.caption(
+            "Bộ năm email phải có ba phản hồi tự động, hai chuyển tiếp đúng lý do và hoàn thành trong 90 giây."
+        )
+    with st.expander("Mở từng lần xử lý"):
+        for result in results:
+            st.link_button(result.subject, f"/Nhat_ky_kiem_toan?case_id={quote(result.case_ref)}")
     st.download_button(
-        "Xuất JSON kết quả Verify",
-        data=json.dumps(
-            [_row(result, include_question=include_question) for result in results],
+        "Tải kết quả kiểm tra đầy đủ",
+        json.dumps(
+            {
+                "set": case_set,
+                "elapsed_seconds": elapsed,
+                "within_time_limit": within_limit,
+                "results": [asdict(result) for result in results],
+            },
             ensure_ascii=False,
+            indent=2,
         ),
-        file_name="ket-qua-verify.json",
+        file_name="ket-qua-kiem-tra.json",
         mime="application/json",
     )
-    for result in results:
-        st.link_button(f"Xem audit log: {result.case_id}", _audit_url(result.case_ref))
-    if all(result.passed for result in results):
-        st.success(f"Cả {len(results)} trường hợp đều PASS.")
-    else:
-        st.error("Có trường hợp FAIL. Hãy mở nhật ký kiểm toán để xem quyết định thực tế.")
 
 
-def _run_set(case_set: str, *, include_question: bool = False) -> None:
-    case_ids = "V01 đến V04" if case_set == "verify4" else "E01 đến E05"
-    with st.spinner(f"Đang chạy tuần tự {case_ids} qua pipeline dùng chung."):
+st.title("Kiểm tra hệ thống")
+st.caption(
+    "Mỗi email đi qua cùng cách xử lý với trang Email. Kết quả kiểm tra cả quyết định, lý do chuyển tiếp, quy tắc và căn cứ."
+)
+st.caption("Bài kiểm tra tạo lịch sử xử lý thật trong dữ liệu local; không gửi email ra ngoài.")
+sets = {
+    "full15": "Toàn bộ 15 tình huống",
+    "verify4": "Bốn tình huống sơ khảo",
+    "escalation5": "Năm tình huống chuyển tiếp",
+}
+case_set = st.selectbox("Bài kiểm tra", list(sets), format_func=lambda value: sets[value])
+if st.button("Chạy kiểm tra", type="primary"):
+    with st.spinner("Đang xử lý lần lượt các email. Bạn có thể mở lịch sử ở tab khác."):
+        started = perf_counter()
         results = run_cases(CASE_SETS[case_set], run_name=case_set)
-    _render_results(results, include_question=include_question)
-
-
-st.set_page_config(page_title="Verify", page_icon="✅", layout="wide")
-st.title("Verify 4 trường hợp")
-st.info("Chế độ mô phỏng — hệ thống không gửi email thật.")
-st.caption("Bộ này chỉ gồm V01–V04; V03 là trường hợp từ chối bắt buộc.")
-
-if st.button("Chạy Verify 4 trường hợp", type="primary"):
-    _run_set("verify4")
-
-st.divider()
-st.subheader("Kiểm tra chuyển tiếp 5 trường hợp")
-st.caption("E01–E03 phải trả lời tự động; E04–E05 phải chuyển tiếp kèm loại và câu hỏi.")
-if st.button("Chạy kiểm tra chuyển tiếp 5 trường hợp", type="primary"):
-    _run_set("escalation5", include_question=True)
+        st.session_state["verification_result"] = (results, perf_counter() - started, case_set)
+if "verification_result" in st.session_state:
+    render_results(*st.session_state["verification_result"])

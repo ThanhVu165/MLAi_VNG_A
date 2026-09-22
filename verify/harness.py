@@ -5,16 +5,17 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
-from corpus.api import is_active
 from core.pipeline import process_case
 from core.types import CaseInput, Decision, EscalationType, PipelineResult
+from corpus.api import is_active
 from infra.audit import log_event
 from infra.db import now_iso, to_local
 
@@ -23,6 +24,7 @@ CASE_SETS = {
     "verify4": Path("verify/cases_verify4.json"),
     "escalation5": Path("verify/cases_escalation5.json"),
     "full15": Path("verify/cases_full15.json"),
+    "fresh5": Path("verify/cases_fresh5.json"),
 }
 VERIFY_ACTOR = "SYSTEM"
 
@@ -33,6 +35,7 @@ class VerifyCase:
     input: CaseInput
     expected_decision: Decision
     expected_type: EscalationType | None
+    expected_rule_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -50,6 +53,7 @@ class VerifyResult:
     timestamp: str
     corpus_version: str
     case_ref: str
+    expected_rule_id: str | None = None
 
 
 def _string(value: object, field: str) -> str:
@@ -68,18 +72,22 @@ def _case_from_payload(payload: object) -> VerifyCase:
     if received_at.tzinfo is None or received_at.utcoffset() is None:
         raise ValueError("received_at phải có múi giờ.")
     expected_type = payload.get("expected_type")
+    body = input_payload.get("body")
+    if not isinstance(body, str):
+        raise ValueError("input.body phải là chuỗi; cho phép rỗng để kiểm thử INVALID_INPUT.")
     return VerifyCase(
         case_id=_string(payload.get("id"), "id"),
         input=CaseInput(
             sender=_string(input_payload.get("sender"), "input.sender"),
             subject=_string(input_payload.get("subject"), "input.subject"),
-            body=_string(input_payload.get("body"), "input.body"),
+            body=body,
             received_at=received_at,
             channel="verify",
             external_id=_string(payload.get("id"), "id"),
         ),
         expected_decision=Decision(_string(payload.get("expected_decision"), "expected_decision")),
         expected_type=EscalationType(expected_type) if isinstance(expected_type, str) else None,
+        expected_rule_id=payload.get("expected_rule_id"),
     )
 
 
@@ -109,7 +117,13 @@ def _matches(case: VerifyCase, result: PipelineResult) -> bool:
     citations_match = (
         _has_active_citations(result) if case.expected_decision is Decision.AUTO_REPLY else True
     )
-    return decision_matches and type_matches and citations_match
+    rule_matches = case.expected_rule_id is None or result.decision.rule_id == case.expected_rule_id
+    card_matches = (
+        result.card is not None and bool(result.card.question.strip()) and bool(result.card.options)
+        if case.expected_decision is Decision.ESCALATE
+        else True
+    )
+    return decision_matches and type_matches and rule_matches and citations_match and card_matches
 
 
 def _run_case(case: VerifyCase) -> VerifyResult:
@@ -130,6 +144,7 @@ def _run_case(case: VerifyCase) -> VerifyResult:
         timestamp=to_local(now_iso()),
         corpus_version=result.corpus_version,
         case_ref=result.case_id,
+        expected_rule_id=case.expected_rule_id,
     )
 
 
@@ -185,7 +200,9 @@ def main(arguments: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Chạy Verify qua pipeline dùng chung.")
     parser.add_argument("--set", choices=tuple(CASE_SETS), required=True, dest="case_set")
     parser.add_argument("--case", dest="case_id")
+    parser.add_argument("--output", type=Path, help="Lưu kết quả và thời gian thực dạng JSON.")
     options = parser.parse_args(arguments)
+    started = perf_counter()
     try:
         results = run_cases(
             CASE_SETS[options.case_set], run_name=options.case_set, case_id=options.case_id
@@ -193,7 +210,28 @@ def main(arguments: list[str] | None = None) -> int:
     except ValueError as error:
         parser.error(str(error))
     sys.stdout.write(f"{format_results(results)}\n")
-    return 0
+    elapsed = perf_counter() - started
+    within_time_limit = options.case_set != "escalation5" or elapsed <= 90
+    if options.output:
+        options.output.parent.mkdir(parents=True, exist_ok=True)
+        options.output.write_text(
+            json.dumps(
+                {
+                    "case_set": options.case_set,
+                    "llm_mode": os.getenv("LLM_MODE", "live"),
+                    "model": os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
+                    "cache_enabled": os.getenv("LLM_CACHE", "1") != "0",
+                    "elapsed_seconds": elapsed,
+                    "within_time_limit": within_time_limit,
+                    "results": [asdict(result) for result in results],
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    sys.stdout.write(f"Total: {elapsed:.2f}s; within time limit: {within_time_limit}\n")
+    return 0 if all(result.passed for result in results) and within_time_limit else 1
 
 
 if __name__ == "__main__":

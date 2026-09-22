@@ -19,7 +19,7 @@ priority_order:
     reason_vi: "Thiếu dữ kiện bắt buộc để áp dụng quy định."
 
   - id: P04
-    when: "llm_error or parse_error or timeout or guard_failed"
+    when: "guard_failed"
     decision: ESCALATE
     type: FACT_UNRESOLVED
     reason_vi: "Hệ thống không hoàn tất được bước xử lý nên dừng lại thay vì phỏng đoán."
@@ -27,4 +27,4 @@ priority_order:
   - id: P05
     else: true
     decision: AUTO_REPLY
-    reason_vi: "Câu hỏi thường quy, có căn cứ quy định đang hiệu lực và đã được mở quyền trả lời tự động."
+    reason_vi: "Câu hỏi thông tin thường quy, có căn cứ đang hiệu lực và không cần quyết định của người có thẩm quyền."

@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import json
 import logging
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from sqlite3 import Row
 from uuid import uuid4
 
+from corpus.api import get_chunk, get_corpus_version
 from core.pipeline import _new_ulid
 from core.sanitize import mask_pii
 from core.types import CaseStatus, Decision, DraftReply, PolicyDecision
 from infra.audit import log_event
-from infra.db import execute, fetch_one, now_iso, to_utc_iso
+from infra.db import execute, fetch_one, get_connection, now_iso, to_utc_iso
 from infra.settings import PENDING_SEND_SECONDS
 
 logger = logging.getLogger(__name__)
@@ -38,8 +40,10 @@ def _pending_case(case_id: str, now: datetime) -> Row:
         raise ValueError(f"Case {case_id} không ở trạng thái PENDING_SEND.")
     deadline = datetime.fromisoformat(row["send_deadline"].replace("Z", "+00:00"))
     if deadline <= now:
-        dispatch_due(case_id, now=now)
-        raise ValueError(f"Case {case_id} đã SENT nên không thể sửa.")
+        if dispatch_due(case_id, now=now):
+            raise ValueError("Email đã được gửi nên không thể sửa.")
+        if _case(case_id)["status"] != CaseStatus.PENDING_SEND:
+            raise ValueError("Trạng thái email đã thay đổi. Hãy tải lại để kiểm tra.")
     return row
 
 
@@ -47,12 +51,10 @@ def schedule_auto_reply(case_id: str, *, decision: PolicyDecision, actor: str) -
     """Lên lịch gửi cho một quyết định AUTO_REPLY đã được Policy Engine duyệt."""
     if decision.decision is not Decision.AUTO_REPLY:
         raise ValueError("Chỉ AUTO_REPLY mới được lên lịch gửi.")
-    row = _case(case_id)
-    if row["status"] not in (CaseStatus.RECEIVED, CaseStatus.PROCESSING):
-        raise ValueError(f"Case {case_id} ở trạng thái {row['status']} không thể lên lịch gửi.")
     deadline = to_utc_iso(_utc_now() + timedelta(seconds=PENDING_SEND_SECONDS))
-    if (
-        execute(
+    with closing(get_connection()) as connection, connection:
+        connection.execute("BEGIN IMMEDIATE")
+        changed = connection.execute(
             """
             UPDATE cases SET status = ?, send_deadline = ?
             WHERE case_id = ? AND status IN (?, ?)
@@ -64,91 +66,121 @@ def schedule_auto_reply(case_id: str, *, decision: PolicyDecision, actor: str) -
                 CaseStatus.RECEIVED,
                 CaseStatus.PROCESSING,
             ),
+        ).rowcount
+        if changed != 1:
+            raise ValueError("Email không còn ở trạng thái có thể lên lịch gửi.")
+        log_event(
+            case_id=case_id,
+            actor=actor,
+            action="SEND_SCHEDULED",
+            rule_id=decision.rule_id,
+            reason="Đã lên lịch gửi mô phỏng sau thời gian chờ.",
+            corpus_version=decision.corpus_version,
+            connection=connection,
         )
-        != 1
-    ):
-        raise ValueError(f"Case {case_id} không thể lên lịch gửi.")
-    log_event(
-        case_id=case_id,
-        actor=actor,
-        action="SEND_SCHEDULED",
-        rule_id=decision.rule_id,
-        reason="Đã lên lịch gửi mô phỏng sau thời gian chờ.",
-        corpus_version=decision.corpus_version,
-    )
     logger.info("Đã lên lịch gửi case %s.", case_id)
 
 
 def cancel_send(case_id: str, actor: str, reason: str) -> None:
     """Hủy một lần gửi còn trong khoảng chờ và giữ lại lý do của người dùng."""
-    row = _pending_case(case_id, _utc_now())
-    if (
-        execute(
+    if not reason.strip():
+        raise ValueError("Hãy ghi lý do hủy gửi.")
+    _pending_case(case_id, _utc_now())
+    with closing(get_connection()) as connection, connection:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute("SELECT * FROM cases WHERE case_id = ?", (case_id,)).fetchone()
+        if row is None or row["status"] != CaseStatus.PENDING_SEND:
+            raise ValueError("Trạng thái email đã thay đổi, không thể hủy gửi.")
+        connection.execute(
             "UPDATE cases SET status = ?, send_deadline = NULL WHERE case_id = ? AND status = ?",
             (CaseStatus.CANCELLED, case_id, CaseStatus.PENDING_SEND),
         )
-        != 1
-    ):
-        raise ValueError(f"Case {case_id} không thể hủy gửi.")
-    log_event(
-        case_id=case_id,
-        actor=actor,
-        action="CANCEL_SEND",
-        reason=reason,
-        corpus_version=row["corpus_version"],
-    )
+        log_event(
+            case_id=case_id,
+            actor=actor,
+            action="CANCEL_SEND",
+            reason=mask_pii(reason.strip()),
+            corpus_version=row["corpus_version"],
+            connection=connection,
+        )
     logger.info("Đã hủy gửi case %s.", case_id)
 
 
 def escalate_from_pending(case_id: str, *, actor: str, reason: str) -> None:
     """Chuyển một lần gửi còn chờ sang hàng đợi người duyệt."""
-    row = _pending_case(case_id, _utc_now())
-    if (
-        execute(
-            "UPDATE cases SET status = ?, send_deadline = NULL WHERE case_id = ? AND status = ?",
-            (CaseStatus.AWAITING_HUMAN, case_id, CaseStatus.PENDING_SEND),
+    from core.controls import _store_manual_decision
+
+    if not reason.strip():
+        raise ValueError("Hãy ghi nội dung cần chuyên viên làm rõ trước khi gửi.")
+    _pending_case(case_id, _utc_now())
+    with closing(get_connection()) as connection, connection:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute("SELECT * FROM cases WHERE case_id = ?", (case_id,)).fetchone()
+        if row is None or row["status"] != CaseStatus.PENDING_SEND:
+            raise ValueError("Trạng thái email đã thay đổi, không thể chuyển chuyên viên.")
+        _store_manual_decision(
+            connection, row, Decision.ESCALATE, actor, reason,
+            rule_id="HUMAN_REVIEW_REQUESTED", action="CASE_QUEUED",
         )
-        != 1
-    ):
-        raise ValueError(f"Case {case_id} không thể chuyển cho người duyệt.")
-    log_event(
-        case_id=case_id,
-        actor=actor,
-        action="CASE_QUEUED",
-        reason=reason,
-        corpus_version=row["corpus_version"],
-    )
     logger.info("Đã chuyển case %s cho người duyệt.", case_id)
 
 
 def dispatch_due(case_id: str, *, actor: str = "SYSTEM", now: datetime | None = None) -> bool:
     """Gửi mô phỏng khi mốc DB đã hết hạn, trả ``True`` nếu đã chuyển trạng thái."""
-    row = _case(case_id)
-    if row["status"] != CaseStatus.PENDING_SEND:
-        return False
-    current = _utc_now(now)
-    deadline = datetime.fromisoformat(row["send_deadline"].replace("Z", "+00:00"))
-    if deadline > current:
-        return False
-    if (
-        execute(
-            """
-            UPDATE cases SET status = ?, send_deadline = NULL
-            WHERE case_id = ? AND status = ? AND send_deadline = ?
-            """,
-            (CaseStatus.SENT, case_id, CaseStatus.PENDING_SEND, row["send_deadline"]),
+    with closing(get_connection()) as connection, connection:
+        # Chặn sửa nguồn/tạm dừng xen giữa kiểm tra cuối và chuyển trạng thái gửi.
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute("SELECT * FROM cases WHERE case_id = ?", (case_id,)).fetchone()
+        if row is None or row["status"] != CaseStatus.PENDING_SEND:
+            return False
+        current = _utc_now(now)
+        deadline = datetime.fromisoformat(row["send_deadline"].replace("Z", "+00:00"))
+        if (
+            deadline > current
+            or connection.execute(
+                "SELECT 1 FROM settings WHERE key = 'automation_paused' AND value = '1'"
+            ).fetchone()
+        ):
+            return False
+        target = CaseStatus.SENT if _send_evidence_valid(row, current) else CaseStatus.NEEDS_RECHECK
+        connection.execute(
+            "UPDATE cases SET status = ?, send_deadline = NULL WHERE case_id = ?", (target, case_id)
         )
-        != 1
-    ):
+        sent = target is CaseStatus.SENT
+        log_event(
+            case_id=case_id,
+            actor=actor,
+            action="SEND_DISPATCHED" if sent else "FLAG_NEEDS_RECHECK",
+            reason=(
+                "Đã hết thời gian chờ gửi mô phỏng."
+                if sent
+                else "Quy định hoặc bản nháp không còn đủ điều kiện gửi. Cần kiểm tra lại email."
+            ),
+            corpus_version=row["corpus_version"],
+            connection=connection,
+        )
+    return sent
+
+
+def _send_evidence_valid(case: Row, now: datetime) -> bool:
+    if case["corpus_version"] != get_corpus_version():
         return False
-    log_event(
-        case_id=case_id,
-        actor=actor,
-        action="SEND_DISPATCHED",
-        reason="Đã hết thời gian chờ gửi mô phỏng.",
-        corpus_version=row["corpus_version"],
+    draft = fetch_one(
+        "SELECT * FROM drafts WHERE case_id = ? ORDER BY rowid DESC LIMIT 1", (case["case_id"],)
     )
-    logger.info("Đã gửi mô phỏng case %s.", case_id)
+    if draft is None or not draft["grounded"] or draft["kind"] != "auto":
+        return False
+    citations = json.loads(draft["citations_json"] or "[]")
+    if not isinstance(citations, list) or not citations:
+        return False
+    for citation in citations:
+        chunk = get_chunk(citation)
+        if (
+            chunk is None
+            or chunk.effective_from > now.date()
+            or (chunk.effective_to is not None and chunk.effective_to < now.date())
+        ):
+            return False
     return True
 
 
