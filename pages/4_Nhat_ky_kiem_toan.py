@@ -7,6 +7,7 @@ import streamlit as st
 from core.explain import explain_plainly
 from infra.audit import ACTIONS, AuditEvent, recent_events
 from infra.db import to_local
+from streamlit_app import render_global_controls
 
 EARLIEST_FILTER_DATE = date(2000, 1, 1)
 
@@ -41,6 +42,7 @@ def _details(event: AuditEvent) -> dict[str, object]:
 
 
 st.set_page_config(page_title="Nhật ký kiểm toán", page_icon="📋", layout="wide")
+render_global_controls()
 st.title("Nhật ký kiểm toán")
 
 query_case_id = st.query_params.get("case_id", "")
