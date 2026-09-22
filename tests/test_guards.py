@@ -4,6 +4,14 @@ import json
 
 import core.pipeline as pipeline
 import pytest
+from core.controls import (
+    is_automation_paused,
+    override_decision,
+    pause_automation,
+    rerun_case,
+    resume_automation,
+)
+from core.explain import explain_plainly
 from core.extract import EXTRACTION_SCHEMA, extract_facts
 from core.dispatch import (
     cancel_send,
@@ -15,7 +23,7 @@ from core.dispatch import (
 from core.prepolicy import decision_lock
 from core.evidence import validate_evidence
 from core.generate import generate_reply
-from core.ground_guard import guard_groundedness
+from core.ground_guard import GroundednessResult, guard_groundedness
 from core.question_gen import generate_escalation_card, generate_multi_intent_card
 from core.question_guard import guard_question, question_failures
 from core.retrieval import retrieve_evidence
@@ -33,6 +41,7 @@ from core.types import (
     EscalationCard,
     EscalationType,
     Extraction,
+    PipelineResult,
     PolicyDecision,
     RequestItem,
 )
@@ -1001,3 +1010,133 @@ def test_pending_send_can_escalate_and_sent_case_creates_linked_correction(
     assert child["parent_case_id"] == "case-sent-parent"
     assert child["status"] == CaseStatus.PENDING_APPROVAL
     assert events[-1].action == "CORRECTION_CREATED"
+
+
+def _case_with_decision(case_id: str, *, decision: Decision = Decision.AUTO_REPLY) -> None:
+    _stored_case(case_id, status=CaseStatus.PENDING_SEND)
+    db.execute(
+        """
+        INSERT INTO decisions (
+            decision_id, case_id, decision, rule_id, reason, evidence_ids_json, corpus_version, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            f"decision-{case_id}",
+            case_id,
+            decision,
+            "P05",
+            "Đủ căn cứ.",
+            '["chunk-1"]',
+            "cv_test",
+            db.now_iso(),
+        ),
+    )
+
+
+def test_pause_and_resume_record_admin_audit(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+
+    pause_automation("ADMIN:lan", "Tạm dừng để kiểm tra.")
+    assert is_automation_paused()
+    resume_automation("ADMIN:lan")
+
+    assert not is_automation_paused()
+    rows = db.fetch_all("SELECT action, actor FROM audit_events ORDER BY rowid")
+    assert [(row["action"], row["actor"]) for row in rows] == [
+        ("PAUSE_AUTOMATION", "ADMIN:lan"),
+        ("RESUME_AUTOMATION", "ADMIN:lan"),
+    ]
+
+
+def test_override_supersedes_decision_and_rerun_returns_diff(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    _case_with_decision("case-override")
+
+    overridden = override_decision(
+        "case-override", Decision.ESCALATE, "ADMIN:lan", "Cần chuyên viên quyết định."
+    )
+    rows = db.fetch_all(
+        "SELECT decision_id, decision, is_override, superseded_by FROM decisions WHERE case_id = ? ORDER BY rowid",
+        ("case-override",),
+    )
+    assert overridden.decision.decision is Decision.ESCALATE
+    assert overridden.status is CaseStatus.AWAITING_HUMAN
+    assert rows[1]["is_override"] == 1 and rows[0]["superseded_by"] == rows[1]["decision_id"]
+
+    rerun_result = PipelineResult(
+        "case-rerun",
+        "trace-rerun",
+        CaseStatus.PENDING_SEND,
+        PolicyDecision(Decision.AUTO_REPLY, None, "P05", "Đủ căn cứ.", ["chunk-2"], "cv_current"),
+        None,
+        None,
+        None,
+        None,
+        "cv_current",
+        {},
+        datetime.now(timezone.utc),
+        datetime.now(timezone.utc),
+    )
+    monkeypatch.setattr("core.controls.process_case", lambda inp, actor: rerun_result)
+    rerun, diff = rerun_case("case-override", "ADMIN:lan")
+
+    assert rerun is rerun_result
+    assert diff == {
+        "decision": {"before": "ESCALATE", "after": "AUTO_REPLY"},
+        "rule_id": {"before": "ADMIN_OVERRIDE", "after": "P05"},
+        "evidence_ids": {"before": ["chunk-1"], "after": ["chunk-2"]},
+    }
+
+
+def test_paused_automation_queues_auto_reply_instead_of_scheduling(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    pause_automation("ADMIN:lan", "Tạm dừng để kiểm tra.")
+    extraction = _evidence_extraction()
+    evidence = EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], [])
+    decision = PolicyDecision(Decision.AUTO_REPLY, None, "P05", "Đủ căn cứ.", ["chunk-1"], "cv")
+    draft = _draft("Căn cứ. [chunk-1].")
+    monkeypatch.setattr(pipeline, "get_corpus_version", lambda: "cv")
+    monkeypatch.setattr(pipeline, "extract_facts", lambda body, case_id: extraction)
+    monkeypatch.setattr(pipeline, "retrieve_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "validate_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "decide_policy", lambda policy_input: decision)
+    monkeypatch.setattr(pipeline, "generate_reply", lambda **kwargs: draft)
+    monkeypatch.setattr(
+        pipeline, "guard_groundedness", lambda **kwargs: GroundednessResult(draft, None, [])
+    )
+
+    result = pipeline.process_case(_input())
+
+    events = events_for_case(result.case_id, database_path=str(database_path))
+    assert result.status is CaseStatus.PENDING_APPROVAL
+    assert "CASE_QUEUED" in [event.action for event in events]
+    assert "SEND_SCHEDULED" not in [event.action for event in events]
+
+
+def test_plain_explanation_uses_document_title_without_technical_terms(
+    monkeypatch, tmp_path
+) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    _case_with_decision("case-explain")
+    db.execute(
+        "INSERT INTO sources (doc_id, title, status) VALUES (?, ?, ?)",
+        ("doc-1", "Quy chế rút học phần 2026", "ACTIVE"),
+    )
+    db.execute(
+        """
+        INSERT INTO chunks (chunk_id, doc_id, breadcrumb, text, domain)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        ("chunk-1", "doc-1", "Điều 3", "Hạn rút học phần.", Domain.COURSE_WITHDRAWAL),
+    )
+
+    explanation = explain_plainly("case-explain")
+
+    events = events_for_case("case-explain", database_path=str(database_path))
+    assert len(explanation.split()) <= 120
+    assert "Quy chế rút học phần 2026" in explanation
+    assert all(term not in explanation.casefold() for term in ("rule_id", "similarity", "chunk"))
+    assert events[-1].action == "EXPLAIN_REQUESTED" and events[-1].actor == "HUMAN:viewer"

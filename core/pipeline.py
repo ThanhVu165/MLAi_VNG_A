@@ -58,6 +58,7 @@ INVALID_INPUT_REASON = "Email thiếu thông tin bắt buộc để tiếp nhậ
 RECEIVED_REASON = "Đã tiếp nhận email để xử lý theo quy trình."
 PROCESSING_REASON = "Đã làm sạch nội dung email và bắt đầu xử lý."
 QUEUED_REASON = "Case cần chuyên viên quyết định trước khi trả lời."
+PAUSED_REASON = "Tự động hóa đang tạm dừng nên case chờ chuyên viên duyệt."
 
 T = TypeVar("T")
 
@@ -509,14 +510,30 @@ def process_case(inp: CaseInput, *, actor: str = "SYSTEM") -> PipelineResult:
                 _save_decision(intake, decision)
                 status = _queue(intake, actor, decision)
             else:
+                from core.controls import is_automation_paused
                 from core.dispatch import schedule_auto_reply
 
-                _run_step(
-                    "R9",
-                    lambda: schedule_auto_reply(intake.case_id, decision=decision, actor=actor),
-                    latencies,
-                )
-                status = CaseStatus.PENDING_SEND
+                if is_automation_paused():
+                    _run_step(
+                        "R9",
+                        lambda: _transition(
+                            intake,
+                            status=CaseStatus.PENDING_APPROVAL,
+                            actor=actor,
+                            action="CASE_QUEUED",
+                            rule_id=decision.rule_id,
+                            reason=PAUSED_REASON,
+                        ),
+                        latencies,
+                    )
+                    status = CaseStatus.PENDING_APPROVAL
+                else:
+                    _run_step(
+                        "R9",
+                        lambda: schedule_auto_reply(intake.case_id, decision=decision, actor=actor),
+                        latencies,
+                    )
+                    status = CaseStatus.PENDING_SEND
         else:
             card = _run_step(
                 "R7",
