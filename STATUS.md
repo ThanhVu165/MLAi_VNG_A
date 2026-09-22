@@ -34,6 +34,9 @@
 [H+00][Agent C] đang làm C-25 bản nháp · soạn 15 case từ corpus seed, chờ A-26 duyệt kỳ vọng · không bị chặn
 [H+00][Agent C] C-25 đã có JSON nháp 4+5+15 case · chờ Agent A duyệt A-26 trước khi DONE
 [H+00][Agent C] C-25 hoàn tất · Agent A duyệt 14 case và xác nhận F02 dùng guard R1; đã bỏ nhãn bản nháp khỏi rationale · Black/Ruff/Mypy xanh
+[H+00][Agent C] đang làm C-19 · nút Verify riêng chạy tuần tự V01–V04 · không bị chặn
+[H+00][Agent C] C-19 đã có nút và bảng 4 case · chặn 4 PASS/<60s vì cassette replay V01–V04 chưa có, live vượt thời hạn · 75 test xanh
+[H+00][Agent C] đang làm C-20 · nút riêng E01–E05 và cột câu hỏi chuyển tiếp · không bị chặn
 [H+00][Agent C] đang làm C-08 · vẽ và nhúng cùng SVG cho homepage/Slide 2 · không bị chặn
 [H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
 [H+00][Agent B] B-02 đã hoàn tất CRUD nguồn/chunk/version · 7 test xanh · full check còn lỗi format/cấu hình Mypy ngoài phạm vi B
@@ -90,5 +93,8 @@
 [H+00][Agent A] A-23 đã hoàn tất giải thích deterministic, không thuật ngữ kỹ thuật và audit EXPLAIN_REQUESTED · 72 test xanh
 [H+00][Agent A] A-25 đã thêm hai test không được xóa: E01–E03 không over-escalate, năm lỗi không fail-open · 74 test xanh
 [H+00][Agent A] A-26 chặn bởi vòng lặp dependency với C-25; chờ xác nhận duyệt khi C-25 WIP có đủ case files
+[H+00][Agent C] C-20 đã thêm nút E01–E05, nhãn quyết định/phân loại và cột câu hỏi từ pipeline · replay thiếu cassette E01–E05 nên chưa thể xác nhận đủ kết quả thật trong 90 giây · 75 test xanh
+[H+00][Agent C] C-22 hoàn tất · bảng Verify có đầy đủ trường bắt buộc, timestamp +07:00, xuất JSON và liên kết audit theo case · Black/Ruff/Mypy/75 test xanh
+[H+00][Agent C] C-11 hoàn tất · đếm ngược đọc deadline DB, Hủy gửi/Chuyển cho người và Correction Email hoạt động; audit Hủy gửi là HUMAN:demo · Black/Ruff/Mypy/75 test xanh
 [H+00][Agent A] A-26 hoàn tất · đã duyệt căn cứ 15 case độc lập với code; C-25 đã chốt F02 dùng guard R1 và ba file Verify · 75 pytest/Ruff xanh, Black/mypy còn blocker ngoài phạm vi A
 [H+00][Agent A] S-05 bị chặn · smoke test Paste với email điểm rèn luyện dừng ở tải model embedding corpus 0 byte; chưa có kết quả/citation/audit đủ 8 event · không cắt tính năng

@@ -6,6 +6,7 @@ import sqlite3
 from collections.abc import Sequence
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
+from math import ceil
 from pathlib import Path
 
 from infra.settings import DATABASE_BUSY_TIMEOUT_MS
@@ -50,6 +51,16 @@ def to_local(timestamp: str) -> str:
     if parsed.tzinfo is None:
         raise ValueError("Timestamp phải có múi giờ.")
     return parsed.astimezone(LOCAL_TIMEZONE).isoformat()
+
+
+def seconds_until(timestamp: str) -> int:
+    """Tính số giây còn lại đến mốc UTC được lưu trong SQLite."""
+    parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        raise ValueError("Timestamp phải có múi giờ.")
+    return max(
+        0, ceil((parsed.astimezone(timezone.utc) - datetime.now(timezone.utc)).total_seconds())
+    )
 
 
 def _database_path(database_path: str | Path | None) -> Path:

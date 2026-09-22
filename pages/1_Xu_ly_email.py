@@ -7,15 +7,32 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from sqlite3 import Row
 from time import perf_counter
 from urllib.parse import quote
 
 import streamlit as st
 
 from corpus.api import get_chunk
+from core.dispatch import (
+    cancel_send,
+    create_correction_email,
+    dispatch_due,
+    escalate_from_pending,
+)
 from core.explain import explain_plainly
 from core.pipeline import process_case
-from core.types import CaseInput, Decision, EscalationCard, EscalationType, PipelineResult
+from core.types import (
+    CaseInput,
+    CaseStatus,
+    Decision,
+    DraftReply,
+    EscalationCard,
+    EscalationType,
+    PipelineResult,
+)
+from infra.db import fetch_one, seconds_until, to_local
+from infra.settings import PENDING_STATUS_REFRESH_SECONDS
 
 
 logger = logging.getLogger(__name__)
@@ -160,6 +177,102 @@ def render_plain_explanation(case_id: str, key: str) -> None:
                 st.write(explanation)
 
 
+def _case_row(case_id: str) -> Row | None:
+    row = fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,))
+    if row is not None and row["status"] == CaseStatus.PENDING_SEND:
+        dispatch_due(case_id)
+        row = fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,))
+    return row
+
+
+def _correction_draft(case_id: str) -> DraftReply | None:
+    row = fetch_one(
+        """
+        SELECT subject, body, citations_json, grounded, guard_failures_json
+        FROM drafts WHERE case_id = ? ORDER BY rowid DESC LIMIT 1
+        """,
+        (case_id,),
+    )
+    if row is None:
+        return None
+    try:
+        citations = json.loads(row["citations_json"] or "[]")
+        failures = json.loads(row["guard_failures_json"] or "[]")
+    except json.JSONDecodeError as error:
+        logger.warning("Không đọc được bản nháp Correction Email: %s", error)
+        return None
+    if not isinstance(citations, list) or not isinstance(failures, list):
+        return None
+    return DraftReply(
+        subject=row["subject"] or "Correction Email",
+        body=row["body"] or "",
+        citations=[citation for citation in citations if isinstance(citation, str)],
+        grounded=bool(row["grounded"]),
+        guard_failures=[failure for failure in failures if isinstance(failure, str)],
+    )
+
+
+def _render_correction(case_id: str) -> None:
+    draft = _correction_draft(case_id)
+    st.subheader("Tạo Correction Email")
+    if draft is None:
+        st.error("Không có bản nháp gốc để tạo Correction Email an toàn.")
+        return
+    subject = st.text_input(
+        "Tiêu đề Correction Email", value=draft.subject, key=f"correction_subject_{case_id}"
+    )
+    body = st.text_area(
+        "Nội dung Correction Email", value=draft.body, key=f"correction_body_{case_id}"
+    )
+    if st.button("Tạo Correction Email", key=f"create_correction_{case_id}"):
+        if not subject.strip() or not body.strip():
+            st.error("Correction Email cần có tiêu đề và nội dung.")
+            return
+        correction_id = create_correction_email(
+            case_id,
+            actor=UI_ACTOR,
+            draft=DraftReply(subject, body, draft.citations, draft.grounded, draft.guard_failures),
+        )
+        st.success(f"Đã tạo Correction Email {correction_id} để chờ duyệt.")
+
+
+@st.fragment(run_every=PENDING_STATUS_REFRESH_SECONDS)
+def render_delivery_controls(case_id: str) -> None:
+    """Hiển thị và cập nhật vòng đời gửi từ trạng thái được lưu trong DB."""
+    row = _case_row(case_id)
+    if row is None:
+        st.error("Không tìm thấy case để kiểm tra trạng thái gửi.")
+        return
+    status = CaseStatus(row["status"])
+    st.subheader("Trạng thái gửi mô phỏng")
+    if status is CaseStatus.PENDING_SEND:
+        deadline = row["send_deadline"]
+        if not isinstance(deadline, str):
+            st.error("Case chờ gửi thiếu mốc hết hạn trong DB.")
+            return
+        st.metric("Thời gian còn lại", f"{seconds_until(deadline)} giây")
+        st.caption(f"Mốc hết hạn từ DB: {to_local(deadline)}")
+        reason = st.text_input("Lý do can thiệp", key=f"send_reason_{case_id}")
+        cancel_column, escalate_column = st.columns(2)
+        if cancel_column.button("Hủy gửi", key=f"cancel_send_{case_id}"):
+            if not reason.strip():
+                st.error("Hãy ghi lý do trước khi hủy gửi.")
+            else:
+                cancel_send(case_id, UI_ACTOR, reason.strip())
+                st.rerun(scope="fragment")
+        if escalate_column.button("Chuyển cho người", key=f"escalate_send_{case_id}"):
+            if not reason.strip():
+                st.error("Hãy ghi lý do trước khi chuyển cho người.")
+            else:
+                escalate_from_pending(case_id, actor=UI_ACTOR, reason=reason.strip())
+                st.rerun(scope="fragment")
+    elif status is CaseStatus.SENT:
+        st.success("Đã gửi (mô phỏng)")
+        _render_correction(case_id)
+    else:
+        st.info(f"Case đang ở trạng thái {status}. Các nút gửi đã khóa.")
+
+
 def render_result(result: PipelineResult, elapsed_ms: int) -> None:
     """Hiển thị kết quả có căn cứ và đường dẫn sang audit của case."""
     st.success("Đã xử lý email.")
@@ -211,7 +324,9 @@ def main() -> None:
             if not body.strip():
                 st.error("Chưa có nội dung email. Hãy dán email rồi bấm xử lý lại.")
             else:
-                render_result(*run_case(paste_input(body)))
+                result, elapsed_ms = run_case(paste_input(body))
+                st.session_state["active_case_id"] = result.case_id
+                render_result(result, elapsed_ms)
     with inbox_tab:
         emails = load_inbox()
         if not emails:
@@ -222,7 +337,13 @@ def main() -> None:
         )
         st.caption(f"Từ: {selected.sender}\n\n{selected.body}")
         if st.button("Xử lý email mô phỏng", key="process_inbox"):
-            render_result(*run_case(inbox_input(selected)))
+            result, elapsed_ms = run_case(inbox_input(selected))
+            st.session_state["active_case_id"] = result.case_id
+            render_result(result, elapsed_ms)
+    query_case_id = st.query_params.get("case_id")
+    active_case_id = st.session_state.get("active_case_id", query_case_id)
+    if isinstance(active_case_id, str):
+        render_delivery_controls(active_case_id)
 
 
 main()

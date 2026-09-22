@@ -38,6 +38,10 @@ SIMILARITY_THRESHOLD: float = _read_float("SIMILARITY_THRESHOLD", 0.35)
 CITATION_RATIO_MIN: float = _read_float("CITATION_RATIO_MIN", 0.6)
 # Thời gian chờ trước khi email tự chuyển sang trạng thái đã gửi mô phỏng.
 PENDING_SEND_SECONDS: int = _read_int("PENDING_SEND_SECONDS", 60, _MINIMUM_POSITIVE)
+# Chu kỳ giao diện kiểm tra lại mốc gửi được lưu trong SQLite.
+PENDING_STATUS_REFRESH_SECONDS: int = _read_int(
+    "PENDING_STATUS_REFRESH_SECONDS", 1, _MINIMUM_POSITIVE
+)
 # Số từ tối thiểu của email ngắn trước khi hỏi lại thay vì gửi LLM.
 MIN_WORDS_GUARD: int = _read_int("MIN_WORDS_GUARD", 15, _MINIMUM_POSITIVE)
 # Thời gian tối đa cho một lần gọi LLM.

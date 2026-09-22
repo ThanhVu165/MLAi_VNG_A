@@ -40,6 +40,7 @@ class VerifyCase:
 class VerifyResult:
     case_id: str
     subject: str
+    question: str | None
     expected_decision: Decision
     expected_type: EscalationType | None
     actual_decision: Decision
@@ -119,6 +120,7 @@ def _run_case(case: VerifyCase) -> VerifyResult:
     return VerifyResult(
         case_id=case.case_id,
         subject=case.input.subject,
+        question=result.card.question if result.card is not None else None,
         expected_decision=case.expected_decision,
         expected_type=case.expected_type,
         actual_decision=result.decision.decision,

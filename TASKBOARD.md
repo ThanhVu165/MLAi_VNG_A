@@ -532,6 +532,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6 · 2
 
 ### C-11 · Đồng hồ 60 giây và nút dừng
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 2h · **Phụ thuộc:** C-10, A-19
 - **File:** `pages/1_Xu_ly_email.py`
 - **Việc phải làm:** Hiển thị đếm ngược đọc từ mốc hết hạn **trong DB** (không phải timer phía client). Hai nút: **Hủy gửi** và **Chuyển cho người**. Sau khi hết giờ đổi sang trạng thái `Đã gửi (mô phỏng)` và khóa nút. Có màn hình tạo Correction Email cho case đã gửi.
@@ -593,6 +594,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 2 (12đ) · tính trung thực
 
 ### C-19 · Nút 1 — Chạy Verify 4 trường hợp
+- **Trạng thái:** WIP
 - **Khối:** B3 · **Ước lượng:** 1.5h · **Phụ thuộc:** C-18, C-25
 - **File:** `pages/5_Verify.py`
 - **Việc phải làm:** Một nút duy nhất chạy tuần tự V01–V04 và in bảng kết quả. **Không gộp với bộ 5 case** — tiêu chí 2 chấm riêng bộ này, và Giai đoạn 0 đếm *"đủ 4 trường hợp kiểm thử với ít nhất 1 trường hợp từ chối"*.
@@ -600,6 +602,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 2 (12đ) · Giai đoạn 0
 
 ### C-20 · Nút 2 — Chạy kiểm tra chuyển tiếp 5 trường hợp
+- **Trạng thái:** WIP
 - **Khối:** B3 · **Ước lượng:** 1.5h · **Phụ thuộc:** C-18, C-25
 - **File:** `pages/5_Verify.py`
 - **Việc phải làm:** Nút riêng chạy E01–E05, bảng có **thêm cột hiển thị nguyên văn câu hỏi chuyển tiếp** để giám khảo đọc trực tiếp mà không phải mở từng case. Hiển thị rõ 3 case xử lý tự động và 2 case chuyển tiếp kèm phân loại.
@@ -614,6 +617,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 7 · chuẩn bị Sprint 2
 
 ### C-22 · Bảng kết quả chuẩn và xuất JSON
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 1.5h · **Phụ thuộc:** C-18
 - **File:** `pages/5_Verify.py`
 - **Việc phải làm:** Mỗi dòng đủ: `case_id` · tóm tắt input · expected · actual · `rule_id` · PASS/FAIL · thời gian chạy (ms) · **timestamp ISO có `+07:00`** · `corpus_version` · liên kết **Xem audit log**. Thêm nút **Xuất JSON** tải toàn bộ kết quả.
