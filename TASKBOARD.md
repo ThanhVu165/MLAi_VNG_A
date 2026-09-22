@@ -497,7 +497,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 4 (Slide 3, Slide 5) · 5
 
 ### C-07 · Trang chủ
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 2h · **Phụ thuộc:** C-01
 - **File:** `streamlit_app.py`
 - **Việc phải làm:** Dòng đầu tiên là **một câu hướng dẫn duy nhất**: *"Dán email sinh viên vào ô bên dưới và bấm Xử lý."* Ngay dưới là ô nhập và nút. Banner cố định *"Chế độ mô phỏng — hệ thống không gửi email thật."* Thanh bên liệt kê 6 trang bằng tiếng Việt. Không đăng nhập, không modal, không onboarding.

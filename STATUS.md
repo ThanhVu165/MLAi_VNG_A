@@ -72,3 +72,4 @@
 [H+00][Agent A] A-23 renderer deterministic + audit EXPLAIN_REQUESTED xong nhưng WIP cùng blocker mypy page C · 72 pytest xanh
 [H+00][Agent C] C-08 hoàn tất · SVG nguồn duy nhất đã nhúng trên trang chủ, đánh dấu hai điểm con người quyết định · mypy xanh
 [H+00][Agent C] đang làm C-07 · hoàn thiện trang chủ và điều hướng tiếng Việt · không bị chặn
+[H+00][Agent C] C-07 hoàn tất · trang chủ có hướng dẫn, ô dán, nút, banner và 6 mục điều hướng tiếng Việt · 72 test xanh
