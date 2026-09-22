@@ -79,6 +79,7 @@
 [H+00][Agent C] C-12 hoàn tất · thẻ bốn khối, breadcrumb mở được và lựa chọn một chạm · Black/Ruff/Mypy/74 test xanh
 [H+00][Agent C] đang làm C-15 · nút giải thích dễ hiểu tại ba màn hình · không bị chặn
 [H+00][Agent C] C-15 hoàn tất · giải thích tại ba màn hình, UI/audit xác nhận EXPLAIN_REQUESTED · Black/Ruff/Mypy/74 test xanh
+[H+00][Agent C] đang làm C-17 · thanh điều khiển quản trị toàn cục · không bị chặn
 [H+00][Agent C] đang làm C-10 · hiển thị kết quả, trích dẫn và liên kết audit · không bị chặn
 [H+00][Agent C] C-10 hoàn tất · kết quả hiển thị quyết định, căn cứ mở rộng và liên kết audit theo case · 74 test xanh
 [H+00][Agent A] A-22 đã hoàn tất pause/resume/override/rerun và pause chặn auto-send · 72 test xanh
