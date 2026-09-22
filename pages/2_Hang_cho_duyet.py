@@ -135,6 +135,9 @@ def _open_decision(case_id: str) -> Row:
 
 
 def _record_decision(case: QueueCase, record: Row, choice: str, reason: str) -> None:
+    reason = reason.strip()
+    if not reason:
+        raise ValueError("Cần nhập lý do trước khi ghi quyết định.")
     decided_at = now_iso()
     shown_at = datetime.fromisoformat(record["shown_at"].replace("Z", "+00:00"))
     review_seconds = (

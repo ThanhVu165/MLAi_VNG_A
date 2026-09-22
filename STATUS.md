@@ -101,3 +101,5 @@
 
 [H+00][Agent C] C-13 đã triển khai hàng chờ, ghi shown_at/decided_at và audit HUMAN_DECISION; 75 test xanh · chờ xác nhận thao tác UI do runtime trình duyệt Windows lỗi ownership
 [H+00][Agent C] S-05 smoke test thật trượt · Gemini DeadlineExceeded ở R2 sau >30s; case PROCESSING, 4/8 audit event, chưa có rule/citation/UI · theo Phụ lục cần dừng tính năng mới và ưu tiên sửa đường demo
+
+[H+00][Agent C] C-13 hoàn tất · hàng chờ AWAITING_HUMAN tăng dần theo thời gian chờ; chặn lý do rỗng tại UI và tầng ghi; lưu shown_at/decided_at và audit nguyên văn lý do · Black/Ruff/Mypy/75 pytest xanh
