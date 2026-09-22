@@ -71,3 +71,4 @@
 [H+00][Agent A] A-22 code/test xong nhưng WIP do mypy lỗi 3 dòng ở pages/3_Quan_tri_quy_dinh.py ngoài phạm vi A · 71 pytest xanh
 [H+00][Agent A] A-23 renderer deterministic + audit EXPLAIN_REQUESTED xong nhưng WIP cùng blocker mypy page C · 72 pytest xanh
 [H+00][Agent C] C-08 hoàn tất · SVG nguồn duy nhất đã nhúng trên trang chủ, đánh dấu hai điểm con người quyết định · mypy xanh
+[H+00][Agent C] đang làm C-07 · hoàn thiện trang chủ và điều hướng tiếng Việt · không bị chặn
