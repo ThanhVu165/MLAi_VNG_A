@@ -8,11 +8,14 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
+from urllib.parse import quote
 
 import streamlit as st
 
+from corpus.api import get_chunk
+from core.explain import explain_plainly
 from core.pipeline import process_case
-from core.types import CaseInput, PipelineResult
+from core.types import CaseInput, Decision, EscalationCard, EscalationType, PipelineResult
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +24,11 @@ PASTE_SENDER = "student@mo-phong.local"
 PASTE_SUBJECT = "Email sinh viên được dán"
 UI_ACTOR = "HUMAN:demo"
 STEP_NAMES = tuple(f"R{step}" for step in range(1, 14))
+ESCALATION_TYPE_LABELS: dict[EscalationType, str] = {
+    EscalationType.FACT_UNRESOLVED: "Thiếu dữ kiện",
+    EscalationType.OUT_OF_POLICY: "Ngoài phạm vi quy định",
+    EscalationType.AUTHORITY_REQUIRED: "Cần phê duyệt",
+}
 
 
 @dataclass(frozen=True)
@@ -63,12 +71,110 @@ def run_case(case_input: CaseInput) -> tuple[PipelineResult, int]:
     return result, elapsed_ms
 
 
+def render_decision(result: PipelineResult) -> None:
+    """Hiển thị huy hiệu quyết định và lý do từ Policy Engine."""
+    if result.decision.decision is Decision.AUTO_REPLY:
+        st.success("Trả lời tự động")
+    elif result.decision.decision is Decision.ESCALATE:
+        st.warning("Chuyển tiếp chuyên viên")
+    else:
+        st.error("Dữ liệu đầu vào chưa hợp lệ")
+    st.write(f"Quy tắc áp dụng: {result.decision.rule_id}")
+    st.write(f"Lý do: {result.decision.reason}")
+
+
+def render_draft(result: PipelineResult) -> None:
+    """Hiển thị nguyên văn bản nháp khi pipeline tạo được email."""
+    if result.draft is None:
+        st.info("Chưa có email nháp vì case cần chuyên viên xử lý tiếp.")
+        return
+    st.subheader("Nội dung email nháp")
+    st.write(f"Tiêu đề: {result.draft.subject}")
+    st.text(result.draft.body)
+
+
+def render_citations(result: PipelineResult) -> None:
+    """Hiển thị mỗi trích dẫn cùng breadcrumb và nguyên văn điều khoản."""
+    citation_ids = (
+        result.draft.citations if result.draft is not None else result.decision.evidence_ids
+    )
+    if not citation_ids:
+        st.info("Case này không có trích dẫn quy định để tự động trả lời.")
+        return
+    st.subheader("Căn cứ quy định")
+    for citation_id in citation_ids:
+        chunk = get_chunk(citation_id)
+        if chunk is None:
+            st.warning(f"Không mở được trích dẫn {citation_id} trong corpus đang hiệu lực.")
+            continue
+        with st.expander(f"{chunk.breadcrumb} · {chunk.chunk_id}"):
+            st.write(chunk.text)
+
+
+def render_escalation_card(card: EscalationCard, case_id: str) -> None:
+    """Hiển thị đủ thông tin để chuyên viên chọn phương án chuyển tiếp."""
+    st.subheader("Thẻ chuyển tiếp chuyên viên")
+
+    st.markdown("#### Tóm tắt")
+    st.write(card.summary)
+    st.caption(f"Loại chuyển tiếp: {ESCALATION_TYPE_LABELS[card.escalation_type]}")
+
+    st.markdown("#### Dữ kiện")
+    if card.facts:
+        for fact in card.facts:
+            st.write(f"• {fact}")
+    else:
+        st.info("Chưa có dữ kiện đã xác nhận; hãy dựa vào căn cứ và câu hỏi bên dưới.")
+
+    st.markdown("#### Căn cứ")
+    if card.basis:
+        for breadcrumb, citation in card.basis:
+            with st.expander(breadcrumb):
+                st.write(citation)
+    else:
+        st.info("Chưa có căn cứ quy định đang hiệu lực cho case này.")
+
+    st.markdown("#### Câu hỏi")
+    st.write(card.question)
+    if card.options:
+        st.radio("Chọn một phương án", card.options, key=f"escalation_choice_{case_id}")
+    else:
+        st.error("Thẻ chưa có phương án. Hãy mở nhật ký kiểm toán để xử lý case này an toàn.")
+
+    if card.partial_draft is not None:
+        st.markdown("#### Phần A đã soạn sẵn")
+        st.write(f"Tiêu đề: {card.partial_draft.subject}")
+        st.text(card.partial_draft.body)
+
+
+def render_plain_explanation(case_id: str, key: str) -> None:
+    """Cho phép mở phần giải thích đơn giản và lưu audit qua API dùng chung."""
+    if st.button("Giải thích cho người không chuyên", key=key):
+        try:
+            explanation = explain_plainly(case_id)
+        except ValueError:
+            st.error("Chưa thể tạo giải thích cho case này. Hãy xử lý email rồi thử lại.")
+        else:
+            with st.container(border=True):
+                st.subheader("Vì sao hệ thống xử lý như vậy?")
+                st.write(explanation)
+
+
 def render_result(result: PipelineResult, elapsed_ms: int) -> None:
-    """Hiển thị kết quả tối thiểu; trang kết quả chi tiết được bổ sung ở C-10."""
+    """Hiển thị kết quả có căn cứ và đường dẫn sang audit của case."""
     st.success("Đã xử lý email.")
+    render_decision(result)
     st.write(f"Thời gian xử lý: {elapsed_ms} ms")
-    st.write(f"Quyết định: {result.decision.decision} · Quy tắc: {result.decision.rule_id}")
     st.write(f"Mã case: {result.case_id} · Trạng thái: {result.status}")
+    st.write(f"Phiên bản corpus: {result.corpus_version}")
+    render_draft(result)
+    if result.card is None:
+        render_citations(result)
+    else:
+        render_escalation_card(result.card, result.case_id)
+    render_plain_explanation(result.case_id, f"explain_result_{result.case_id}")
+    audit_url = f"/Nhat_ky_kiem_toan?case_id={quote(result.case_id)}"
+    st.link_button("Mở nhật ký kiểm toán của case", audit_url)
     with st.expander("Thời gian theo bước R1–R13"):
         for step in STEP_NAMES:
             st.write(f"{step}: {result.step_latencies_ms.get(step, 0)} ms")

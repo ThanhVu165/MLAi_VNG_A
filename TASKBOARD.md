@@ -523,6 +523,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 1 · 3
 
 ### C-10 · Màn hình kết quả nhánh tự động
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 2.5h · **Phụ thuộc:** C-09
 - **File:** `pages/1_Xu_ly_email.py`
 - **Việc phải làm:** Huy hiệu quyết định (`Trả lời tự động` / `Chuyển tiếp`), `rule_id` và `reason` bằng tiếng Việt, nội dung email nháp, **danh sách trích dẫn có breadcrumb đầy đủ** và mở rộng được để xem nguyên văn điều khoản, `corpus_version`, liên kết sang audit log của case.
@@ -537,6 +538,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6 (4đ)
 
 ### C-12 · Thẻ escalation bốn khối
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 2h · **Phụ thuộc:** C-09, A-17
 - **File:** `pages/1_Xu_ly_email.py`, `pages/2_Hang_cho_duyet.py`
 - **Việc phải làm:** Trình bày đúng bốn khối: Tóm tắt · Dữ kiện · Căn cứ (breadcrumb bấm được) · Câu hỏi + các phương án dạng nút chọn. Hiển thị `escalation_type` bằng tiếng Việt dễ hiểu (*Thiếu dữ kiện* / *Ngoài phạm vi quy định* / *Cần phê duyệt*). Nếu có `partial_draft` thì hiện khối *"Phần A đã soạn sẵn"*.
@@ -558,6 +560,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6
 
 ### C-15 · Nút "Giải thích cho người không chuyên"
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 1h · **Phụ thuộc:** A-23
 - **File:** `pages/1_Xu_ly_email.py`, `pages/2_Hang_cho_duyet.py`, `pages/4_Nhat_ky_kiem_toan.py`
 - **Việc phải làm:** Nút hiện ở cả ba nơi, gọi `explain_plainly(case_id)`, hiển thị trong khung riêng dễ đọc. Ghi audit `EXPLAIN_REQUESTED`.
@@ -573,6 +576,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6 (6đ) · chặng 6:30–7:30 của buổi chấm
 
 ### C-17 · Thanh điều khiển toàn cục
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 2h · **Phụ thuộc:** A-22
 - **File:** `streamlit_app.py` (thanh bên), `pages/4_Nhat_ky_kiem_toan.py`
 - **Việc phải làm:** Bốn điều khiển luôn nhìn thấy: **Tạm dừng tự động** (có chỉ báo trạng thái rõ) · **Tiếp tục** · **Ghi đè quyết định** (chọn case, đổi chiều, bắt buộc lý do) · **Chạy lại case** (hiện bảng diff hai lần chạy). Mọi thao tác ghi audit với actor `ADMIN`.
@@ -580,6 +584,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6 (4đ)
 
 ### C-18 · `verify/harness.py` — lõi chạy kiểm thử
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 2.5h · **Phụ thuộc:** A-21
 - **File:** `verify/harness.py`
 - **Việc phải làm:** Đọc file case JSON; với mỗi case gọi `core.pipeline.process_case()` với `channel="verify"`; so `actual` với `expected` theo ba trường (`decision`, `escalation_type`, và với case AUTO thì `có ≥1 citation ACTIVE`); đo thời gian từng case; ghi audit `VERIFY_RUN_STARTED` / `VERIFY_RUN_FINISHED`; chạy **tuần tự** để tránh SQLite lock.

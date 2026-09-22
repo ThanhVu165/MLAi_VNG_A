@@ -4,8 +4,12 @@ from datetime import date
 
 import streamlit as st
 
+from core.explain import explain_plainly
 from infra.audit import ACTIONS, AuditEvent, recent_events
 from infra.db import to_local
+from streamlit_app import render_global_controls
+
+EARLIEST_FILTER_DATE = date(2000, 1, 1)
 
 
 def _matches(
@@ -38,6 +42,7 @@ def _details(event: AuditEvent) -> dict[str, object]:
 
 
 st.set_page_config(page_title="Nhật ký kiểm toán", page_icon="📋", layout="wide")
+render_global_controls()
 st.title("Nhật ký kiểm toán")
 
 query_case_id = st.query_params.get("case_id", "")
@@ -45,7 +50,7 @@ case_id = st.text_input("Case ID", value=query_case_id, placeholder="Ví dụ: c
 actor = st.text_input("Actor", placeholder="SYSTEM, HUMAN: hoặc ADMIN:")
 action = st.selectbox("Hành động", ("Tất cả", *sorted(ACTIONS)))
 start_column, end_column = st.columns(2)
-start_value = start_column.date_input("Từ ngày", value=date.min)
+start_value = start_column.date_input("Từ ngày", value=EARLIEST_FILTER_DATE)
 end_value = end_column.date_input("Đến ngày", value=date.today())
 
 if not isinstance(start_value, date) or not isinstance(end_value, date):
@@ -86,3 +91,14 @@ else:
         label = f"{event.action} · {to_local(event.ts)} · {event.case_id or 'Không có case'}"
         with st.expander(label):
             st.json(_details(event))
+            if event.case_id and st.button(
+                "Giải thích cho người không chuyên", key=f"explain_{event.event_id}"
+            ):
+                try:
+                    explanation = explain_plainly(event.case_id)
+                except ValueError:
+                    st.error("Chưa thể tạo giải thích cho case này. Hãy kiểm tra lại dữ liệu case.")
+                else:
+                    with st.container(border=True):
+                        st.subheader("Vì sao hệ thống xử lý như vậy?")
+                        st.write(explanation)
