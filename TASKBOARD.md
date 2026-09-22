@@ -55,6 +55,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 - **Xong khi:** Có kết luận ghi vào `STATUS.md`: làn nào đúng tiến độ, task nào cắt bớt.
 
 ### S-05 · Checkpoint H28 — tích hợp dọc lần 1
+- **Trạng thái:** WIP
 - **Khối:** B2 kết thúc · **Ước lượng:** 2h · **Phụ thuộc:** A-21, B-12, C-10
 - **Việc phải làm:**
   1. Gỡ toàn bộ stub. Chạy một email thật về điểm rèn luyện qua `process_case()` với corpus thật.
