@@ -299,6 +299,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 7 (8đ + 6đ)
 
 ### A-26 · Duyệt kỳ vọng của bộ 15 case
+- **Trạng thái:** WIP
 - **Khối:** B4 · **Ước lượng:** 1.5h · **Phụ thuộc:** C-25
 - **File:** `verify/cases_*.json` (chỉ duyệt, C viết)
 - **Việc phải làm:** Với từng case, xác nhận `expected_decision`, `expected_type` và `expected_rule_id` **suy ra được từ tài liệu quy định của đội**, không phải từ hành vi hiện tại của code. Nếu code sai thì sửa code, không sửa kỳ vọng.
