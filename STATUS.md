@@ -91,3 +91,4 @@
 [H+00][Agent A] A-25 đã thêm hai test không được xóa: E01–E03 không over-escalate, năm lỗi không fail-open · 74 test xanh
 [H+00][Agent A] A-26 chặn bởi vòng lặp dependency với C-25; chờ xác nhận duyệt khi C-25 WIP có đủ case files
 [H+00][Agent A] A-26 hoàn tất · đã duyệt căn cứ 15 case độc lập với code; C-25 đã chốt F02 dùng guard R1 và ba file Verify · 75 pytest/Ruff xanh, Black/mypy còn blocker ngoài phạm vi A
+[H+00][Agent A] S-05 bị chặn · smoke test Paste với email điểm rèn luyện dừng ở tải model embedding corpus 0 byte; chưa có kết quả/citation/audit đủ 8 event · không cắt tính năng
