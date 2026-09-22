@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title description">
+  <title id="title">Luồng xử lý email và hai điểm con người quyết định</title>
+  <desc id="description">Email đi từ đầu vào qua xử lý tự động. Con người quyết định case escalation, rồi duyệt trước khi gửi mô phỏng.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+    <style>
+      .heading { font: 700 30px Arial, sans-serif; fill: #0f172a; }
+      .section { font: 700 20px Arial, sans-serif; fill: #0f172a; }
+      .label { font: 700 18px Arial, sans-serif; fill: #0f172a; }
+      .text { font: 16px Arial, sans-serif; fill: #334155; }
+      .human-label { font: 700 16px Arial, sans-serif; fill: #9a3412; }
+      .human-text { font: 700 18px Arial, sans-serif; fill: #7c2d12; }
+      .card { stroke: #94a3b8; stroke-width: 2; rx: 16; }
+      .arrow { stroke: #334155; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="760" fill="#f8fafc"/>
+  <text x="600" y="48" text-anchor="middle" class="heading">Escalation Referee — Đầu vào → Xử lý → Đầu ra</text>
+
+  <text x="110" y="108" text-anchor="middle" class="section">Đầu vào</text>
+  <rect x="35" y="132" width="150" height="144" class="card" fill="#dbeafe"/>
+  <text x="110" y="174" text-anchor="middle" class="label">Email sinh viên</text>
+  <text x="110" y="204" text-anchor="middle" class="text">Dán email</text>
+  <text x="110" y="230" text-anchor="middle" class="text">hoặc hộp thư</text>
+  <text x="110" y="256" text-anchor="middle" class="text">mô phỏng</text>
+
+  <text x="390" y="108" text-anchor="middle" class="section">Xử lý tự động</text>
+  <rect x="250" y="132" width="280" height="144" class="card" fill="#e0f2fe"/>
+  <text x="390" y="171" text-anchor="middle" class="label">Làm sạch và trích xuất</text>
+  <text x="390" y="201" text-anchor="middle" class="text">Tra quy định · kiểm chứng</text>
+  <text x="390" y="227" text-anchor="middle" class="text">Policy Engine quyết định</text>
+  <text x="390" y="253" text-anchor="middle" class="text">AUTO_REPLY hay ESCALATE</text>
+
+  <text x="950" y="108" text-anchor="middle" class="section">Đầu ra</text>
+  <rect x="855" y="132" width="190" height="144" class="card" fill="#dcfce7"/>
+  <text x="950" y="171" text-anchor="middle" class="label">Phản hồi có căn cứ</text>
+  <text x="950" y="201" text-anchor="middle" class="text">Bản nháp + trích dẫn</text>
+  <text x="950" y="227" text-anchor="middle" class="text">Gửi mô phỏng</text>
+
+  <path d="M185 204 H250" class="arrow"/>
+  <path d="M530 204 H855" class="arrow"/>
+
+  <rect x="250" y="390" width="280" height="128" class="card" fill="#ffedd5" stroke="#fb923c"/>
+  <text x="390" y="425" text-anchor="middle" class="human-label">ĐIỂM CON NGƯỜI QUYẾT ĐỊNH 1</text>
+  <text x="390" y="458" text-anchor="middle" class="human-text">Quyết định case escalation</text>
+  <text x="390" y="487" text-anchor="middle" class="text">Chọn hướng xử lý và lý do</text>
+
+  <rect x="670" y="390" width="280" height="128" class="card" fill="#ffedd5" stroke="#fb923c"/>
+  <text x="810" y="425" text-anchor="middle" class="human-label">ĐIỂM CON NGƯỜI QUYẾT ĐỊNH 2</text>
+  <text x="810" y="458" text-anchor="middle" class="human-text">Duyệt trước khi gửi</text>
+  <text x="810" y="487" text-anchor="middle" class="text">Duyệt hoặc hủy gửi mô phỏng</text>
+
+  <path d="M390 276 V390" class="arrow"/>
+  <path d="M530 454 H670" class="arrow"/>
+  <path d="M810 390 V276" class="arrow"/>
+
+  <rect x="362" y="602" width="476" height="82" rx="16" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+  <text x="600" y="635" text-anchor="middle" class="label">Nguyên tắc: con người quyết định việc gì,</text>
+  <text x="600" y="663" text-anchor="middle" class="label">AI chỉ hỗ trợ xử lý và diễn đạt có căn cứ.</text>
+  <path d="M390 518 V584 H600 V602" class="arrow"/>
+  <path d="M810 518 V584 H600" class="arrow"/>
+</svg>

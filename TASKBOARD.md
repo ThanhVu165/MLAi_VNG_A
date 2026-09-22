@@ -504,7 +504,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 1 (10đ)
 
 ### C-08 · Sơ đồ Slide 2 in trên trang chủ
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 2h · **Phụ thuộc:** A-21
 - **File:** `docs/slide2_flow.svg`, `streamlit_app.py`
 - **Việc phải làm:** Vẽ sơ đồ Đầu vào → Xử lý → Đầu ra, **đánh dấu rõ hai điểm con người ra quyết định**: (1) quyết định case escalation, (2) duyệt trước khi gửi. Nhúng SVG ngay trên trang chủ, đúng nguyên văn hình dùng cho Slide 2.
