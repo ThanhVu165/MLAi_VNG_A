@@ -685,7 +685,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 ### Đợt sửa Sprint 1 theo chỉ dẫn ngày 22/09/2026
 
 - **C-30 · DONE** — Bản đọc nguyên văn 15 case, parity test mọi trường; F01 rỗng đi qua pipeline thật.
-- **C-31 · WIP** — Giải thích ba loại chuyển tiếp, đối chiếu từng case; tách INVALID_INPUT.
+- **C-31 · DONE** — Giải thích ba loại chuyển tiếp, đối chiếu 7 case; tách INVALID_INPUT và P04 fail-safe.
 - **B-19 · WIP** — Câu chữ seed quy định hư cấu thực tế hơn, giữ 6 tài liệu/72 chunk.
 - **C-32 · WIP** — Email paste đủ ba trường, inbox giữ thời điểm gốc, kiểm thử đầu vào thật.
 

@@ -4,6 +4,32 @@
 
 Chạy lệnh bên dưới từ thư mục gốc repo sau khi cài môi trường theo RUNBOOK.md. Bộ Verify 4 ca và bộ Escalation 5 ca vẫn là hai nút riêng. `null` nghĩa là không có loại chuyển tiếp; nội dung trống của F01 được giữ nguyên để thử đầu vào không hợp lệ.
 
+## Phân loại mức độ không chắc chắn
+
+Ba nhóm mô tả **lý do cần dừng tự động**, không phải ba mức điểm tự tin tăng dần. Hệ thống vẫn phải xử lý tự động các câu hỏi thường quy có đủ căn cứ và quyền trả lời.
+
+- **FACT_UNRESOLVED — Chưa xác định được dữ kiện thực tế:** thiếu học kỳ, khóa, thời điểm, mã học phần hoặc dữ kiện bắt buộc để chọn quy định áp dụng. P03 xử lý thiếu dữ kiện; P04 còn là đường dừng an toàn khi LLM/guard/lỗi xử lý không cho phép kết luận. Hai rule cùng nhóm không đồng nghĩa cùng nguyên nhân.
+- **OUT_OF_POLICY — Ngoài phạm vi quy định hoặc căn cứ chưa đủ an toàn:** domain không được hỗ trợ, không có nguồn ACTIVE, các nguồn mâu thuẫn, hoặc điều khoản chưa được mở quyền trả lời tự động (`human_only`). P02 xử lý nhóm này; guard R1 dừng sớm khi ngôn ngữ ngoài vi/en. Không suy đoán chọn một nguồn trong cặp mâu thuẫn.
+- **AUTHORITY_REQUIRED — Cần người có thẩm quyền phê duyệt:** yêu cầu quyết định về hồ sơ cá nhân, khiếu nại, xin ngoại lệ, chấp thuận hay điều chỉnh quyền lợi. P01 khóa quyền tự động quyết định. Câu hỏi về phí/thời hạn thông thường không tự biến thành yêu cầu phê duyệt chỉ vì nhắc tới phúc khảo hoặc rút học phần.
+
+`auto_answerable` / `human_only` là cấu hình quyền của hệ thống quản trị, **không phải trường vốn có trên văn bản quy chế ngoài đời**. Seed khai báo cấu hình này riêng với nội dung văn bản. Hệ thống không được lấy quyền trả lời thông tin làm quyền phê duyệt hồ sơ.
+
+### Đối chiếu các ca cần chuyển tiếp
+
+| ID | Nhóm kỳ vọng | Rule | Điều gì ngăn tự động xử lý? |
+| --- | --- | --- | --- |
+| V03 | AUTHORITY_REQUIRED | P01 | Xin phúc khảo quá hạn; PK-2026-204 Điều 3 Khoản 1 giao Trưởng phòng Đào tạo quyết định. |
+| V04 | OUT_OF_POLICY | P02 | Ký túc xá ngoài ba domain có nguồn ACTIVE. |
+| E04 | FACT_UNRESOLVED | P03 | Thiếu khóa và học kỳ để áp dụng điều khoản chuyển tiếp RL-2026-3150. |
+| E05 | AUTHORITY_REQUIRED | P01 | Xin miễn điều kiện; QDPQ-2026-01 Điều 2 Khoản 1 giao Hội đồng đào tạo quyết định. |
+| F02 | OUT_OF_POLICY | R1 | Tiếng Nhật ngoài vi/en; guard chạy trước Policy Engine. |
+| F04 | AUTHORITY_REQUIRED | P01 | Có phần hỏi hạn thông thường nhưng đồng thời xin ngoại lệ; chuyển cả case theo QDPQ-2026-01 Điều 2 Khoản 1. |
+| F05 | OUT_OF_POLICY | P02 | Điều 3 Khoản 1 RH-2026-101 nói 70%, HP-2026-1 nói 60%; chưa thể khẳng định tỷ lệ hoàn học phí. |
+
+**F01 là INVALID_INPUT / R0**, không thuộc ba nhóm chuyển tiếp và không vào hàng chờ chuyên viên. Trong bản đọc, 7 ca AUTO_REPLY, 7 ca ESCALATE và 1 ca INVALID_INPUT là **kỳ vọng**, không phải kết quả đo. P04 không phải kỳ vọng của ca nào trong bộ này; cần kiểm thử lỗi riêng.
+
+Khi chạy, kiểm tra cả `rule_id` bên cạnh quyết định và loại chuyển tiếp: harness hiện so quyết định, loại và citation ACTIVE cho nhánh tự động, chưa so rule kỳ vọng. Ví dụ E04 ra P04 không chứng minh đã phát hiện đúng dữ kiện thiếu theo P03, dù bảng ghi PASS. Xem giới hạn vận hành trong `docs/known_failures.md`.
+
 <!-- CASES_START -->
 
 ## V01
@@ -202,4 +228,3 @@ Chạy lệnh bên dưới từ thư mục gốc repo sau khi cài môi trườn
 - Lệnh chạy (`how_to_run`): python -m verify.harness --set full15 --case F06
 
 <!-- CASES_END -->
-
