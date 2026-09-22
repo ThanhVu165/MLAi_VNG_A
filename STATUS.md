@@ -100,3 +100,4 @@
 [H+00][Agent A] S-05 bị chặn · smoke test Paste với email điểm rèn luyện dừng ở tải model embedding corpus 0 byte; chưa có kết quả/citation/audit đủ 8 event · không cắt tính năng
 
 [H+00][Agent C] C-13 đã triển khai hàng chờ, ghi shown_at/decided_at và audit HUMAN_DECISION; 75 test xanh · chờ xác nhận thao tác UI do runtime trình duyệt Windows lỗi ownership
+[H+00][Agent C] S-05 smoke test thật trượt · Gemini DeadlineExceeded ở R2 sau >30s; case PROCESSING, 4/8 audit event, chưa có rule/citation/UI · theo Phụ lục cần dừng tính năng mới và ưu tiên sửa đường demo
