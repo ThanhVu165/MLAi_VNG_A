@@ -9,6 +9,8 @@ import unicodedata
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from corpus.store import SourceContent, save_source_content
+
 from infra.db import execute, fetch_one, now_iso
 
 SEED_DOCUMENTS_DIRECTORY = Path(__file__).parents[1] / "data" / "seed_docs"
@@ -47,6 +49,7 @@ class _SeedChunk:
 def ensure_seeded(*, database_path: str | Path | None = None) -> SeedResult:
     """Nạp seed chỉ khi chưa có nguồn nào; không ghi đè corpus do admin quản trị."""
     if fetch_one("SELECT doc_id FROM sources LIMIT 1", database_path=database_path) is not None:
+        _restore_matching_seed_originals(database_path=database_path)
         return SeedResult(False, 0, 0)
 
     documents = [_read_document(path) for path in sorted(SEED_DOCUMENTS_DIRECTORY.glob("*.json"))]
@@ -60,6 +63,25 @@ def ensure_seeded(*, database_path: str | Path | None = None) -> SeedResult:
     _insert_sources(documents, database_path=database_path)
     _insert_chunks(_with_refund_conflicts(chunks), database_path=database_path)
     return SeedResult(True, len(documents), len(chunks))
+
+
+def _restore_matching_seed_originals(*, database_path: str | Path | None) -> None:
+    for path in SEED_DOCUMENTS_DIRECTORY.glob("*.json"):
+        document = _read_document(path)
+        doc_id, text = _string(document, "document_id"), _string(document, "text")
+        row = fetch_one(
+            "SELECT sha256 FROM sources WHERE doc_id = ? AND source_kind = 'seed'",
+            (doc_id,),
+            database_path=database_path,
+        )
+        if row is None or row["sha256"] != hashlib.sha256(text.encode()).hexdigest():
+            continue
+        execute(
+            """INSERT OR IGNORE INTO source_contents (doc_id, content, extracted_text, filename)
+               VALUES (?, ?, ?, ?)""",
+            (doc_id, text.encode(), text, f"{doc_id}.txt"),
+            database_path=database_path,
+        )
 
 
 def _read_document(path: Path) -> dict[str, object]:
@@ -112,6 +134,15 @@ def _insert_sources(
                 created_at,
                 created_at if status == "ACTIVE" else None,
                 "ADMIN:seed" if status == "ACTIVE" else None,
+            ),
+            database_path=database_path,
+        )
+        save_source_content(
+            SourceContent(
+                _string(document, "document_id"),
+                text.encode("utf-8"),
+                text,
+                f"{_string(document, 'document_id')}.txt",
             ),
             database_path=database_path,
         )

@@ -2,10 +2,29 @@
 
 import logging
 import os
+from pathlib import Path
 
 LOGGER = logging.getLogger(__name__)
 _MINIMUM_NON_NEGATIVE = 0
 _MINIMUM_POSITIVE = 1
+
+
+def load_local_env(path: Path = Path(".env")) -> None:
+    """Đọc cấu hình local tối giản mà không ghi đè biến môi trường đã được cung cấp."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = (part.strip() for part in line.split("=", maxsplit=1))
+        if key:
+            os.environ.setdefault(key, value.strip("\"'"))
+
+
+load_local_env()
 
 
 def _read_int(name: str, default: int, minimum: int = _MINIMUM_NON_NEGATIVE) -> int:
@@ -42,12 +61,12 @@ PENDING_SEND_SECONDS: int = _read_int("PENDING_SEND_SECONDS", 60, _MINIMUM_POSIT
 PENDING_STATUS_REFRESH_SECONDS: int = _read_int(
     "PENDING_STATUS_REFRESH_SECONDS", 1, _MINIMUM_POSITIVE
 )
-# Số từ tối thiểu của email ngắn trước khi hỏi lại thay vì gửi LLM.
-MIN_WORDS_GUARD: int = _read_int("MIN_WORDS_GUARD", 15, _MINIMUM_POSITIVE)
 # Thời gian tối đa cho một lần gọi LLM.
 LLM_TIMEOUT_S: int = _read_int("LLM_TIMEOUT_S", 20, _MINIMUM_POSITIVE)
 # Số lần thử lại LLM sau lần gọi đầu tiên.
 LLM_RETRIES: int = _read_int("LLM_RETRIES", 1)
+LLM_MAX_ATTEMPTS: int = 4
+CASE_TIMEOUT_SECONDS: int = 60
 # Số chunk tối đa retrieval trả về cho pipeline.
 RETRIEVAL_TOP_K: int = _read_int("RETRIEVAL_TOP_K", 6, _MINIMUM_POSITIVE)
 # Giới hạn số từ của một câu hỏi chuyển tiếp.

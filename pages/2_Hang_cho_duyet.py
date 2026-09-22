@@ -1,9 +1,8 @@
 """Trang hàng chờ để chuyên viên duyệt các case được chuyển tiếp."""
 
-from __future__ import annotations
-
 import json
 import logging
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime
 from sqlite3 import Row
@@ -11,22 +10,20 @@ from uuid import uuid4
 
 import streamlit as st
 
-from core.explain import explain_plainly
-from core.ground_guard import guard_resume_groundedness
-from core.resume import resume_case
+from core.resume import validate_human_draft
+from core.results import load_result
 from core.sanitize import mask_pii
 from core.types import CaseStatus, DraftReply, EscalationType
+from core.worker import queue_resume
+from corpus.api import get_corpus_version
 from infra.audit import log_event
-from infra.db import execute, fetch_all, fetch_one, now_iso, to_local
+from infra.db import execute, fetch_all, fetch_one, get_connection, now_iso, transaction
+from infra.settings import PENDING_STATUS_REFRESH_SECONDS
+from ui.presentation import TYPE_LABELS, local_time, readable_text, reply_text
 
 LOGGER = logging.getLogger(__name__)
-UI_ACTOR = "HUMAN:demo"
+UI_ACTOR = "HUMAN:local"
 CHOICES = ("Chấp thuận", "Từ chối", "Quyết định khác")
-TYPE_LABELS: dict[str, str] = {
-    EscalationType.FACT_UNRESOLVED: "Thiếu dữ kiện",
-    EscalationType.OUT_OF_POLICY: "Ngoài phạm vi quy định",
-    EscalationType.AUTHORITY_REQUIRED: "Cần phê duyệt",
-}
 
 
 @dataclass(frozen=True)
@@ -98,11 +95,11 @@ def _queue_cases() -> tuple[QueueCase, ...]:
                ), c.created_at) AS queued_at,
                e.escalation_type, e.summary, e.facts_json, e.basis_json, e.question, e.options_json
         FROM cases AS c
-        JOIN escalations AS e ON e.case_id = c.case_id
-        WHERE c.status = ?
+        LEFT JOIN escalations AS e ON e.case_id = c.case_id
+        WHERE c.status IN (?, ?)
         ORDER BY queued_at ASC
         """,
-        (CaseStatus.AWAITING_HUMAN,),
+        (CaseStatus.AWAITING_HUMAN, CaseStatus.HUMAN_DECIDED),
     )
     return tuple(
         QueueCase(
@@ -111,7 +108,7 @@ def _queue_cases() -> tuple[QueueCase, ...]:
             body_masked=row["body_masked"] or "",
             corpus_version=row["corpus_version"],
             queued_at=row["queued_at"],
-            escalation_type=row["escalation_type"],
+            escalation_type=row["escalation_type"] or EscalationType.FACT_UNRESOLVED,
             summary=row["summary"] or "Chưa có tóm tắt.",
             facts=_strings(row["facts_json"]),
             basis=_basis(row["basis_json"]),
@@ -153,6 +150,14 @@ def _preview_drafts() -> tuple[PreviewDraft, ...]:
 
 
 def _open_decision(case_id: str) -> Row:
+    case = fetch_one("SELECT status FROM cases WHERE case_id = ?", (case_id,))
+    if case is not None and case["status"] == CaseStatus.HUMAN_DECIDED:
+        decided = fetch_one(
+            "SELECT * FROM human_decisions WHERE case_id = ? AND decided_at IS NOT NULL ORDER BY rowid DESC LIMIT 1",
+            (case_id,),
+        )
+        if decided is not None:
+            return decided
     row = fetch_one(
         """
         SELECT * FROM human_decisions
@@ -194,47 +199,49 @@ def _record_decision(case: QueueCase, record: Row, choice: str, reason: str) -> 
     review_seconds = (
         datetime.fromisoformat(decided_at.replace("Z", "+00:00")) - shown_at
     ).total_seconds()
-    if (
-        execute(
-            """
-        UPDATE human_decisions
-        SET choice = ?, reason = ?, decided_at = ?, review_seconds = ?
-        WHERE id = ? AND decided_at IS NULL
-        """,
-            (choice, reason, decided_at, review_seconds, record["id"]),
+    with closing(get_connection()) as connection, connection:
+        connection.execute("BEGIN IMMEDIATE")
+        if (
+            connection.execute(
+                "UPDATE cases SET status = ? WHERE case_id = ? AND status = ?",
+                (CaseStatus.HUMAN_DECIDED, case.case_id, CaseStatus.AWAITING_HUMAN),
+            ).rowcount
+            != 1
+        ):
+            raise ValueError("Email đã có quyết định hoặc không còn trong hàng chờ. Hãy tải lại.")
+        if (
+            connection.execute(
+                """UPDATE human_decisions SET choice = ?, reason = ?, decided_at = ?, review_seconds = ?
+               WHERE id = ? AND decided_at IS NULL""",
+                (choice, reason, decided_at, review_seconds, record["id"]),
+            ).rowcount
+            != 1
+        ):
+            raise ValueError("Quyết định đã được ghi nhận. Hãy tải lại.")
+        queue_resume(case.case_id, connection=connection)
+        log_event(
+            case_id=case.case_id,
+            actor=UI_ACTOR,
+            action="HUMAN_DECISION",
+            reason=mask_pii(reason),
+            corpus_version=case.corpus_version,
+            connection=connection,
         )
-        != 1
-    ):
-        raise ValueError("Case này đã có quyết định; hãy tải lại hàng chờ.")
-    if (
-        execute(
-            "UPDATE cases SET status = ? WHERE case_id = ? AND status = ?",
-            (CaseStatus.HUMAN_DECIDED, case.case_id, CaseStatus.AWAITING_HUMAN),
-        )
-        != 1
-    ):
-        raise ValueError("Case không còn ở hàng chờ; hãy tải lại.")
-    log_event(
-        case_id=case.case_id,
-        actor=UI_ACTOR,
-        action="HUMAN_DECISION",
-        reason=reason,
-        corpus_version=case.corpus_version,
-    )
 
 
 def _save_draft(preview: PreviewDraft, subject: str, body: str) -> None:
-    draft = guard_resume_groundedness(
-        DraftReply(subject.strip(), body.strip(), list(preview.citations), False, [])
-    )
-    if not draft.subject or not draft.body:
-        raise ValueError("Tiêu đề và nội dung email không được để trống.")
-    if (
-        execute(
+    with transaction() as connection:
+        draft = validate_human_draft(
+            preview.case_id,
+            DraftReply(subject.strip(), body.strip(), list(preview.citations), False, []),
+        )
+        if not draft.subject or not draft.body:
+            raise ValueError("Tiêu đề và nội dung email không được để trống.")
+        changed = connection.execute(
             """
             UPDATE drafts
             SET subject = ?, body = ?, grounded = ?, guard_failures_json = ?
-            WHERE draft_id = ?
+            WHERE draft_id = ? AND EXISTS (SELECT 1 FROM cases WHERE case_id = drafts.case_id AND status = 'PENDING_APPROVAL')
             """,
             (
                 draft.subject,
@@ -243,166 +250,243 @@ def _save_draft(preview: PreviewDraft, subject: str, body: str) -> None:
                 json.dumps(draft.guard_failures, ensure_ascii=False),
                 preview.draft_id,
             ),
+        ).rowcount
+        if changed != 1:
+            raise ValueError("Không tìm thấy bản nháp để sửa. Hãy tải lại trang.")
+        log_event(
+            case_id=preview.case_id,
+            actor=UI_ACTOR,
+            action="DRAFT_GENERATED",
+            reason="Chuyên viên đã sửa nội dung và yêu cầu kiểm tra lại căn cứ trước khi duyệt gửi.",
+            sources=draft.citations,
+            corpus_version=get_corpus_version(),
         )
-        != 1
-    ):
-        raise ValueError("Không tìm thấy bản nháp để sửa. Hãy tải lại trang.")
 
 
 def _approve_send(preview: PreviewDraft) -> None:
-    if not preview.grounded:
-        raise ValueError("Hãy sửa nội dung để Ground Guard rút gọn không còn cảnh báo.")
-    if (
-        execute(
-            "UPDATE cases SET status = ? WHERE case_id = ? AND status = ?",
-            (CaseStatus.SENT, preview.case_id, CaseStatus.PENDING_APPROVAL),
-        )
-        != 1
-    ):
-        raise ValueError("Case không còn chờ duyệt gửi. Hãy tải lại trang.")
-    log_event(
-        case_id=preview.case_id,
-        actor=UI_ACTOR,
-        action="HUMAN_APPROVED_SEND",
-        reason="Chuyên viên đã duyệt và gửi email mô phỏng.",
-        corpus_version=preview.corpus_version,
+    version = get_corpus_version()
+    checked = validate_human_draft(
+        preview.case_id,
+        DraftReply(preview.subject, preview.body, list(preview.citations), False, []),
     )
+    if not checked.grounded:
+        raise ValueError("Phản hồi chưa vượt qua kiểm tra căn cứ. Hãy sửa và kiểm tra lại.")
+    with closing(get_connection()) as connection, connection:
+        connection.execute("BEGIN IMMEDIATE")
+        current = connection.execute(
+            "SELECT * FROM drafts WHERE case_id = ? ORDER BY rowid DESC LIMIT 1", (preview.case_id,)
+        ).fetchone()
+        if (
+            current is None
+            or current["draft_id"] != preview.draft_id
+            or current["body"] != preview.body
+            or current["subject"] != preview.subject
+            or _strings(current["citations_json"]) != preview.citations
+        ):
+            raise ValueError("Nội dung đã thay đổi. Hãy tải lại và đọc bản mới trước khi duyệt.")
+        if get_corpus_version() != version:
+            raise ValueError(
+                "Quy định đã thay đổi trong lúc duyệt. Hãy đối chiếu lại trước khi gửi."
+            )
+        if (
+            connection.execute(
+                "UPDATE cases SET status = ?, send_deadline = NULL WHERE case_id = ? AND status = ?",
+                (CaseStatus.SENT, preview.case_id, CaseStatus.PENDING_APPROVAL),
+            ).rowcount
+            != 1
+        ):
+            raise ValueError("Email không còn chờ duyệt gửi. Hãy tải lại.")
+        log_event(
+            case_id=preview.case_id,
+            actor=UI_ACTOR,
+            action="HUMAN_APPROVED_SEND",
+            reason="Chuyên viên đã đọc bản hiện tại, duyệt và gửi email mô phỏng.",
+            corpus_version=version,
+            sources=list(preview.citations),
+            connection=connection,
+        )
 
 
 def _return_to_queue(preview: PreviewDraft) -> None:
-    if (
-        execute(
+    with transaction() as connection:
+        changed = connection.execute(
             "UPDATE cases SET status = ? WHERE case_id = ? AND status = ?",
             (CaseStatus.AWAITING_HUMAN, preview.case_id, CaseStatus.PENDING_APPROVAL),
+        ).rowcount
+        if changed != 1:
+            raise ValueError("Email không còn chờ duyệt gửi. Hãy tải lại trang.")
+        log_event(
+            case_id=preview.case_id,
+            actor=UI_ACTOR,
+            action="HUMAN_REJECTED_DRAFT",
+            reason="Chuyên viên trả bản nháp về hàng chờ để quyết định lại.",
+            corpus_version=preview.corpus_version,
         )
-        != 1
-    ):
-        raise ValueError("Case không còn chờ duyệt gửi. Hãy tải lại trang.")
-    log_event(
-        case_id=preview.case_id,
-        actor=UI_ACTOR,
-        action="HUMAN_REJECTED_DRAFT",
-        reason="Chuyên viên trả bản nháp về hàng chờ để quyết định lại.",
-        corpus_version=preview.corpus_version,
-    )
 
 
 def _render_card(case: QueueCase) -> None:
-    st.subheader("Thẻ chuyển tiếp chuyên viên")
+    st.subheader(case.subject)
     st.caption(
-        f"Đang chờ từ {to_local(case.queued_at)} · {TYPE_LABELS.get(case.escalation_type, case.escalation_type)}"
+        f"Đang chờ từ {local_time(case.queued_at)} · {TYPE_LABELS.get(case.escalation_type, 'Cần chuyên viên xử lý')}"
     )
-    st.markdown("#### Tóm tắt")
-    st.write(case.summary)
-    st.markdown("#### Dữ kiện")
-    for fact in case.facts or ("Chưa có dữ kiện đã xác nhận.",):
-        st.write(f"• {fact}")
-    st.markdown("#### Căn cứ")
+    st.write(readable_text(case.summary))
+    with st.expander("Email và thông tin đã có"):
+        st.text(case.body_masked)
+        for fact in case.facts:
+            st.write(readable_text(fact))
     for breadcrumb, excerpt in case.basis:
         with st.expander(breadcrumb):
             st.write(excerpt)
     if not case.basis:
-        st.info("Chưa có căn cứ quy định đang hiệu lực.")
-    st.markdown("#### Câu hỏi")
+        st.info("Chưa có quy định phù hợp. Chuyên viên cần xác nhận căn cứ hoặc hướng xử lý.")
+    saved = load_result(case.case_id)
+    prepared = saved.draft if saved else None
+    if prepared:
+        with st.expander("Phần trả lời đã chuẩn bị, chưa gửi"):
+            st.text(reply_text(prepared.body, prepared.citations))
+            if not prepared.grounded:
+                st.warning("Phần này chưa đủ căn cứ để gửi; cần chỉnh sửa khi soạn phản hồi cuối.")
+    st.subheader("Câu hỏi cần quyết định")
     st.write(case.question)
-    if case.options:
-        st.radio("Phương án đề xuất", case.options, key=f"options_{case.case_id}")
 
 
 def _render_decision_form(case: QueueCase, record: Row) -> None:
-    st.subheader("Quyết định của chuyên viên")
-    choice = st.radio("Chọn quyết định", CHOICES, key=f"choice_{case.case_id}")
-    reason = st.text_area("Lý do quyết định", key=f"reason_{case.case_id}")
-    if st.button("Ghi quyết định", disabled=not reason.strip(), key=f"decide_{case.case_id}"):
+    previous = fetch_one(
+        "SELECT * FROM human_decisions WHERE case_id = ? AND decided_at IS NOT NULL ORDER BY rowid DESC LIMIT 1",
+        (case.case_id,),
+    )
+    current = fetch_one("SELECT status FROM cases WHERE case_id = ?", (case.case_id,))
+    decided = current is not None and current["status"] == CaseStatus.HUMAN_DECIDED
+    if decided and previous:
+        job = fetch_one("SELECT state FROM case_jobs WHERE case_id = ?", (case.case_id,))
+        pending = job is not None and job["state"] in ("queued", "running")
+        st.info(
+            "Quyết định đã lưu. Hệ thống đang soạn phản hồi; bạn có thể chuyển trang."
+            if pending
+            else "Quyết định đã lưu nhưng chưa soạn xong phản hồi. Bạn có thể thử soạn lại."
+        )
+        st.write(previous["choice"])
+        st.write(previous["reason"])
+        if job is not None and job["state"] == "failed":
+            failure = fetch_one(
+                "SELECT reason FROM audit_events WHERE case_id = ? AND action = 'CASE_ERROR' ORDER BY rowid DESC LIMIT 1",
+                (case.case_id,),
+            )
+            if failure and failure["reason"]:
+                st.warning(readable_text(failure["reason"]))
+        if st.button("Thử soạn phản hồi lại", disabled=pending, key=f"resume_{case.case_id}"):
+            try:
+                queue_resume(case.case_id)
+            except (RuntimeError, ValueError) as error:
+                st.error(readable_text(str(error)))
+            else:
+                st.rerun()
+        return
+    choice = st.radio(
+        "Quyết định của chuyên viên",
+        (*case.options, "Quyết định khác") if case.options else CHOICES,
+        key=f"choice_{case.case_id}",
+    )
+    reason = st.text_area(
+        "Câu trả lời và lý do cụ thể",
+        help="Ghi thông tin bổ sung hoặc quyết định của bạn. Hệ thống sẽ diễn đạt lại để bạn duyệt trước khi gửi.",
+        key=f"reason_{case.case_id}",
+    )
+    if st.button(
+        "Ghi quyết định và soạn phản hồi", disabled=not reason.strip(), key=f"decide_{case.case_id}"
+    ):
         try:
-            _record_decision(case, record, choice, reason.strip())
-            resume_case(case.case_id, choice, reason.strip(), UI_ACTOR)
+            _record_decision(case, record, choice, reason)
         except (RuntimeError, ValueError) as error:
-            st.error(f"Đã giữ case ở trạng thái an toàn: {error}")
+            st.error(readable_text(str(error)))
         else:
-            st.success("Đã tạo email diễn đạt lại để chuyên viên duyệt gửi.")
             st.rerun()
 
 
 def _render_preview(preview: PreviewDraft) -> None:
-    st.subheader("Xem trước email trước khi gửi")
+    st.subheader("Đọc và duyệt phản hồi")
     if preview.grounded:
-        st.success("Ground Guard rút gọn không phát hiện cảnh báo.")
+        st.caption("Nội dung đã được kiểm tra khi soạn và sẽ được đối chiếu lại khi bạn duyệt gửi.")
     else:
-        failures = ", ".join(preview.guard_failures) or "không xác định"
-        st.warning(f"Ground Guard rút gọn phát hiện: {failures}. Hãy sửa nội dung trước khi gửi.")
+        st.warning(
+            "Nội dung cần được kiểm tra lại trước khi gửi. Hãy chỉnh sửa và lưu để kiểm tra."
+        )
     subject = st.text_input(
         "Tiêu đề email", value=preview.subject, key=f"subject_{preview.draft_id}"
     )
-    body = st.text_area("Nội dung email", value=preview.body, key=f"body_{preview.draft_id}")
+    display_body = reply_text(preview.body, list(preview.citations))
+    body = st.text_area(
+        "Nội dung email", value=display_body, height=240, key=f"body_{preview.draft_id}"
+    )
+    for index, citation in enumerate(preview.citations, start=1):
+        from corpus.api import get_chunk
+
+        chunk = get_chunk(citation)
+        if chunk:
+            with st.expander(f"[{index}] {chunk.breadcrumb}"):
+                st.write(chunk.text)
+    unsaved = subject != preview.subject or body != display_body
+    if unsaved:
+        st.info("Bạn đã chỉnh sửa. Hãy lưu và kiểm tra trước khi duyệt gửi.")
     approve, edit, return_to_queue = st.columns(3)
     if approve.button(
-        "Duyệt và gửi", disabled=not preview.grounded, key=f"approve_{preview.draft_id}"
+        "Duyệt và gửi", disabled=not preview.grounded or unsaved, key=f"approve_{preview.draft_id}"
     ):
         try:
             _approve_send(preview)
         except ValueError as error:
-            st.error(str(error))
+            st.error(readable_text(str(error)))
         else:
-            st.success("Đã gửi email mô phỏng theo thao tác của chuyên viên.")
             st.rerun()
-    if edit.button("Sửa nội dung", key=f"edit_{preview.draft_id}"):
+    if edit.button("Lưu và kiểm tra", key=f"edit_{preview.draft_id}"):
+        for index, citation in enumerate(preview.citations, start=1):
+            body = body.replace(f"[{index}]", f"[{citation}]")
         try:
             _save_draft(preview, subject, body)
         except ValueError as error:
-            st.error(str(error))
+            st.error(readable_text(str(error)))
         else:
-            st.success("Đã lưu nội dung và kiểm tra lại Ground Guard rút gọn.")
             st.rerun()
     if return_to_queue.button("Trả lại hàng chờ", key=f"return_{preview.draft_id}"):
         try:
             _return_to_queue(preview)
         except ValueError as error:
-            st.error(str(error))
+            st.error(readable_text(str(error)))
         else:
-            st.success("Đã trả case về hàng chờ quyết định.")
             st.rerun()
 
 
-def _render_explanation(case_id: str) -> None:
-    if st.button("Giải thích cho người không chuyên", key=f"explain_{case_id}"):
-        try:
-            explanation = explain_plainly(case_id)
-        except ValueError:
-            st.error("Chưa thể tạo giải thích cho case này. Hãy kiểm tra lại dữ liệu.")
-        else:
-            with st.container(border=True):
-                st.write(explanation)
-
-
+@st.fragment(run_every=PENDING_STATUS_REFRESH_SECONDS)
 def main() -> None:
-    st.set_page_config(page_title="Hàng chờ duyệt", page_icon="🧑‍⚖️", layout="wide")
-    st.title("Hàng chờ duyệt")
-    st.info("Chế độ mô phỏng — hệ thống không gửi email thật.")
-    cases = _queue_cases()
-    previews = _preview_drafts()
+    st.title("Cần chuyên viên xử lý")
+    cases, previews = _queue_cases(), _preview_drafts()
     if not cases and not previews:
-        st.info("Chưa có case chờ duyệt. Hãy xử lý email cần chuyển tiếp để tạo thẻ quyết định.")
+        st.info("Không có email đang chờ chuyên viên quyết định hoặc duyệt gửi.")
         return
     if cases:
-        selected = st.selectbox(
-            "Chọn case đang chờ",
-            cases,
-            format_func=lambda case: f"{case.subject} · {to_local(case.queued_at)}",
+        case_id = st.selectbox(
+            "Email cần quyết định",
+            [case.case_id for case in cases],
+            format_func=lambda value: next(
+                f"{case.subject} · {local_time(case.queued_at)}"
+                for case in cases
+                if case.case_id == value
+            ),
         )
-        st.caption(f"Nội dung đã che dữ liệu cá nhân: {selected.body_masked}")
+        selected = next(case for case in cases if case.case_id == case_id)
         record = _open_decision(selected.case_id)
         _render_card(selected)
         _render_decision_form(selected, record)
-        _render_explanation(selected.case_id)
     if previews:
-        if cases:
-            st.divider()
-        preview = st.selectbox(
-            "Chọn email chờ duyệt gửi",
-            previews,
-            format_func=lambda item: item.case_id,
+        st.divider()
+        draft_id = st.selectbox(
+            "Phản hồi chờ duyệt gửi",
+            [item.draft_id for item in previews],
+            format_func=lambda value: next(
+                item.subject for item in previews if item.draft_id == value
+            ),
         )
+        preview = next(item for item in previews if item.draft_id == draft_id)
         _render_preview(preview)
 
 

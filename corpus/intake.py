@@ -4,13 +4,23 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import unicodedata
+import ipaddress
+import socket
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.request import urlopen
+from urllib.parse import urlsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from corpus.store import DatabasePath, SourceRecord, create_source, get_source, list_sources
+from corpus.store import (
+    DatabasePath,
+    SourceRecord,
+    SourceContent,
+    create_source,
+    get_source,
+    list_sources,
+    save_source_content,
+)
 from infra.audit import log_event
 from infra.db import now_iso
 
@@ -68,6 +78,7 @@ def _ingest(
     fetched_at: str | None = None,
     document_id: str | None = None,
     database_path: DatabasePath = None,
+    filename: str = "",
 ) -> IntakeResult:
     if not content:
         raise ValueError("Nội dung tài liệu không được để trống.")
@@ -92,6 +103,9 @@ def _ingest(
             content_hash=digest,
         ),
         database_path=database_path,
+    )
+    save_source_content(
+        SourceContent(source.doc_id, content, filename=filename), database_path=database_path
     )
     log_event(
         case_id=None,
@@ -123,6 +137,7 @@ def ingest_file(
         actor=actor,
         document_id=document_id,
         database_path=database_path,
+        filename=filename,
     )
 
 
@@ -134,8 +149,10 @@ def ingest_text(
     document_id: str | None = None,
     database_path: DatabasePath = None,
 ) -> IntakeResult:
-    """Nạp văn bản được admin dán trực tiếp sau khi chuẩn hóa NFC."""
-    content = unicodedata.normalize("NFC", text).encode("utf-8")
+    """Giữ nguyên bản dán; chỉ chuẩn hóa NFC khi trích xuất nội dung."""
+    if not text.strip():
+        raise ValueError("Nội dung tài liệu không được để trống.")
+    content = text.encode("utf-8")
     return _ingest(
         content,
         title=title,
@@ -143,6 +160,7 @@ def ingest_text(
         actor=actor,
         document_id=document_id,
         database_path=database_path,
+        filename="van-ban.txt",
     )
 
 
@@ -249,7 +267,23 @@ def _log_recheck(
 
 
 def _download_once(url: str) -> bytes:
-    with urlopen(  # nosec B310: chỉ gọi từ thao tác admin thủ công.
-        url, timeout=RECHECK_TIMEOUT_SECONDS
-    ) as response:
-        return response.read()
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+        raise ValueError("Chỉ chấp nhận URL HTTPS công khai, không chứa tài khoản.")
+    addresses = socket.getaddrinfo(parsed.hostname, parsed.port or 443, type=socket.SOCK_STREAM)
+    if not addresses or any(not ipaddress.ip_address(item[4][0]).is_global for item in addresses):
+        raise ValueError("Không được tải nguồn từ địa chỉ nội bộ hoặc không công khai.")
+    # ponytail: URL bị ẩn trên UI; chặn redirect, chưa hỗ trợ xác thực/DNS pinning.
+    opener = build_opener(_NoRedirect)
+    with opener.open(url, timeout=RECHECK_TIMEOUT_SECONDS) as response:
+        content = response.read(10 * 1024 * 1024 + 1)
+    if len(content) > 10 * 1024 * 1024:
+        raise ValueError("Tài liệu vượt giới hạn 10 MB; hãy tải tệp nhỏ hơn.")
+    return content
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(
+        self, req: Request, fp: object, code: int, msg: str, headers: object, newurl: str
+    ) -> None:
+        raise ValueError("Không tải URL chuyển hướng; hãy nạp tệp trực tiếp.")

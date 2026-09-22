@@ -6,13 +6,16 @@ import hashlib
 import json
 import logging
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from pathlib import Path
 from time import perf_counter
 from typing import cast
 
 from infra.db import execute, fetch_one, now_iso
-from infra.settings import LLM_RETRIES, LLM_TIMEOUT_S
+from infra.settings import CASE_TIMEOUT_SECONDS, LLM_MAX_ATTEMPTS, LLM_RETRIES, LLM_TIMEOUT_S
 
 LOGGER = logging.getLogger(__name__)
 CASSETTE_DIRECTORY = Path("tests/cassettes")
@@ -21,6 +24,36 @@ DEFAULT_MODEL = "gemini-3.5-flash-lite"
 MILLISECONDS_PER_SECOND = 1_000
 JsonValue = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 JsonObject = dict[str, JsonValue]
+
+
+@dataclass
+class _CallBudget:
+    remaining: int
+    deadline: float
+
+
+_BUDGET: ContextVar[_CallBudget | None] = ContextVar("llm_case_budget", default=None)
+
+
+@contextmanager
+def case_call_budget() -> Iterator[None]:
+    """Một ngân sách chung cho toàn bộ lượt xử lý, kể cả các lần thử lại."""
+    token = _BUDGET.set(_CallBudget(LLM_MAX_ATTEMPTS, perf_counter() + CASE_TIMEOUT_SECONDS))
+    try:
+        yield
+    finally:
+        _BUDGET.reset(token)
+
+
+def _attempt_timeout(timeout_s: int) -> int:
+    budget = _BUDGET.get()
+    if budget is None:
+        return min(timeout_s, LLM_TIMEOUT_S)
+    remaining_seconds = int(budget.deadline - perf_counter())
+    if budget.remaining <= 0 or remaining_seconds <= 0:
+        raise TimeoutError("Đã hết thời gian hoặc số lần xử lý cho phép.")
+    budget.remaining -= 1
+    return min(timeout_s, LLM_TIMEOUT_S, remaining_seconds)
 
 
 @dataclass(frozen=True)
@@ -47,8 +80,12 @@ def call_json(
 ) -> LLMResult:
     """Gọi LLM theo chế độ cấu hình và luôn trả về ``LLMResult``."""
     started = perf_counter()
-    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
     model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL)
+    prompt_hash = hashlib.sha256(
+        json.dumps([model, schema, prompt, temperature], sort_keys=True, ensure_ascii=False).encode(
+            "utf-8"
+        )
+    ).hexdigest()
     result: LLMResult
     try:
         if temperature != 0.0:
@@ -81,7 +118,7 @@ def _run_mode(
     if mode not in {"live", "record"}:
         return _failure("LLM_MODE phải là live, replay hoặc record.", prompt_hash, model)
 
-    cached = _load_cache(prompt_hash, model)
+    cached = _load_cache(prompt_hash, model) if os.getenv("LLM_CACHE", "1") != "0" else None
     if cached is not None:
         return cached
 
@@ -103,15 +140,57 @@ def _call_live(
 ) -> LLMResult:
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        return _failure("Thiếu GOOGLE_API_KEY để gọi Gemini.", prompt_hash, model)
+        return _failure(
+            "Chưa cấu hình kết nối dịch vụ AI. Hãy nhờ người quản trị bổ sung khóa truy cập rồi thử lại.",
+            prompt_hash,
+            model,
+        )
 
-    retry_count = min(max(retries, 0), LLM_RETRIES)
+    retry_count = min(max(retries, 0), LLM_RETRIES, 1)
     for attempt in range(retry_count + 1):
         try:
-            return _request_gemini(prompt, schema, prompt_hash, model, api_key, timeout_s)
+            remaining_timeout = _attempt_timeout(timeout_s)
+            return _request_gemini(prompt, schema, prompt_hash, model, api_key, remaining_timeout)
         except Exception as error:
             LOGGER.warning("Lần gọi LLM %s thất bại: %s", attempt + 1, type(error).__name__)
-    return _failure("Gemini không phản hồi sau số lần thử cho phép.", prompt_hash, model)
+            transient = isinstance(error, (TimeoutError, ConnectionError)) or type(
+                error
+            ).__name__ in {
+                "DeadlineExceeded",
+                "ServiceUnavailable",
+                "ResourceExhausted",
+                "InternalServerError",
+                "ReadTimeout",
+                "ConnectTimeout",
+                "ConnectionError",
+            }
+            if not transient or attempt == retry_count:
+                error_name = type(error).__name__
+                if error_name in {
+                    "TimeoutError",
+                    "DeadlineExceeded",
+                    "ReadTimeout",
+                    "ConnectTimeout",
+                }:
+                    message = "Dịch vụ AI không phản hồi trong thời gian cho phép."
+                elif error_name in {"ServiceUnavailable", "InternalServerError"}:
+                    message = "Dịch vụ AI đang quá tải hoặc tạm thời không sẵn sàng."
+                elif error_name == "ResourceExhausted":
+                    message = "Dịch vụ AI báo đã chạm hạn mức của tài khoản."
+                elif error_name in {"PermissionDenied", "Unauthenticated", "Forbidden"}:
+                    message = "Dịch vụ AI không chấp nhận quyền truy cập hiện tại."
+                elif error_name == "NotFound":
+                    message = "Dịch vụ AI không tìm thấy mô hình đã cấu hình."
+                else:
+                    message = (
+                        "Dịch vụ AI chưa xử lý được yêu cầu do kết nối hoặc cấu hình chưa phù hợp."
+                    )
+                return _failure(
+                    f"{message} Email được giữ lại, chưa gửi phản hồi. Hãy kiểm tra kết nối/cấu hình rồi thử lại.",
+                    prompt_hash,
+                    model,
+                )
+    return _failure("Dịch vụ AI chưa sẵn sàng; email được giữ lại để thử sau.", prompt_hash, model)
 
 
 def _request_gemini(
@@ -124,7 +203,7 @@ def _request_gemini(
 ) -> LLMResult:
     import google.generativeai as genai
 
-    genai.configure(api_key=api_key)
+    genai.configure(api_key=api_key, transport="rest")
     response = genai.GenerativeModel(model).generate_content(
         prompt,
         generation_config={
@@ -132,7 +211,7 @@ def _request_gemini(
             "response_mime_type": "application/json",
             "response_schema": schema,
         },
-        request_options={"timeout": min(timeout_s, LLM_TIMEOUT_S)},
+        request_options={"timeout": min(timeout_s, LLM_TIMEOUT_S), "retry": None},
     )
     return _success(_parse_object(response.text), prompt_hash, model)
 

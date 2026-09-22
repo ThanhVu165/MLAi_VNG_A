@@ -68,6 +68,44 @@ class CorpusVersionRecord:
     created_at: str | None = None
 
 
+@dataclass(frozen=True)
+class SourceContent:
+    doc_id: str
+    content: bytes
+    extracted_text: str = ""
+    filename: str = ""
+
+
+def save_source_content(record: SourceContent, *, database_path: DatabasePath = None) -> None:
+    """Giữ bản gốc riêng; không thay thế nội dung của nguồn đã duyệt."""
+    source = get_source(record.doc_id, database_path=database_path)
+    if source is None:
+        raise ValueError("Không tìm thấy nguồn để lưu bản gốc.")
+    existing = get_source_content(record.doc_id, database_path=database_path)
+    if existing and existing.content != record.content:
+        raise ValueError("Bản gốc bất biến; hãy nạp nội dung thay đổi thành nguồn mới.")
+    if existing and source.status is not SourceStatus.PENDING_REVIEW and existing != record:
+        raise ValueError("Không sửa nội dung đã duyệt; hãy nạp một phiên bản thay thế.")
+    execute(
+        """INSERT INTO source_contents (doc_id, content, extracted_text, filename)
+           VALUES (?, ?, ?, ?) ON CONFLICT(doc_id) DO UPDATE SET
+           extracted_text=excluded.extracted_text, filename=excluded.filename""",
+        (record.doc_id, record.content, record.extracted_text, record.filename),
+        database_path=database_path,
+    )
+
+
+def get_source_content(doc_id: str, *, database_path: DatabasePath = None) -> SourceContent | None:
+    row = fetch_one(
+        "SELECT * FROM source_contents WHERE doc_id = ?", (doc_id,), database_path=database_path
+    )
+    return (
+        SourceContent(row["doc_id"], bytes(row["content"]), row["extracted_text"], row["filename"])
+        if row
+        else None
+    )
+
+
 def _nfc(value: str | None) -> str | None:
     return unicodedata.normalize("NFC", value) if value is not None else None
 

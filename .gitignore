@@ -1,6 +1,10 @@
 # Thông tin nhạy cảm và cơ sở dữ liệu cục bộ
 .env
 data/app.db
+data/*.db-wal
+data/*.db-shm
+data/backups/
+data/validation/
 
 # Python
 __pycache__/
@@ -14,6 +18,7 @@ __pycache__/
 venv/
 
 # Cache mô hình và embedding
+data/embedding-cache/
 data/embedding_cache/
 data/vector_cache/
 *.faiss

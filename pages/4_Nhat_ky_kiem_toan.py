@@ -1,104 +1,112 @@
+"""Lịch sử email và quyết định, trình bày theo công việc."""
+
 from __future__ import annotations
 
-from datetime import date
+import json
+from dataclasses import asdict
+from urllib.parse import quote
 
 import streamlit as st
 
-from core.explain import explain_plainly
-from infra.audit import ACTIONS, AuditEvent, recent_events
-from infra.db import to_local
-from streamlit_app import render_global_controls
+from core.controls import override_decision
+from core.types import Decision
+from core.pipeline import load_result
+from core.worker import retry_case
+from corpus.api import get_chunk
+from infra.audit import events_for_case, recent_events
+from infra.db import fetch_all, fetch_one
+from ui.presentation import ACTION_LABELS, actor_label, local_time, readable_text, status_label
 
-EARLIEST_FILTER_DATE = date(2000, 1, 1)
-
-
-def _matches(
-    event: AuditEvent,
-    case_id: str,
-    actor: str,
-    action: str,
-    start_date: date,
-    end_date: date,
-) -> bool:
-    return (
-        (not case_id or event.case_id == case_id)
-        and (not actor or actor.casefold() in event.actor.casefold())
-        and (action == "Tất cả" or event.action == action)
-        and start_date <= date.fromisoformat(event.ts[:10]) <= end_date
-    )
-
-
-def _details(event: AuditEvent) -> dict[str, object]:
-    return {
-        "Làm gì": event.action,
-        "Lúc nào": to_local(event.ts),
-        "Trên dữ liệu nào": {"input_ref": event.input_ref, "sources": event.sources or []},
-        "Vì sao": event.reason or "Không có lý do được ghi.",
-        "Theo luật nào": event.rule_id or "Không áp dụng",
-        "Phiên bản corpus": event.corpus_version or "Không áp dụng",
-        "Actor": event.actor,
-        "output_ref": event.output_ref,
-    }
-
-
-st.set_page_config(page_title="Nhật ký kiểm toán", page_icon="📋", layout="wide")
-render_global_controls()
-st.title("Nhật ký kiểm toán")
-
-query_case_id = st.query_params.get("case_id", "")
-case_id = st.text_input("Case ID", value=query_case_id, placeholder="Ví dụ: c_01")
-actor = st.text_input("Actor", placeholder="SYSTEM, HUMAN: hoặc ADMIN:")
-action = st.selectbox("Hành động", ("Tất cả", *sorted(ACTIONS)))
-start_column, end_column = st.columns(2)
-start_value = start_column.date_input("Từ ngày", value=EARLIEST_FILTER_DATE)
-end_value = end_column.date_input("Đến ngày", value=date.today())
-
-if not isinstance(start_value, date) or not isinstance(end_value, date):
-    st.error("Bộ lọc ngày phải chọn đúng một ngày bắt đầu và một ngày kết thúc.")
-    st.stop()
-
-start_date = start_value
-end_date = end_value
-if start_date > end_date:
-    st.error("Khoảng thời gian không hợp lệ: ngày bắt đầu phải không muộn hơn ngày kết thúc.")
-    st.stop()
-
-events = [
-    event
-    for event in recent_events(limit=None)
-    if _matches(event, case_id.strip(), actor.strip(), action, start_date, end_date)
-]
-
-if not events:
-    st.info("Chưa có event phù hợp. Hãy nới bộ lọc hoặc xử lý một email để tạo nhật ký.")
-else:
-    st.caption(f"Hiển thị {len(events)} event mới nhất theo thời gian giảm dần.")
-    st.dataframe(
-        [
-            {
-                "Lúc nào (+07:00)": to_local(event.ts),
-                "Hành động": event.action,
-                "Case": event.case_id or "—",
-                "Actor": event.actor,
-                "Lý do": event.reason or "—",
-            }
-            for event in events
-        ],
-        use_container_width=True,
-        hide_index=True,
-    )
-    for event in events:
-        label = f"{event.action} · {to_local(event.ts)} · {event.case_id or 'Không có case'}"
-        with st.expander(label):
-            st.json(_details(event))
-            if event.case_id and st.button(
-                "Giải thích cho người không chuyên", key=f"explain_{event.event_id}"
-            ):
+st.title("Lịch sử xử lý")
+cases = fetch_all("SELECT * FROM cases ORDER BY rowid DESC LIMIT 200")
+labels = {
+    row[
+        "case_id"
+    ]: f"{row['subject']} · {status_label(row['status'])} · {local_time(row['received_at'])}"
+    for row in cases
+}
+query_id = st.query_params.get("case_id")
+if isinstance(query_id, str) and query_id and query_id not in labels:
+    older = fetch_one("SELECT * FROM cases WHERE case_id = ?", (query_id,))
+    if older is not None:
+        cases.append(older)
+        labels[query_id] = (
+            f"{older['subject']} · {status_label(older['status'])} · {local_time(older['received_at'])}"
+        )
+options = ["", *labels]
+selected = st.selectbox(
+    "Chọn email để xem lịch sử",
+    options,
+    index=options.index(query_id) if query_id in options else 0,
+    format_func=lambda value: labels.get(value, "Hoạt động gần đây"),
+)
+if selected:
+    events = events_for_case(selected)
+    case = next(row for row in cases if row["case_id"] == selected)
+    st.caption(f"Từ {case['sender']} · {local_time(case['received_at'])}")
+    st.text(case["body_raw"])
+    st.link_button("Mở nội dung phản hồi", f"/?case_id={quote(selected)}")
+    with st.expander("Can thiệp của người quản trị"):
+        st.caption(
+            "Mọi thay đổi đều lưu lý do. Email đã gửi không thể bị thu hồi hoặc gửi lại bằng thao tác này."
+        )
+        reason = st.text_area("Lý do điều chỉnh")
+        choice = st.selectbox(
+            "Cách xử lý mới",
+            [Decision.ESCALATE, Decision.AUTO_REPLY],
+            format_func=lambda value: (
+                "Chuyển chuyên viên"
+                if value is Decision.ESCALATE
+                else "Đưa phản hồi đã kiểm tra sang chờ duyệt gửi"
+            ),
+        )
+        if st.button("Ghi nhận điều chỉnh", disabled=not reason.strip()):
+            try:
+                override_decision(selected, choice, "ADMIN:local", reason)
+            except ValueError as error:
+                st.error(readable_text(str(error)))
+            else:
+                st.success("Đã lưu điều chỉnh. Nội dung chưa được gửi ra ngoài.")
+                st.rerun()
+        if case["status"] in ("ERROR", "NEEDS_RECHECK", "CANCELLED"):
+            if st.button("Xử lý lại bằng quy định hiện tại"):
                 try:
-                    explanation = explain_plainly(event.case_id)
-                except ValueError:
-                    st.error("Chưa thể tạo giải thích cho case này. Hãy kiểm tra lại dữ liệu case.")
+                    new_id = retry_case(selected, actor="ADMIN:local")
+                except ValueError as error:
+                    st.error(readable_text(str(error)))
                 else:
-                    with st.container(border=True):
-                        st.subheader("Vì sao hệ thống xử lý như vậy?")
-                        st.write(explanation)
+                    st.success("Đã lưu một lần xử lý mới; lịch sử cũ được giữ nguyên.")
+                    st.link_button("Mở lần xử lý mới", f"/?case_id={quote(new_id)}")
+else:
+    events = recent_events(limit=200)
+if not events:
+    st.info("Chưa có hoạt động được ghi nhận.")
+else:
+    st.caption(f"{len(events)} hoạt động · Thời gian Việt Nam")
+    for event in events:
+        action = ACTION_LABELS.get(event.action, "Cập nhật công việc")
+        with st.expander(f"{local_time(event.ts)} · {actor_label(event.actor)} · {action}"):
+            st.write(readable_text(event.reason) if event.reason else action)
+            if event.case_id and event.case_id in labels:
+                st.caption(labels[event.case_id])
+            result = load_result(event.case_id) if event.case_id and event.sources else None
+            snapshots = (
+                {item.chunk_id: item for item in result.evidence.chunks}
+                if result and result.evidence
+                else {}
+            )
+            for source in event.sources or []:
+                chunk = snapshots.get(source) or get_chunk(source)
+                if chunk:
+                    st.write(chunk.breadcrumb)
+                    st.write(chunk.text)
+                else:
+                    st.caption(
+                        "Căn cứ gốc được ghi trong dữ liệu kiểm tra; có thể đã được thay thế."
+                    )
+    st.download_button(
+        "Tải dữ liệu kiểm tra đầy đủ",
+        json.dumps([asdict(event) for event in events], ensure_ascii=False, indent=2),
+        file_name="lich-su-xu-ly.json",
+        mime="application/json",
+    )

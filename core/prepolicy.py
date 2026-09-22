@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from core.types import EscalationType, Extraction, RequestItem
+from core.types import Domain, EscalationType, Extraction, RequestItem
 
 
 @dataclass(frozen=True)
@@ -29,13 +29,13 @@ def decision_lock(extraction: Extraction) -> EscalationType | None:
 
 
 def multi_intent_plan(extraction: Extraction) -> MultiIntentPlan | None:
-    """Tách phần thông tin thường quy khỏi phần cần thẩm quyền của email đa ý định."""
+    """Tách phần thường quy khỏi yêu cầu ngoài phạm vi hoặc cần quyền quyết định."""
     if len(extraction.requests) < 2:
         return None
     locked = tuple(
         request
         for request in extraction.requests
-        if any(
+        if request.domain is Domain.UNKNOWN or any(
             (
                 request.requires_personal_record,
                 request.asks_exception,

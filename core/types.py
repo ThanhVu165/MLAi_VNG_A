@@ -10,6 +10,7 @@ class Decision(StrEnum):
     AUTO_REPLY = "AUTO_REPLY"
     ESCALATE = "ESCALATE"
     INVALID_INPUT = "INVALID_INPUT"
+    ERROR = "ERROR"
 
 
 class EscalationType(StrEnum):

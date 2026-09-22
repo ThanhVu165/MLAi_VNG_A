@@ -63,7 +63,7 @@ def test_policy_engine_covers_p01_to_p05(monkeypatch, tmp_path) -> None:
             Decision.ESCALATE,
         ),
         (_policy_input(evidence_status=EvidenceStatus.FACT_MISSING), "P03", Decision.ESCALATE),
-        (_policy_input(llm_error=True), "P04", Decision.ESCALATE),
+        (_policy_input(llm_error=True), "TECHNICAL_ERROR", Decision.ERROR),
         (_policy_input(), "P05", Decision.AUTO_REPLY),
     )
 
@@ -93,9 +93,8 @@ def test_policy_engine_prioritizes_lock_and_fails_safe(monkeypatch, tmp_path) ->
     assert lock_with_evidence.rule_id == lock_with_failed_evidence.rule_id == "P01"
     assert lock_with_evidence.escalation_type is EscalationType.AUTHORITY_REQUIRED
     assert lock_with_failed_evidence.decision is Decision.ESCALATE
-    assert all(
-        result.rule_id == "P04" and result.decision is Decision.ESCALATE for result in failures
-    )
+    assert all(result.decision is Decision.ERROR for result in failures[:3])
+    assert failures[3].rule_id == "P04" and failures[3].decision is Decision.ESCALATE
 
 
 def test_policy_engine_audits_rule_and_falls_back_when_no_rule_matches(
@@ -108,6 +107,6 @@ def test_policy_engine_audits_rule_and_falls_back_when_no_rule_matches(
     result = decide_policy(_policy_input())
     events = events_for_case("case-policy", database_path=str(database_path))
 
-    assert result.rule_id == "P04" and result.decision is Decision.ESCALATE
+    assert result.rule_id == "TECHNICAL_ERROR" and result.decision is Decision.ERROR
     assert [event.action for event in events] == ["POLICY_DECIDED"]
-    assert events[0].rule_id == "P04"
+    assert events[0].rule_id == "TECHNICAL_ERROR"

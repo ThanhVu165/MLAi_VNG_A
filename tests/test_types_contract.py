@@ -21,7 +21,7 @@ from core.types import (
 
 
 def test_contract_enums_have_specified_members() -> None:
-    assert len(Decision) == 3
+    assert len(Decision) == 4
     assert len(EscalationType) == 3
     assert len(EvidenceStatus) == 7
     assert len(CaseStatus) == 12

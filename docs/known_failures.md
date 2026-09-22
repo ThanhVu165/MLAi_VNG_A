@@ -2,6 +2,21 @@
 
 Không xóa mục cũ. Khi đã xử lý, giữ nguyên mục và thêm nhãn `[đã sửa]`.
 
+## Hiện trạng sau đợt sửa mã 22/09/2026 — chưa nghiệm thu
+
+- Người dùng chốt hoàn thành tái cấu trúc trước, kiểm thử sau. Không tiếp tục chạy các lượt kiểm chứng đang bị API chặn; các thay đổi cuối chưa chạy Black/Ruff/mypy/pytest hoặc E2E.
+- Mã đã tách lỗi kỹ thuật thành “Chưa xử lý được”, giới hạn lượt gọi/chờ, lưu công việc và soạn sau quyết định trong nền. Thay đổi này thay thế thiết kế cũ biến lỗi LLM thành chuyển tiếp thiếu dữ kiện; chưa đồng nghĩa mô hình live đã xử lý đúng.
+- Giữ `gemini-3.5-flash-lite` theo lựa chọn người dùng. Các lượt gọi trước khi dừng gặp quá tải/hết thời gian; chưa có bằng chứng chạy đủ 15 ca và bài 90 giây với bản cuối. Không suy luận thông báo quá tải là đã xác định đúng giới hạn TPM.
+- Duyệt nguồn và thao tác gửi đã bổ sung bảo vệ giao dịch; regression mới chỉ được viết. Cần kiểm chứng rollback, ngắt/khởi động lại, hủy và duyệt sau đợt tái cấu trúc.
+- Chưa kết nối hộp thư hoặc gửi email ra ngoài, chưa deploy public/xác thực. Kho nguồn còn nhỏ; bộ phát hiện mâu thuẫn dựa vào nội dung tương đồng và số liệu, chưa bảo đảm nhận diện mọi mâu thuẫn diễn đạt bằng lời.
+- Đường nhập nguồn mới đã nối lưu bản gốc, chuẩn bị điều khoản, đề xuất và duyệt nguồn. Chưa hoàn thành thử nguồn mới với LLM live và xác nhận ảnh hưởng câu trả lời trên bản mã cuối.
+
+## Các quan sát lịch sử trước tái cấu trúc
+
+Các mục dưới đây được giữ nguyên để truy vết. Thông số/thiết kế cũ (mô hình, nhãn đoạn,
+đồng bộ UI, migration 001, fallback P04, replay dùng demo) không còn là hướng vận hành hiện tại;
+đối chiếu PROJECT_SPEC và RUNBOOK thay vì áp dụng lại các hướng khắc phục cũ.
+
 - [đã sửa] Hiện tượng: Chưa thể chạy một email từ đầu đến cuối. · Điều kiện tái hiện: Gọi ứng dụng ở trạng thái repository giai đoạn B0. · Vì sao chưa sửa: `core/pipeline.py` và facade corpus chưa được tạo ở các task Agent A/B. · Hướng xử lý: Đã hoàn tất pipeline và facade; tiếp tục kiểm thử tích hợp dọc tại S-05.
 - [đã sửa] Hiện tượng: Chưa thể xác minh migration, settings hoặc toàn bộ build bằng CI cục bộ. · Điều kiện tái hiện: Chạy `python`, `py` hoặc `make check` trong môi trường B0. · Vì sao chưa sửa: Máy chưa có Python 3.11 và Make trên PATH. · Hướng xử lý: Python 3.11 đã có; dùng các lệnh kiểm tra tương đương khi Make vẫn chưa cài.
 - [đã sửa] Hiện tượng: Cấu hình Gemini mặc định lệch model đã xác thực. · Điều kiện tái hiện: Chạy khi không đặt `GEMINI_MODEL`, khiến wrapper dùng `gemini-3.5-flash-lite`. · Vì sao chưa sửa: Cấu hình mặc định không khớp A-08. · Hướng xử lý: Dùng mặc định `gemini-3.5-flash`; vẫn cho phép override qua biến môi trường.

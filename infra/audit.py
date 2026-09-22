@@ -101,36 +101,40 @@ def log_event(
     sources: list[str] | None = None,
     corpus_version: str | None = None,
     database_path: str | None = None,
+    connection: sqlite3.Connection | None = None,
 ) -> str:
-    """Ghi một sự kiện hợp lệ và trả về mã sự kiện."""
+    """Ghi sự kiện; dùng connection để lưu cùng giao dịch với thay đổi nghiệp vụ."""
+    if connection is not None and database_path is not None:
+        raise ValueError("Chỉ chọn kết nối hiện tại hoặc đường dẫn dữ liệu.")
     if action not in ACTIONS:
         raise ValueError(f"Action audit không hợp lệ: {action}")
     if action in REASON_REQUIRED_ACTIONS and not (reason and reason.strip()):
         raise ValueError(f"Action {action} bắt buộc có reason.")
 
     event_id = str(uuid4())
-    execute(
-        """
+    statement = """
         INSERT INTO audit_events (
             event_id, case_id, ts, actor, action, rule_id, input_ref, output_ref,
             reason, sources_json, corpus_version
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            event_id,
-            case_id,
-            now_iso(),
-            actor,
-            action,
-            rule_id,
-            input_ref,
-            output_ref,
-            reason,
-            json.dumps(sources, ensure_ascii=False) if sources is not None else None,
-            corpus_version,
-        ),
-        database_path=database_path,
+        """
+    parameters = (
+        event_id,
+        case_id,
+        now_iso(),
+        actor,
+        action,
+        rule_id,
+        input_ref,
+        output_ref,
+        reason,
+        json.dumps(sources, ensure_ascii=False) if sources is not None else None,
+        corpus_version,
     )
+    if connection is not None:
+        connection.execute(statement, parameters)
+    else:
+        execute(statement, parameters, database_path=database_path)
     return event_id
 
 

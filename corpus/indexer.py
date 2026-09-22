@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ from rank_bm25 import BM25Okapi
 
 from core.types import SourceStatus
 from corpus.store import ChunkRecord, DatabasePath, list_chunks, list_sources
+from infra import db
 
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 EMBEDDING_CACHE_DIR = Path("data/embedding-cache")
@@ -49,9 +51,39 @@ def active_chunks(*, database_path: DatabasePath = None) -> list[ChunkRecord]:
 def active_index_signature(*, database_path: DatabasePath = None) -> str:
     """A cache key that changes as soon as an active source/chunk changes."""
     parts = [
-        f"{chunk.doc_id}:{chunk.chunk_id}:{chunk.text}"
+        json.dumps(
+            [
+                chunk.doc_id,
+                chunk.chunk_id,
+                chunk.text,
+                chunk.domain.value,
+                chunk.label.value,
+                chunk.conflict_flag,
+                chunk.conflict_with,
+                chunk.article_no,
+                chunk.clause_no,
+                chunk.breadcrumb,
+            ],
+            ensure_ascii=False,
+        )
         for chunk in active_chunks(database_path=database_path)
     ]
+    parts.extend(
+        json.dumps(
+            [
+                source.doc_id,
+                source.content_hash,
+                source.effective_from,
+                source.effective_to,
+                source.applies_to,
+                source.cohorts,
+                source.transitional_clause,
+                [domain.value for domain in source.domains],
+            ],
+            ensure_ascii=False,
+        )
+        for source in list_sources(SourceStatus.ACTIVE, database_path=database_path)
+    )
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()
 
 
@@ -142,7 +174,7 @@ def search_active(
     query: str, *, top_k: int = 6, database_path: DatabasePath = None
 ) -> list[SearchResult]:
     """Search active chunks. The changing signature removes downgraded docs immediately."""
-    path = str(Path(database_path or "data/app.db").resolve())
+    path = str(Path(database_path or db.DEFAULT_DATABASE_PATH).resolve())
     return _cached_index(path, active_index_signature(database_path=database_path)).search(
         query, top_k=top_k
     )

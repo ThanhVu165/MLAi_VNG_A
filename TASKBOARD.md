@@ -688,7 +688,14 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **A-27 · WIP** — Luồng hiểu email/tra cứu/trả lời thật, lỗi kỹ thuật riêng, khôi phục kết quả và gửi độc lập giao diện.
 - **B-20 · WIP** — Nạp/lưu/duyệt nguồn trọn vẹn, bỏ gán quyền từng đoạn, conflict theo nội dung và phạm vi.
 - **C-33 · WIP** — Lưu trữ có backup/migration, giới hạn gọi LLM, năm màn hình tiếng Việt tự nhiên và kiểm tra trung thực.
-- **S-13 · WIP** — Nghiệm thu local: 15 ca, 5 email mới, nguồn mới, thao tác thật và RUNBOOK.
+- **S-13 · TODO** — Nghiệm thu local sau khi chốt tái cấu trúc: 15 ca, 5 email mới, nguồn mới, thao tác thật và RUNBOOK. Người dùng yêu cầu dừng kiểm thử trong giai đoạn sửa; chưa được đánh DONE bằng kết quả kiểm tra cũ.
+
+**Cập nhật 22/09/2026 — thứ tự người dùng chốt:** tiếp tục sửa và ghép A-27/B-20/C-33;
+không chạy thêm pytest, Black, Ruff, mypy, LLM live hoặc E2E. Mã đã được bổ sung hàng
+công việc email/soạn theo quyết định, bảo vệ thao tác gửi, duyệt nguồn nguyên tử và UI năm mục.
+Các task còn WIP cho đến khi bước nghiệm thu sau tái cấu trúc xác nhận đúng hành vi;
+regression đã viết nhưng chưa chạy không phải bằng chứng DONE. Commit hoàn tất từng nhóm
+được thực hiện sau kiểm chứng, không đưa DB, khóa API hoặc bộ nhớ đệm vào commit.
 
 - **C-30 · DONE** — Bản đọc nguyên văn 15 case, parity test mọi trường; F01 rỗng đi qua pipeline thật.
 - **C-31 · DONE** — Giải thích ba loại chuyển tiếp, đối chiếu 7 case; tách INVALID_INPUT và P04 fail-safe.

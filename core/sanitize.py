@@ -7,7 +7,6 @@ from html.parser import HTMLParser
 from typing import Literal
 
 from core.types import Decision, EscalationType
-from infra.settings import MIN_WORDS_GUARD
 
 QUOTE_MARKER = re.compile(
     r"^(?:on .+ wrote:|vào .+ đã viết:|-----original message-----|>)", re.IGNORECASE
@@ -213,25 +212,17 @@ def detect_language(body: str) -> Literal["vi", "en", "other"]:
 
 
 def guard_input(body: str) -> InputGuardResult:
-    """Áp dụng ba chốt R1 trước khi email tới LLM hoặc hàng chờ."""
+    """Chỉ chặn thư rỗng hoặc ngôn ngữ chắc chắn ngoài phạm vi phục vụ."""
     if not body.strip():
         return InputGuardResult(
             Decision.INVALID_INPUT,
             None,
             "Vui lòng gửi nội dung câu hỏi để hệ thống hỗ trợ.",
         )
-    language = detect_language(body)
-    if language == "other":
+    if any(start <= char <= end for start, end in OTHER_SCRIPT_RANGES for char in body):
         return InputGuardResult(
             Decision.ESCALATE,
             EscalationType.OUT_OF_POLICY,
             "Email không dùng tiếng Việt hoặc tiếng Anh nên cần chuyên viên hỗ trợ.",
-        )
-    words = set(re.findall(r"[a-zà-ỹđ]+", body.lower()))
-    if len(words) < MIN_WORDS_GUARD and "?" not in body and not words & QUESTION_WORDS:
-        return InputGuardResult(
-            Decision.INVALID_INPUT,
-            None,
-            "Vui lòng nêu rõ nội dung, quy định cần hỏi và học kỳ hoặc hoàn cảnh liên quan.",
         )
     return InputGuardResult(None, None, None)
