@@ -98,3 +98,5 @@
 [H+00][Agent C] C-11 hoàn tất · đếm ngược đọc deadline DB, Hủy gửi/Chuyển cho người và Correction Email hoạt động; audit Hủy gửi là HUMAN:demo · Black/Ruff/Mypy/75 test xanh
 [H+00][Agent A] A-26 hoàn tất · đã duyệt căn cứ 15 case độc lập với code; C-25 đã chốt F02 dùng guard R1 và ba file Verify · 75 pytest/Ruff xanh, Black/mypy còn blocker ngoài phạm vi A
 [H+00][Agent A] S-05 bị chặn · smoke test Paste với email điểm rèn luyện dừng ở tải model embedding corpus 0 byte; chưa có kết quả/citation/audit đủ 8 event · không cắt tính năng
+
+[H+00][Agent C] C-13 đã triển khai hàng chờ, ghi shown_at/decided_at và audit HUMAN_DECISION; 75 test xanh · chờ xác nhận thao tác UI do runtime trình duyệt Windows lỗi ownership
