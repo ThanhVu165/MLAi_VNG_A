@@ -13,7 +13,6 @@ from urllib.parse import quote
 
 import streamlit as st
 
-from corpus.api import get_chunk
 from core.dispatch import (
     cancel_send,
     create_correction_email,
@@ -31,13 +30,12 @@ from core.types import (
     EscalationType,
     PipelineResult,
 )
+from corpus.api import get_chunk
 from infra.db import fetch_one, seconds_until, to_local
 from infra.settings import PENDING_STATUS_REFRESH_SECONDS
 
 logger = logging.getLogger(__name__)
 INBOX_PATH = Path("data/seed_inbox.json")
-PASTE_SENDER = "student@mo-phong.local"
-PASTE_SUBJECT = "Email sinh viên được dán"
 UI_ACTOR = "HUMAN:demo"
 STEP_NAMES = tuple(f"R{step}" for step in range(1, 14))
 ESCALATION_TYPE_LABELS: dict[EscalationType, str] = {
@@ -53,6 +51,7 @@ class InboxEmail:
     sender: str
     subject: str
     body: str
+    received_at: datetime
 
 
 def load_inbox() -> tuple[InboxEmail, ...]:
@@ -70,9 +69,20 @@ def load_inbox() -> tuple[InboxEmail, ...]:
         if not isinstance(item, dict):
             continue
         values = (item.get("id"), item.get("sender"), item.get("subject"), item.get("body"))
-        if item.get("is_synthetic") is True and all(isinstance(value, str) for value in values):
+        if item.get("is_synthetic") is True and all(
+            isinstance(value, str) and value.strip() for value in values
+        ):
+            try:
+                received_at = datetime.fromisoformat(item.get("received_at", ""))
+                if received_at.utcoffset() is None:
+                    raise ValueError("received_at thiếu múi giờ")
+            except (TypeError, ValueError) as error:
+                logger.warning("Bỏ qua email mô phỏng có thời điểm nhận không hợp lệ: %s", error)
+                continue
             email_id, sender, subject, body = values
-            emails.append(InboxEmail(str(email_id), str(sender), str(subject), str(body)))
+            emails.append(
+                InboxEmail(str(email_id), str(sender), str(subject), str(body), received_at)
+            )
     return tuple(emails)
 
 
@@ -292,10 +302,12 @@ def render_result(result: PipelineResult, elapsed_ms: int) -> None:
             st.write(f"{step}: {result.step_latencies_ms.get(step, 0)} ms")
 
 
-def paste_input(body: str) -> CaseInput:
+def paste_input(sender: str, subject: str, body: str) -> CaseInput:
+    if not all(value.strip() for value in (sender, subject, body)):
+        raise ValueError("Hãy nhập đủ email người gửi, tiêu đề và nội dung trước khi xử lý.")
     return CaseInput(
-        sender=PASTE_SENDER,
-        subject=PASTE_SUBJECT,
+        sender=sender,
+        subject=subject,
         body=body,
         received_at=datetime.now(timezone.utc),
         channel="paste",
@@ -307,7 +319,7 @@ def inbox_input(email: InboxEmail) -> CaseInput:
         sender=email.sender,
         subject=email.subject,
         body=email.body,
-        received_at=datetime.now(timezone.utc),
+        received_at=email.received_at,
         channel="inbox",
         external_id=email.external_id,
     )
@@ -318,12 +330,29 @@ def main() -> None:
     st.info("Chế độ mô phỏng — hệ thống không gửi email thật.")
     paste_tab, inbox_tab = st.tabs(("Dán nội dung email", "Hộp thư mô phỏng"))
     with paste_tab:
-        body = st.text_area("Nội dung email", placeholder="Dán toàn bộ nội dung email vào đây.")
+        home_input = st.session_state.pop("home_email_to_process", None)
+        if home_input:
+            st.session_state["paste_sender"] = home_input.sender
+            st.session_state["paste_subject"] = home_input.subject
+            st.session_state["paste_body"] = home_input.body
+        sender = st.text_input("Email người gửi", key="paste_sender")
+        subject = st.text_input("Tiêu đề", key="paste_subject")
+        body = st.text_area(
+            "Nội dung email",
+            placeholder="Dán toàn bộ nội dung email vào đây.",
+            key="paste_body",
+        )
+        if home_input and all(
+            value.strip() for value in (home_input.sender, home_input.subject, home_input.body)
+        ):
+            result, elapsed_ms = run_case(home_input)
+            st.session_state["active_case_id"] = result.case_id
+            render_result(result, elapsed_ms)
         if st.button("Xử lý email đã dán", key="process_paste"):
-            if not body.strip():
-                st.error("Chưa có nội dung email. Hãy dán email rồi bấm xử lý lại.")
+            if not all(value.strip() for value in (sender, subject, body)):
+                st.error("Hãy nhập đủ email người gửi, tiêu đề và nội dung trước khi xử lý.")
             else:
-                result, elapsed_ms = run_case(paste_input(body))
+                result, elapsed_ms = run_case(paste_input(sender, subject, body))
                 st.session_state["active_case_id"] = result.case_id
                 render_result(result, elapsed_ms)
     with inbox_tab:
@@ -334,7 +363,10 @@ def main() -> None:
         selected = st.selectbox(
             "Chọn email mô phỏng", emails, format_func=lambda email: email.subject
         )
-        st.caption(f"Từ: {selected.sender}\n\n{selected.body}")
+        st.caption(
+            f"Từ: {selected.sender}\n\nNhận lúc: {to_local(selected.received_at.isoformat())}"
+            f"\n\n{selected.body}"
+        )
         if st.button("Xử lý email mô phỏng", key="process_inbox"):
             result, elapsed_ms = run_case(inbox_input(selected))
             st.session_state["active_case_id"] = result.case_id

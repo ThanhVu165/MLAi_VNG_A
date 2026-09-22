@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from pathlib import Path
 
 import streamlit as st
@@ -9,7 +10,7 @@ from core.controls import (
     rerun_case,
     resume_automation,
 )
-from core.types import Decision
+from core.types import CaseInput, Decision
 from infra.db import fetch_all
 
 FLOW_DIAGRAM_PATH = Path(__file__).parent / "docs" / "slide2_flow.svg"
@@ -120,8 +121,25 @@ def render_sidebar() -> None:
 def main() -> None:
     st.set_page_config(page_title="Escalation Referee", page_icon="📨", layout="wide")
     st.write("Dán email sinh viên vào ô bên dưới và bấm Xử lý.")
-    st.text_area("Nội dung email sinh viên", placeholder="Dán toàn bộ nội dung email vào đây.")
-    st.button("Xử lý email")
+    sender = st.text_input("Email người gửi", key="home_email_sender")
+    subject = st.text_input("Tiêu đề", key="home_email_subject")
+    body = st.text_area(
+        "Nội dung email sinh viên",
+        placeholder="Dán toàn bộ nội dung email vào đây.",
+        key="home_email_body",
+    )
+    if st.button("Xử lý email", type="primary"):
+        if not all(value.strip() for value in (sender, subject, body)):
+            st.error("Hãy nhập đủ email người gửi, tiêu đề và nội dung trước khi xử lý.")
+        else:
+            st.session_state["home_email_to_process"] = CaseInput(
+                sender=sender,
+                subject=subject,
+                body=body,
+                received_at=datetime.now(timezone.utc),
+                channel="paste",
+            )
+            st.switch_page("pages/1_Xu_ly_email.py")
     st.info("Chế độ mô phỏng — hệ thống không gửi email thật.")
     render_sidebar()
     st.title("Escalation Referee")

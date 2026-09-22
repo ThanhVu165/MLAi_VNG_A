@@ -687,7 +687,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **C-30 · DONE** — Bản đọc nguyên văn 15 case, parity test mọi trường; F01 rỗng đi qua pipeline thật.
 - **C-31 · DONE** — Giải thích ba loại chuyển tiếp, đối chiếu 7 case; tách INVALID_INPUT và P04 fail-safe.
 - **B-19 · DONE** — Seed ghi rõ giả lập/phi pháp lý, bổ sung căn cứ và trách nhiệm; giữ 6 tài liệu/72 chunk.
-- **C-32 · WIP** — Email paste đủ ba trường, inbox giữ thời điểm gốc, kiểm thử đầu vào thật.
+- **C-32 · DONE** — Hai form paste bắt buộc ba trường; inbox giữ timestamp gốc có múi giờ; 9 test UI/pipeline thật xanh.
 
 
 ### Ngưỡng kích hoạt cắt
