@@ -559,7 +559,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6
 
 ### C-15 · Nút "Giải thích cho người không chuyên"
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 1h · **Phụ thuộc:** A-23
 - **File:** `pages/1_Xu_ly_email.py`, `pages/2_Hang_cho_duyet.py`, `pages/4_Nhat_ky_kiem_toan.py`
 - **Việc phải làm:** Nút hiện ở cả ba nơi, gọi `explain_plainly(case_id)`, hiển thị trong khung riêng dễ đọc. Ghi audit `EXPLAIN_REQUESTED`.

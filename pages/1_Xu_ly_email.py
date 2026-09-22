@@ -13,6 +13,7 @@ from urllib.parse import quote
 import streamlit as st
 
 from corpus.api import get_chunk
+from core.explain import explain_plainly
 from core.pipeline import process_case
 from core.types import CaseInput, Decision, EscalationCard, EscalationType, PipelineResult
 
@@ -146,6 +147,19 @@ def render_escalation_card(card: EscalationCard, case_id: str) -> None:
         st.text(card.partial_draft.body)
 
 
+def render_plain_explanation(case_id: str, key: str) -> None:
+    """Cho phép mở phần giải thích đơn giản và lưu audit qua API dùng chung."""
+    if st.button("Giải thích cho người không chuyên", key=key):
+        try:
+            explanation = explain_plainly(case_id)
+        except ValueError:
+            st.error("Chưa thể tạo giải thích cho case này. Hãy xử lý email rồi thử lại.")
+        else:
+            with st.container(border=True):
+                st.subheader("Vì sao hệ thống xử lý như vậy?")
+                st.write(explanation)
+
+
 def render_result(result: PipelineResult, elapsed_ms: int) -> None:
     """Hiển thị kết quả có căn cứ và đường dẫn sang audit của case."""
     st.success("Đã xử lý email.")
@@ -158,6 +172,7 @@ def render_result(result: PipelineResult, elapsed_ms: int) -> None:
         render_citations(result)
     else:
         render_escalation_card(result.card, result.case_id)
+    render_plain_explanation(result.case_id, f"explain_result_{result.case_id}")
     audit_url = f"/Nhat_ky_kiem_toan?case_id={quote(result.case_id)}"
     st.link_button("Mở nhật ký kiểm toán của case", audit_url)
     with st.expander("Thời gian theo bước R1–R13"):
