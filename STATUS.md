@@ -75,6 +75,7 @@
 [H+00][Agent C] C-07 hoàn tất · trang chủ có hướng dẫn, ô dán, nút, banner và 6 mục điều hướng tiếng Việt · 72 test xanh
 [H+00][Agent C] đang làm C-09 · nối hai đường vào cùng process_case() và hiển thị tiến trình · không bị chặn
 [H+00][Agent C] C-09 hoàn tất · paste/inbox cùng gọi process_case(), UI replay xác nhận 753 ms và 1.158 ms · Mypy/Ruff xanh
+[H+00][Agent C] đang làm C-12 · thẻ escalation bốn khối trên luồng kết quả · không bị chặn
 [H+00][Agent C] đang làm C-10 · hiển thị kết quả, trích dẫn và liên kết audit · không bị chặn
 [H+00][Agent C] C-10 hoàn tất · kết quả hiển thị quyết định, căn cứ mở rộng và liên kết audit theo case · 74 test xanh
 [H+00][Agent A] A-22 đã hoàn tất pause/resume/override/rerun và pause chặn auto-send · 72 test xanh
