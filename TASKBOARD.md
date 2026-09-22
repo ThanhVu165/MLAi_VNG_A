@@ -684,6 +684,12 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 
 ### Đợt sửa Sprint 1 theo chỉ dẫn ngày 22/09/2026
 
+- **S-12 · WIP** — Áp dụng kế hoạch tái cấu trúc được người dùng duyệt, bảo toàn dữ liệu và cập nhật đặc tả.
+- **A-27 · WIP** — Luồng hiểu email/tra cứu/trả lời thật, lỗi kỹ thuật riêng, khôi phục kết quả và gửi độc lập giao diện.
+- **B-20 · WIP** — Nạp/lưu/duyệt nguồn trọn vẹn, bỏ gán quyền từng đoạn, conflict theo nội dung và phạm vi.
+- **C-33 · WIP** — Lưu trữ có backup/migration, giới hạn gọi LLM, năm màn hình tiếng Việt tự nhiên và kiểm tra trung thực.
+- **S-13 · WIP** — Nghiệm thu local: 15 ca, 5 email mới, nguồn mới, thao tác thật và RUNBOOK.
+
 - **C-30 · DONE** — Bản đọc nguyên văn 15 case, parity test mọi trường; F01 rỗng đi qua pipeline thật.
 - **C-31 · DONE** — Giải thích ba loại chuyển tiếp, đối chiếu 7 case; tách INVALID_INPUT và P04 fail-safe.
 - **B-19 · DONE** — Seed ghi rõ giả lập/phi pháp lý, bổ sung căn cứ và trách nhiệm; giữ 6 tài liệu/72 chunk.

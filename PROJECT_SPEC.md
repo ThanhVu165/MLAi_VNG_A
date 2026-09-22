@@ -1,5 +1,19 @@
 # PROJECT_SPEC.md — Escalation Referee (Đề A)
 
+## Quyết định tái cấu trúc đã được người dùng duyệt — 22/09/2026
+
+Mục này thay thế các quy định cũ mâu thuẫn bên dưới: người dùng đã cho phép sửa contract, dữ liệu và UI để thực hiện kế hoạch vận hành Sprint 1A, kiểm chứng local trước khi triển khai public.
+
+- Nhập email đầy đủ; cả tiêu đề/nội dung/dữ kiện đi đến LLM và bước trả lời. Không chặn email có nghĩa bằng số từ/dấu hỏi. Chỉ gửi ra ngoài còn mô phỏng.
+- LLM hiểu yêu cầu và chọn căn cứ; mã kiểm soát quyền, nguồn, mâu thuẫn và gửi. Một process_case dùng chung UI/Verify, không dựa câu trả lời chuẩn bị sẵn.
+- Lỗi dịch vụ có Decision.ERROR và CaseStatus.ERROR, không thuộc ba loại escalation. Thử lại tối đa một lần cho lỗi tạm thời, ngân sách gọi hữu hạn; không đưa lỗi kỹ thuật thành thiếu dữ kiện nghiệp vụ.
+- Quản trị viên duyệt nguồn, ngày hiệu lực và phạm vi. Nhãn chunk cũ được giữ để đọc lịch sử nhưng không phải điều kiện cấp quyền trả lời; không cần gán nhãn từng đoạn.
+- Lưu bản gốc nguồn; migration có phiên bản và backup, không xóa dữ liệu. Bổ sung schema tối thiểu được C điều phối; A/B thông báo trước khi cần thêm cột/bảng.
+- UI năm mục: Email, Cần chuyên viên xử lý, Quy định, Lịch sử xử lý, Kiểm tra hệ thống. Không hiện mã trạng thái/thuật ngữ máy trực tiếp. Công việc và gửi mô phỏng không phụ thuộc trang đang mở.
+- Giữ kỳ vọng nghiệp vụ 15 ca, bổ sung kiểm tra rule_id và kiểm chứng LLM live/email mới/nguồn mới. Unit test xanh không thay bằng chứng vận hành.
+- Phân công: A sở hữu core/policies và kiểm thử runtime; B sở hữu corpus/page quy định và kiểm thử nguồn; C sở hữu infra/UI/Verify và tích hợp. C ghi commit/taskboard chung theo từng phần.
+
+
 > **Đây là nguồn chân lý duy nhất.** Khi TASKBOARD, AGENT.md hoặc code mâu thuẫn với file này, file này thắng.
 > Mọi thay đổi ở Mục 5, 6, 7, 8 (contract) đều là **CONTRACT-CHANGE**: phải được cả 3 agent xác nhận trước khi merge.
 
