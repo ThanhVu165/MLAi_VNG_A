@@ -1140,3 +1140,112 @@ def test_plain_explanation_uses_document_title_without_technical_terms(
     assert "Quy chế rút học phần 2026" in explanation
     assert all(term not in explanation.casefold() for term in ("rule_id", "similarity", "chunk"))
     assert events[-1].action == "EXPLAIN_REQUESTED" and events[-1].actor == "HUMAN:viewer"
+
+
+def _install_routine_pipeline(monkeypatch, domain: Domain) -> None:
+    extraction = Extraction(
+        "vi",
+        [RequestItem(domain, "hỏi thông tin", True, False, False, False, False)],
+        {"semester": "2026-1"},
+        [],
+        False,
+        "{}",
+    )
+    evidence = EvidenceResult(EvidenceStatus.OK, [_evidence_chunk(domain=domain)], [])
+    draft = _draft("Thông tin theo quy định. [chunk-1].")
+    monkeypatch.setattr(pipeline, "get_corpus_version", lambda: "cv_test")
+    monkeypatch.setattr(pipeline, "extract_facts", lambda body, case_id: extraction)
+    monkeypatch.setattr(pipeline, "retrieve_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "validate_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "generate_reply", lambda **kwargs: draft)
+    monkeypatch.setattr(
+        pipeline, "guard_groundedness", lambda **kwargs: GroundednessResult(draft, None, [])
+    )
+
+
+# KHÔNG ĐƯỢC XÓA: bảo vệ ba tình huống E01–E03 không bị chuyển tiếp thừa.
+def test_no_over_escalation(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    cases = (
+        (
+            "Thang điểm rèn luyện",
+            "Em hỏi thang điểm rèn luyện học kỳ này là bao nhiêu?",
+            Domain.CONDUCT_SCORE,
+        ),
+        (
+            "Hạn rút học phần",
+            "Em hỏi hạn chót rút học phần năm nay là khi nào?",
+            Domain.COURSE_WITHDRAWAL,
+        ),
+        (
+            "Lệ phí phúc khảo",
+            "Em hỏi lệ phí phúc khảo và cách nộp là bao nhiêu?",
+            Domain.GRADE_APPEAL,
+        ),
+    )
+    results = []
+    for subject, body, domain in cases:
+        with monkeypatch.context() as patched:
+            _install_routine_pipeline(patched, domain)
+            results.append(
+                pipeline.process_case(
+                    CaseInput(
+                        sender="student@example.edu",
+                        subject=subject,
+                        body=body,
+                        received_at=datetime(2026, 9, 22, tzinfo=timezone.utc),
+                        channel="verify",
+                    )
+                )
+            )
+
+    assert all(result.decision.decision is Decision.AUTO_REPLY for result in results)
+    assert all(result.decision.rule_id == "P05" for result in results)
+
+
+# KHÔNG ĐƯỢC XÓA: mọi lỗi phải fail-safe thành ESCALATE, không được fail-open.
+def test_no_fail_open(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    failures = ("timeout", "json", "empty_corpus", "guard", "missing_policy")
+    results = []
+    for failure in failures:
+        with monkeypatch.context() as patched:
+            _install_routine_pipeline(patched, Domain.COURSE_WITHDRAWAL)
+            if failure == "timeout":
+                patched.setattr(
+                    pipeline,
+                    "extract_facts",
+                    lambda body, case_id: (_ for _ in ()).throw(TimeoutError("LLM timeout")),
+                )
+            elif failure == "json":
+                patched.setattr(
+                    pipeline,
+                    "extract_facts",
+                    lambda body, case_id: (_ for _ in ()).throw(ValueError("JSON hỏng")),
+                )
+            elif failure == "empty_corpus":
+                empty = EvidenceResult(EvidenceStatus.NO_AUTHORITATIVE_SOURCE, [], [])
+                patched.setattr(pipeline, "retrieve_evidence", lambda **kwargs: empty)
+                patched.setattr(pipeline, "validate_evidence", lambda **kwargs: empty)
+            elif failure == "guard":
+                decision = PolicyDecision(
+                    Decision.ESCALATE,
+                    EscalationType.FACT_UNRESOLVED,
+                    "P04",
+                    "groundedness_failed:citation",
+                    [],
+                    "cv_test",
+                )
+                patched.setattr(
+                    pipeline,
+                    "guard_groundedness",
+                    lambda **kwargs: GroundednessResult(kwargs["draft"], decision, ["citation"]),
+                )
+            else:
+                import core.policy_engine as policy_engine
+
+                patched.setattr(policy_engine, "POLICY_PATH", tmp_path / "missing-policy.yaml")
+            results.append(pipeline.process_case(_input()))
+
+    assert all(result.decision.decision is Decision.ESCALATE for result in results)
+    assert all(result.status is CaseStatus.AWAITING_HUMAN for result in results)

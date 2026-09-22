@@ -71,3 +71,4 @@
 [H+00][Agent A] A-23 renderer deterministic + audit EXPLAIN_REQUESTED xong nhưng WIP cùng blocker mypy page C · 72 pytest xanh
 [H+00][Agent A] A-22 đã hoàn tất pause/resume/override/rerun và pause chặn auto-send · 72 test xanh
 [H+00][Agent A] A-23 đã hoàn tất giải thích deterministic, không thuật ngữ kỹ thuật và audit EXPLAIN_REQUESTED · 72 test xanh
+[H+00][Agent A] A-25 đã thêm hai test không được xóa: E01–E03 không over-escalate, năm lỗi không fail-open · 74 test xanh

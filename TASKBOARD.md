@@ -291,7 +291,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 3 (8đ) · 7
 
 ### A-25 · Hai test sống còn
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 1.5h · **Phụ thuộc:** A-21
 - **File:** `tests/test_guards.py`
 - **Việc phải làm:** `test_no_over_escalation`: ba case thường quy E01–E03 phải ra `AUTO_REPLY`. `test_no_fail_open`: với mọi lỗi mô phỏng (LLM timeout, JSON hỏng, corpus rỗng, guard fail, YAML thiếu luật) kết quả phải là `ESCALATE`, không bao giờ `AUTO_REPLY`.
