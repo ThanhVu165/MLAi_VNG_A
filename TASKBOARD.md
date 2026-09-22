@@ -267,7 +267,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 2 · 7 · tính trung thực của Verify
 
 ### A-22 · `controls.py` — Pause, Resume, Override, Re-run
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 2.5h · **Phụ thuộc:** A-21
 - **File:** `core/controls.py`
 - **Việc phải làm:** `pause_automation` (email vẫn vào hàng chờ, **không auto-send**), `resume_automation`, `override_decision` (đổi `AUTO ↔ ESCALATE`, **bắt buộc có lý do**, ghi `is_override=1` và `superseded_by`), `rerun_case` (chạy lại trên `corpus_version` hiện tại và trả về **diff** với lần chạy cũ: decision, rule_id, danh sách citation). Mọi hành động ghi audit với actor `ADMIN:<user>`.
