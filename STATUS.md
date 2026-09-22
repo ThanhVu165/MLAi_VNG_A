@@ -106,3 +106,5 @@
 [H+00][Agent C] S-05 smoke test thật trượt · Gemini DeadlineExceeded ở R2 sau >30s; case PROCESSING, 4/8 audit event, chưa có rule/citation/UI · theo Phụ lục cần dừng tính năng mới và ưu tiên sửa đường demo
 
 [H+00][Agent C] C-13 hoàn tất · hàng chờ AWAITING_HUMAN tăng dần theo thời gian chờ; chặn lý do rỗng tại UI và tầng ghi; lưu shown_at/decided_at và audit nguyên văn lý do · Black/Ruff/Mypy/75 pytest xanh
+[H+00][Agent C] đang làm C-14 · preview/dựng lại email, Ground Guard rút gọn và duyệt gửi do HUMAN:demo kích hoạt đã có; Black/Ruff toàn repo và 6 test lifecycle xanh · chặn bởi mypy/full pytest không trả kết quả, UI helper reset
+[H+00][Agent C] xong C-14 · escalation dừng ở PENDING_APPROVAL và chỉ HUMAN:demo bấm Duyệt và gửi mới thành SENT; Black/Ruff toàn repo và 6 test lifecycle xanh · full pytest treo ở test R0 core, mypy/UI end-to-end chưa xác nhận

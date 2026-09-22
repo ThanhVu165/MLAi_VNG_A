@@ -18,7 +18,6 @@ from core.types import CaseInput, Decision, EscalationType, PipelineResult
 from infra.audit import log_event
 from infra.db import now_iso, to_local
 
-
 LOGGER = logging.getLogger(__name__)
 CASE_SETS = {
     "verify4": Path("verify/cases_verify4.json"),

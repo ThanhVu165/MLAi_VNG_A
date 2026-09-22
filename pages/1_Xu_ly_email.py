@@ -34,7 +34,6 @@ from core.types import (
 from infra.db import fetch_one, seconds_until, to_local
 from infra.settings import PENDING_STATUS_REFRESH_SECONDS
 
-
 logger = logging.getLogger(__name__)
 INBOX_PATH = Path("data/seed_inbox.json")
 PASTE_SENDER = "student@mo-phong.local"

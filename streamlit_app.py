@@ -12,7 +12,6 @@ from core.controls import (
 from core.types import Decision
 from infra.db import fetch_all
 
-
 FLOW_DIAGRAM_PATH = Path(__file__).parent / "docs" / "slide2_flow.svg"
 ADMIN_ACTOR = "ADMIN:demo"
 PAGE_NAMES = (

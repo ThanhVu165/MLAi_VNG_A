@@ -39,3 +39,5 @@
 - **Triệu chứng:** case điểm rèn luyện chạy `LLM_MODE=live` qua `process_case()` trong 7.516ms, nhưng `sentence_transformers` không import được vì PyTorch C extensions lỗi.
 - **Hệ quả:** retrieval trả rỗng, case `AWAITING_HUMAN / P02` có 12 audit event nhưng không có citation ACTIVE; chưa thể xác nhận UI nhánh tự động.
 - **Cần xử lý:** sửa môi trường cài PyTorch/SentenceTransformer, sau đó chạy lại S-05 với email điểm rèn luyện và ghi kết quả vào `STATUS.md`.
+
+- [C-14][đã xử lý 2026-09-22] Agent A đã format `core/retrieval.py`; Agent C đã format ba file còn lại. Black (100 ký tự), Ruff toàn repo và 6 test Resume/gửi mô phỏng xanh. Full pytest đã pass 27 test đầu rồi treo ở `tests/test_guards.py::test_r0_creates_one_case_and_freezes_corpus_version` thuộc core; mypy không trả kết quả trong môi trường Python 3.11. Kiểm tra UI xác nhận trang hàng chờ/bản tin mô phỏng tải đúng, nhưng helper UI Windows reset khi case escalation mẫu đang chạy.
