@@ -62,7 +62,7 @@ PENDING_STATUS_REFRESH_SECONDS: int = _read_int(
     "PENDING_STATUS_REFRESH_SECONDS", 1, _MINIMUM_POSITIVE
 )
 # Thời gian tối đa cho một lần gọi LLM.
-LLM_TIMEOUT_S: int = _read_int("LLM_TIMEOUT_S", 20, _MINIMUM_POSITIVE)
+LLM_TIMEOUT_S: int = _read_int("LLM_TIMEOUT_S", 30, _MINIMUM_POSITIVE)
 # Số lần thử lại LLM sau lần gọi đầu tiên.
 LLM_RETRIES: int = _read_int("LLM_RETRIES", 1)
 LLM_MAX_ATTEMPTS: int = 4
