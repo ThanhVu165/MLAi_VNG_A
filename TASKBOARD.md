@@ -498,6 +498,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 4 (Slide 3, Slide 5) · 5
 
 ### C-07 · Trang chủ
+- **Trạng thái:** DONE
 - **Khối:** B1 · **Ước lượng:** 2h · **Phụ thuộc:** C-01
 - **File:** `streamlit_app.py`
 - **Việc phải làm:** Dòng đầu tiên là **một câu hướng dẫn duy nhất**: *"Dán email sinh viên vào ô bên dưới và bấm Xử lý."* Ngay dưới là ô nhập và nút. Banner cố định *"Chế độ mô phỏng — hệ thống không gửi email thật."* Thanh bên liệt kê 6 trang bằng tiếng Việt. Không đăng nhập, không modal, không onboarding.
@@ -505,6 +506,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 1 (10đ)
 
 ### C-08 · Sơ đồ Slide 2 in trên trang chủ
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 2h · **Phụ thuộc:** A-21
 - **File:** `docs/slide2_flow.svg`, `streamlit_app.py`
 - **Việc phải làm:** Vẽ sơ đồ Đầu vào → Xử lý → Đầu ra, **đánh dấu rõ hai điểm con người ra quyết định**: (1) quyết định case escalation, (2) duyệt trước khi gửi. Nhúng SVG ngay trên trang chủ, đúng nguyên văn hình dùng cho Slide 2.
@@ -512,6 +514,7 @@ Thứ tự khuyến nghị: C-01..C-06 (hạ tầng, làm sớm vì hai làn kia
 - **Tiêu chí:** 6 (6đ ranh giới quyết định)
 
 ### C-09 · Trang 1 — Xử lý email
+- **Trạng thái:** DONE
 - **Khối:** B2 · **Ước lượng:** 2.5h · **Phụ thuộc:** C-07, A-21
 - **File:** `pages/1_Xu_ly_email.py`
 - **Việc phải làm:** Hai đường vào: ô dán văn bản và hộp thư mô phỏng chọn từ `seed_inbox.json`. Cả hai gọi **cùng** `process_case()`. Hiển thị tiến trình theo bước (R1…R13) khi đang chạy. Thời gian xử lý hiển thị rõ.

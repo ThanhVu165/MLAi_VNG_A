@@ -33,6 +33,7 @@
 [H+00][Agent C] xong C-23 · tám nhóm chỉ số và công thức hiển thị trực tiếp cho Slide 3/5 · không bị chặn
 [H+00][Agent C] đang làm C-25 bản nháp · soạn 15 case từ corpus seed, chờ A-26 duyệt kỳ vọng · không bị chặn
 [H+00][Agent C] C-25 đã có JSON nháp 4+5+15 case · chờ Agent A duyệt A-26 trước khi DONE
+[H+00][Agent C] đang làm C-08 · vẽ và nhúng cùng SVG cho homepage/Slide 2 · không bị chặn
 [H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
 [H+00][Agent B] B-02 đã hoàn tất CRUD nguồn/chunk/version · 7 test xanh · full check còn lỗi format/cấu hình Mypy ngoài phạm vi B
 [H+00][Agent B] B-03 đã hoàn tất nạp file/text/URL, chống trùng SHA-256 và audit · full check 15 test xanh
@@ -69,6 +70,11 @@
 [H+00][Agent A] A-21 đã nối R0–R14, persist state/audit/latency và test chung paste/inbox/verify · 67 test xanh
 [H+00][Agent A] A-22 code/test xong nhưng WIP do mypy lỗi 3 dòng ở pages/3_Quan_tri_quy_dinh.py ngoài phạm vi A · 71 pytest xanh
 [H+00][Agent A] A-23 renderer deterministic + audit EXPLAIN_REQUESTED xong nhưng WIP cùng blocker mypy page C · 72 pytest xanh
+[H+00][Agent C] C-08 hoàn tất · SVG nguồn duy nhất đã nhúng trên trang chủ, đánh dấu hai điểm con người quyết định · mypy xanh
+[H+00][Agent C] đang làm C-07 · hoàn thiện trang chủ và điều hướng tiếng Việt · không bị chặn
+[H+00][Agent C] C-07 hoàn tất · trang chủ có hướng dẫn, ô dán, nút, banner và 6 mục điều hướng tiếng Việt · 72 test xanh
+[H+00][Agent C] đang làm C-09 · nối hai đường vào cùng process_case() và hiển thị tiến trình · không bị chặn
+[H+00][Agent C] C-09 hoàn tất · paste/inbox cùng gọi process_case(), UI replay xác nhận 753 ms và 1.158 ms · Mypy/Ruff xanh
 [H+00][Agent A] A-22 đã hoàn tất pause/resume/override/rerun và pause chặn auto-send · 72 test xanh
 [H+00][Agent A] A-23 đã hoàn tất giải thích deterministic, không thuật ngữ kỹ thuật và audit EXPLAIN_REQUESTED · 72 test xanh
 [H+00][Agent A] A-25 đã thêm hai test không được xóa: E01–E03 không over-escalate, năm lỗi không fail-open · 74 test xanh
