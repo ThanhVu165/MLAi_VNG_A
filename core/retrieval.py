@@ -6,7 +6,15 @@ import logging
 
 from corpus.api import search
 from core.prepolicy import decision_lock
-from core.types import CaseInput, ChunkLabel, Domain, EvidenceChunk, EvidenceResult, EvidenceStatus, Extraction
+from core.types import (
+    CaseInput,
+    ChunkLabel,
+    Domain,
+    EvidenceChunk,
+    EvidenceResult,
+    EvidenceStatus,
+    Extraction,
+)
 from infra.audit import log_event
 from infra.settings import RETRIEVAL_TOP_K
 
