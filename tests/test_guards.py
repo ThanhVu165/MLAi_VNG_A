@@ -1,8 +1,10 @@
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 import json
+from pathlib import Path
 
 import core.pipeline as pipeline
+import core.resume as resume
 import pytest
 from core.controls import (
     is_automation_paused,
@@ -23,7 +25,7 @@ from core.dispatch import (
 from core.prepolicy import decision_lock
 from core.evidence import validate_evidence
 from core.generate import generate_reply
-from core.ground_guard import GroundednessResult, guard_groundedness
+from core.ground_guard import GroundednessResult, guard_groundedness, guard_resume_groundedness
 from core.question_gen import generate_escalation_card, generate_multi_intent_card
 from core.question_guard import guard_question, question_failures
 from core.retrieval import retrieve_evidence
@@ -736,6 +738,88 @@ def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
 
 def _draft(body: str, citations: list[str] | None = None) -> DraftReply:
     return DraftReply("Trả lời", body, citations or ["chunk-1"], True, [])
+
+
+def _human_decided_case(database_path: Path) -> str:
+    case_id = "case-resume"
+    db.execute(
+        """
+        INSERT INTO cases (case_id, trace_id, channel, subject, created_at, status, corpus_version)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            case_id,
+            "trace-resume",
+            "paste",
+            "Kết quả yêu cầu",
+            db.now_iso(),
+            CaseStatus.HUMAN_DECIDED,
+            "cv_test",
+        ),
+        database_path=database_path,
+    )
+    db.execute(
+        """
+        INSERT INTO decisions (
+            decision_id, case_id, decision, rule_id, reason, evidence_ids_json, corpus_version, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "decision-resume",
+            case_id,
+            Decision.ESCALATE,
+            "P01",
+            "Cần chuyên viên quyết định.",
+            json.dumps(["chunk-1"]),
+            "cv_test",
+            db.now_iso(),
+        ),
+        database_path=database_path,
+    )
+    return case_id
+
+
+def test_resume_uses_human_reason_without_inventing_rules(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    monkeypatch.setattr(resume, "get_chunk", lambda chunk_id: _evidence_chunk())
+    monkeypatch.setattr(
+        resume,
+        "call_json",
+        lambda *args, **kwargs: LLMResult(
+            True,
+            {
+                "subject": "Kết quả yêu cầu",
+                "body": "Yêu cầu của bạn bị từ chối vì nộp quá hạn 2 ngày [chunk-1].",
+                "citations": ["chunk-1"],
+            },
+            None,
+            1,
+            "hash",
+            "model",
+        ),
+    )
+    case_id = _human_decided_case(database_path)
+
+    draft = resume.resume_case(case_id, "Từ chối", "nộp quá hạn 2 ngày", "HUMAN:lan")
+    events = events_for_case(case_id, database_path=str(database_path))
+    row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", (case_id,))
+    saved_draft = db.fetch_one("SELECT kind, grounded FROM drafts WHERE case_id = ?", (case_id,))
+
+    assert "từ chối" in draft.body.lower()
+    assert "nộp quá hạn 2 ngày" in draft.body
+    assert "Điều" not in draft.body and "quy định" not in draft.body.lower()
+    assert draft.grounded and row is not None and row["status"] == CaseStatus.PENDING_APPROVAL
+    assert saved_draft is not None and saved_draft["kind"] == "resume" and saved_draft["grounded"] == 1
+    assert [event.action for event in events] == ["CASE_RESUMED"]
+
+
+def test_resume_ground_guard_checks_only_authority_and_citation_ratio() -> None:
+    authority = guard_resume_groundedness(_draft("Yêu cầu được chấp thuận [chunk-1]."))
+    ratio = guard_resume_groundedness(_draft("Căn cứ [chunk-1]. Câu này không có trích dẫn."))
+
+    assert authority.grounded is False and authority.guard_failures == ["authority"]
+    assert ratio.grounded is False and ratio.guard_failures == ["citation_ratio"]
 
 
 def test_ground_guard_escalates_unsupported_number_without_editing_draft(

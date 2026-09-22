@@ -113,3 +113,16 @@ def guard_groundedness(
         corpus_version=corpus_version,
     )
     return GroundednessResult(_draft_with_grounding(draft, False, failures), decision, failures)
+
+
+def guard_resume_groundedness(draft: DraftReply) -> DraftReply:
+    """Chạy hai kiểm tra R11: không vượt thẩm quyền và đủ citation theo câu."""
+    failures = [
+        name
+        for name, failed in (
+            ("authority", _authority_failure(draft)),
+            ("citation_ratio", _citation_ratio_failure(draft)),
+        )
+        if failed
+    ]
+    return _draft_with_grounding(draft, not failures, failures)

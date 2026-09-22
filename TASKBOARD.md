@@ -253,7 +253,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 6 (4đ)
 
 ### A-20 · R11 Resume sau quyết định của người
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B3 · **Ước lượng:** 2h · **Phụ thuộc:** A-18, C-13
 - **File:** `core/resume.py`
 - **Việc phải làm:** Nhận `choice` + `reason` của người; LLM **chỉ diễn đạt lại quyết định đó** thành email, cấm thêm quy định mới, cấm suy diễn; chạy lại Ground Guard ở chế độ rút gọn (kiểm tra 3 và 4); đưa case sang `PENDING_APPROVAL`; ghi audit `CASE_RESUMED`.
