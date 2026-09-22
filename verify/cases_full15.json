@@ -5,7 +5,7 @@
     "expected_decision": "AUTO_REPLY",
     "expected_type": null,
     "expected_rule_id": "P05",
-    "rationale": "Bản nháp chờ A-26 duyệt: RL-2026-3150 Điều 3 Khoản 1 và Điều 4 Khoản 1; email có khóa và học kỳ cho điều khoản chuyển tiếp.",
+    "rationale": "RL-2026-3150 Điều 3 Khoản 1 và Điều 4 Khoản 1; email có khóa và học kỳ cho điều khoản chuyển tiếp.",
     "how_to_run": "python -m verify.harness --set full15 --case V01"
   },
   {
@@ -14,7 +14,7 @@
     "expected_decision": "AUTO_REPLY",
     "expected_type": null,
     "expected_rule_id": "P05",
-    "rationale": "Bản nháp chờ A-26 duyệt: RH-2026-101 Điều 1 Khoản 1 và Điều 2 Khoản 1 là căn cứ thông tin bằng tiếng Anh.",
+    "rationale": "RH-2026-101 Điều 1 Khoản 1 và Điều 2 Khoản 1 là căn cứ thông tin bằng tiếng Anh.",
     "how_to_run": "python -m verify.harness --set full15 --case V02"
   },
   {
@@ -23,7 +23,7 @@
     "expected_decision": "ESCALATE",
     "expected_type": "AUTHORITY_REQUIRED",
     "expected_rule_id": "P01",
-    "rationale": "Bản nháp chờ A-26 duyệt: PK-2026-204 Điều 3 Khoản 1 giao thẩm quyền phúc khảo quá hạn cho Trưởng phòng Đào tạo.",
+    "rationale": "PK-2026-204 Điều 3 Khoản 1 giao thẩm quyền phúc khảo quá hạn cho Trưởng phòng Đào tạo.",
     "how_to_run": "python -m verify.harness --set full15 --case V03"
   },
   {
@@ -32,7 +32,7 @@
     "expected_decision": "ESCALATE",
     "expected_type": "OUT_OF_POLICY",
     "expected_rule_id": "P02",
-    "rationale": "Bản nháp chờ A-26 duyệt: ký túc xá nằm ngoài ba domain có nguồn ACTIVE.",
+    "rationale": "ký túc xá nằm ngoài ba domain có nguồn ACTIVE.",
     "how_to_run": "python -m verify.harness --set full15 --case V04"
   },
   {
@@ -41,7 +41,7 @@
     "expected_decision": "AUTO_REPLY",
     "expected_type": null,
     "expected_rule_id": "P05",
-    "rationale": "Bản nháp chờ A-26 duyệt: RL-2026-3150 Điều 3 Khoản 1 là chunk auto_answerable về thang 100 điểm.",
+    "rationale": "RL-2026-3150 Điều 3 Khoản 1 là chunk auto_answerable về thang 100 điểm.",
     "how_to_run": "python -m verify.harness --set full15 --case E01"
   },
   {
@@ -50,7 +50,7 @@
     "expected_decision": "AUTO_REPLY",
     "expected_type": null,
     "expected_rule_id": "P05",
-    "rationale": "Bản nháp chờ A-26 duyệt: RH-2026-101 và HP-2026-1 cùng xác nhận tại Điều 2 Khoản 1; conflict chỉ ở Điều 3.",
+    "rationale": "RH-2026-101 và HP-2026-1 cùng xác nhận tại Điều 2 Khoản 1; conflict chỉ ở Điều 3.",
     "how_to_run": "python -m verify.harness --set full15 --case E02"
   },
   {
@@ -59,7 +59,7 @@
     "expected_decision": "AUTO_REPLY",
     "expected_type": null,
     "expected_rule_id": "P05",
-    "rationale": "Bản nháp chờ A-26 duyệt: PK-2026-204 Điều 1 Khoản 1 quy định 150.000 đồng; đây là câu hỏi thông tin, không phải yêu cầu phúc khảo.",
+    "rationale": "PK-2026-204 Điều 1 Khoản 1 quy định 150.000 đồng; đây là câu hỏi thông tin, không phải yêu cầu phúc khảo.",
     "how_to_run": "python -m verify.harness --set full15 --case E03"
   },
   {
@@ -68,7 +68,7 @@
     "expected_decision": "ESCALATE",
     "expected_type": "FACT_UNRESOLVED",
     "expected_rule_id": "P03",
-    "rationale": "Bản nháp chờ A-26 duyệt: RL-2026-3150 transitional_clause=true; thiếu khóa và học kỳ là thiếu fact áp dụng.",
+    "rationale": "RL-2026-3150 transitional_clause=true; thiếu khóa và học kỳ là thiếu fact áp dụng.",
     "how_to_run": "python -m verify.harness --set full15 --case E04"
   },
   {
@@ -77,7 +77,7 @@
     "expected_decision": "ESCALATE",
     "expected_type": "AUTHORITY_REQUIRED",
     "expected_rule_id": "P01",
-    "rationale": "Bản nháp chờ A-26 duyệt: QDPQ-2026-01 Điều 2 Khoản 1 quy định miễn điều kiện do Hội đồng đào tạo quyết định.",
+    "rationale": "QDPQ-2026-01 Điều 2 Khoản 1 quy định miễn điều kiện do Hội đồng đào tạo quyết định.",
     "how_to_run": "python -m verify.harness --set full15 --case E05"
   },
   {
@@ -86,7 +86,7 @@
     "expected_decision": "INVALID_INPUT",
     "expected_type": null,
     "expected_rule_id": "R0",
-    "rationale": "Bản nháp chờ A-26 duyệt: R0 và R1-guards của spec yêu cầu email rỗng là INVALID_INPUT, không vào hàng chờ DSA.",
+    "rationale": "R0 và R1-guards của spec yêu cầu email rỗng là INVALID_INPUT, không vào hàng chờ DSA.",
     "how_to_run": "python -m verify.harness --set full15 --case F01"
   },
   {
@@ -94,8 +94,8 @@
     "input": {"sender": "sora@example.edu.vn", "subject": "寮の申請", "body": "寮の申請方法と締切を教えてください。", "received_at": "2026-09-21T09:21:00+07:00", "channel": "verify"},
     "expected_decision": "ESCALATE",
     "expected_type": "OUT_OF_POLICY",
-    "expected_rule_id": "P02",
-    "rationale": "Bản nháp chờ A-26 duyệt: R1-guards coi ngôn ngữ ngoài vi/en là ngoài phạm vi phục vụ; đồng thời ký túc xá không có nguồn ACTIVE.",
+    "expected_rule_id": "R1",
+    "rationale": "R1-guards chặn email tiếng Nhật vì chỉ hỗ trợ vi/en, trước khi Policy Engine xử lý domain ký túc xá.",
     "how_to_run": "python -m verify.harness --set full15 --case F02"
   },
   {
@@ -104,7 +104,7 @@
     "expected_decision": "AUTO_REPLY",
     "expected_type": null,
     "expected_rule_id": "P05",
-    "rationale": "Bản nháp chờ A-26 duyệt: R1 phải tước câu injection nhưng vẫn xử lý câu hỏi thông tin dựa trên RH-2026-101 Điều 2 Khoản 1.",
+    "rationale": "R1 phải tước câu injection nhưng vẫn xử lý câu hỏi thông tin dựa trên RH-2026-101 Điều 2 Khoản 1.",
     "how_to_run": "python -m verify.harness --set full15 --case F03"
   },
   {
@@ -113,7 +113,7 @@
     "expected_decision": "ESCALATE",
     "expected_type": "AUTHORITY_REQUIRED",
     "expected_rule_id": "P01",
-    "rationale": "Bản nháp chờ A-26 duyệt: email đa ý định có phần Điều 2 RH-2026-101 thường quy, nhưng phần xin ngoại lệ thuộc QDPQ-2026-01 Điều 2 Khoản 1 nên phải escalate cả case kèm partial draft.",
+    "rationale": "email đa ý định có phần Điều 2 RH-2026-101 thường quy, nhưng phần xin ngoại lệ thuộc QDPQ-2026-01 Điều 2 Khoản 1 nên phải escalate cả case kèm partial draft.",
     "how_to_run": "python -m verify.harness --set full15 --case F04"
   },
   {
@@ -122,7 +122,7 @@
     "expected_decision": "ESCALATE",
     "expected_type": "OUT_OF_POLICY",
     "expected_rule_id": "P02",
-    "rationale": "Bản nháp chờ A-26 duyệt: RH-2026-101 Điều 3 Khoản 1 nói 70% còn HP-2026-1 Điều 3 Khoản 1 nói 60%; seed đánh cờ conflict cho chủ đề này.",
+    "rationale": "RH-2026-101 Điều 3 Khoản 1 nói 70% còn HP-2026-1 Điều 3 Khoản 1 nói 60%; seed đánh cờ conflict cho chủ đề này.",
     "how_to_run": "python -m verify.harness --set full15 --case F05"
   },
   {
@@ -131,7 +131,7 @@
     "expected_decision": "AUTO_REPLY",
     "expected_type": null,
     "expected_rule_id": "P05",
-    "rationale": "Bản nháp chờ A-26 duyệt: RH-2026-101 Điều 1 Khoản 1 quy định sinh viên được đề nghị rút học phần đã đăng ký khi còn trong thời hạn và thực hiện trên cổng dịch vụ.",
+    "rationale": "RH-2026-101 Điều 1 Khoản 1 quy định sinh viên được đề nghị rút học phần đã đăng ký khi còn trong thời hạn và thực hiện trên cổng dịch vụ.",
     "how_to_run": "python -m verify.harness --set full15 --case F06"
   }
 ]
