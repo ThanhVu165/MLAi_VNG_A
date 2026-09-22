@@ -14,7 +14,7 @@ import streamlit as st
 
 from corpus.api import get_chunk
 from core.pipeline import process_case
-from core.types import CaseInput, Decision, PipelineResult
+from core.types import CaseInput, Decision, EscalationCard, EscalationType, PipelineResult
 
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,11 @@ PASTE_SENDER = "student@mo-phong.local"
 PASTE_SUBJECT = "Email sinh viên được dán"
 UI_ACTOR = "HUMAN:demo"
 STEP_NAMES = tuple(f"R{step}" for step in range(1, 14))
+ESCALATION_TYPE_LABELS: dict[EscalationType, str] = {
+    EscalationType.FACT_UNRESOLVED: "Thiếu dữ kiện",
+    EscalationType.OUT_OF_POLICY: "Ngoài phạm vi quy định",
+    EscalationType.AUTHORITY_REQUIRED: "Cần phê duyệt",
+}
 
 
 @dataclass(frozen=True)
@@ -105,6 +110,42 @@ def render_citations(result: PipelineResult) -> None:
             st.write(chunk.text)
 
 
+def render_escalation_card(card: EscalationCard, case_id: str) -> None:
+    """Hiển thị đủ thông tin để chuyên viên chọn phương án chuyển tiếp."""
+    st.subheader("Thẻ chuyển tiếp chuyên viên")
+
+    st.markdown("#### Tóm tắt")
+    st.write(card.summary)
+    st.caption(f"Loại chuyển tiếp: {ESCALATION_TYPE_LABELS[card.escalation_type]}")
+
+    st.markdown("#### Dữ kiện")
+    if card.facts:
+        for fact in card.facts:
+            st.write(f"• {fact}")
+    else:
+        st.info("Chưa có dữ kiện đã xác nhận; hãy dựa vào căn cứ và câu hỏi bên dưới.")
+
+    st.markdown("#### Căn cứ")
+    if card.basis:
+        for breadcrumb, citation in card.basis:
+            with st.expander(breadcrumb):
+                st.write(citation)
+    else:
+        st.info("Chưa có căn cứ quy định đang hiệu lực cho case này.")
+
+    st.markdown("#### Câu hỏi")
+    st.write(card.question)
+    if card.options:
+        st.radio("Chọn một phương án", card.options, key=f"escalation_choice_{case_id}")
+    else:
+        st.error("Thẻ chưa có phương án. Hãy mở nhật ký kiểm toán để xử lý case này an toàn.")
+
+    if card.partial_draft is not None:
+        st.markdown("#### Phần A đã soạn sẵn")
+        st.write(f"Tiêu đề: {card.partial_draft.subject}")
+        st.text(card.partial_draft.body)
+
+
 def render_result(result: PipelineResult, elapsed_ms: int) -> None:
     """Hiển thị kết quả có căn cứ và đường dẫn sang audit của case."""
     st.success("Đã xử lý email.")
@@ -113,7 +154,10 @@ def render_result(result: PipelineResult, elapsed_ms: int) -> None:
     st.write(f"Mã case: {result.case_id} · Trạng thái: {result.status}")
     st.write(f"Phiên bản corpus: {result.corpus_version}")
     render_draft(result)
-    render_citations(result)
+    if result.card is None:
+        render_citations(result)
+    else:
+        render_escalation_card(result.card, result.case_id)
     audit_url = f"/Nhat_ky_kiem_toan?case_id={quote(result.case_id)}"
     st.link_button("Mở nhật ký kiểm toán của case", audit_url)
     with st.expander("Thời gian theo bước R1–R13"):
