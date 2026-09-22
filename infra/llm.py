@@ -20,7 +20,7 @@ from infra.settings import CASE_TIMEOUT_SECONDS, LLM_MAX_ATTEMPTS, LLM_RETRIES, 
 LOGGER = logging.getLogger(__name__)
 CASSETTE_DIRECTORY = Path("tests/cassettes")
 CACHE_KEY_PREFIX = "llm_cache:"
-DEFAULT_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_MODEL = "gemini-3.6-flash"
 MILLISECONDS_PER_SECOND = 1_000
 JsonValue = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 JsonObject = dict[str, JsonValue]
@@ -160,6 +160,7 @@ def _call_live(
                 "ServiceUnavailable",
                 "ResourceExhausted",
                 "InternalServerError",
+                "ServerError",
                 "ReadTimeout",
                 "ConnectTimeout",
                 "ConnectionError",
@@ -173,7 +174,7 @@ def _call_live(
                     "ConnectTimeout",
                 }:
                     message = "Dịch vụ AI không phản hồi trong thời gian cho phép."
-                elif error_name in {"ServiceUnavailable", "InternalServerError"}:
+                elif error_name in {"ServiceUnavailable", "InternalServerError", "ServerError"}:
                     message = "Dịch vụ AI đang quá tải hoặc tạm thời không sẵn sàng."
                 elif error_name == "ResourceExhausted":
                     message = "Dịch vụ AI báo đã chạm hạn mức của tài khoản."
@@ -201,17 +202,21 @@ def _request_gemini(
     api_key: str,
     timeout_s: int,
 ) -> LLMResult:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
 
-    genai.configure(api_key=api_key, transport="rest")
-    response = genai.GenerativeModel(model).generate_content(
-        prompt,
-        generation_config={
-            "temperature": 0.0,
-            "response_mime_type": "application/json",
-            "response_schema": schema,
-        },
-        request_options={"timeout": min(timeout_s, LLM_TIMEOUT_S), "retry": None},
+    client = genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(timeout=min(timeout_s, LLM_TIMEOUT_S) * 1_000),
+    )
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.0,
+            response_mime_type="application/json",
+            response_json_schema=schema,
+        ),
     )
     return _success(_parse_object(response.text), prompt_hash, model)
 

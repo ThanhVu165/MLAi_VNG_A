@@ -35,3 +35,18 @@ def test_permanent_error_is_not_retried(monkeypatch: pytest.MonkeyPatch) -> None
     with llm.case_call_budget():
         assert not llm._call_live("test", {}, "hash", "model", 20, 1).ok
     assert len(calls) == 1
+
+
+def test_server_error_is_retried_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[int] = []
+    server_error = type("ServerError", (Exception,), {})
+
+    def unavailable(*args: object) -> llm.LLMResult:
+        calls.append(1)
+        raise server_error("overloaded")
+
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-not-a-secret")
+    monkeypatch.setattr(llm, "_request_gemini", unavailable)
+    with llm.case_call_budget():
+        assert not llm._call_live("test", {}, "hash", "model", 20, 1).ok
+    assert len(calls) == 2
