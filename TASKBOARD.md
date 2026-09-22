@@ -55,6 +55,7 @@ Task làn S **chặn** các làn khác. Không bỏ qua, không làm muộn.
 - **Xong khi:** Có kết luận ghi vào `STATUS.md`: làn nào đúng tiến độ, task nào cắt bớt.
 
 ### S-05 · Checkpoint H28 — tích hợp dọc lần 1
+- **Trạng thái:** BLOCKED
 - **Khối:** B2 kết thúc · **Ước lượng:** 2h · **Phụ thuộc:** A-21, B-12, C-10
 - **Việc phải làm:**
   1. Gỡ toàn bộ stub. Chạy một email thật về điểm rèn luyện qua `process_case()` với corpus thật.
@@ -299,7 +300,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 7 (8đ + 6đ)
 
 ### A-26 · Duyệt kỳ vọng của bộ 15 case
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 1.5h · **Phụ thuộc:** C-25
 - **File:** `verify/cases_*.json` (chỉ duyệt, C viết)
 - **Việc phải làm:** Với từng case, xác nhận `expected_decision`, `expected_type` và `expected_rule_id` **suy ra được từ tài liệu quy định của đội**, không phải từ hành vi hiện tại của code. Nếu code sai thì sửa code, không sửa kỳ vọng.

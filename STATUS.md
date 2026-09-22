@@ -96,3 +96,5 @@
 [H+00][Agent C] C-20 đã thêm nút E01–E05, nhãn quyết định/phân loại và cột câu hỏi từ pipeline · replay thiếu cassette E01–E05 nên chưa thể xác nhận đủ kết quả thật trong 90 giây · 75 test xanh
 [H+00][Agent C] C-22 hoàn tất · bảng Verify có đầy đủ trường bắt buộc, timestamp +07:00, xuất JSON và liên kết audit theo case · Black/Ruff/Mypy/75 test xanh
 [H+00][Agent C] C-11 hoàn tất · đếm ngược đọc deadline DB, Hủy gửi/Chuyển cho người và Correction Email hoạt động; audit Hủy gửi là HUMAN:demo · Black/Ruff/Mypy/75 test xanh
+[H+00][Agent A] A-26 hoàn tất · đã duyệt căn cứ 15 case độc lập với code; C-25 đã chốt F02 dùng guard R1 và ba file Verify · 75 pytest/Ruff xanh, Black/mypy còn blocker ngoài phạm vi A
+[H+00][Agent A] S-05 bị chặn · smoke test Paste với email điểm rèn luyện dừng ở tải model embedding corpus 0 byte; chưa có kết quả/citation/audit đủ 8 event · không cắt tính năng

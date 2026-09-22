@@ -19,7 +19,9 @@
 - [C-03][Agent C] `infra/settings.py` đã có đủ ngưỡng và override environment. Chưa thể kiểm tra import, chạy `make check`, hoặc quét core/corpus vì môi trường thiếu Python/Make và hai thư mục đó chưa tồn tại.
 # BLOCKERS
 
-- [A-26/C-25][2026-09-22] Vòng lặp dependency trong TASKBOARD: A-26 yêu cầu C-25 DONE, nhưng C-25 lại chỉ DONE sau khi A-26 duyệt. Cần xác nhận cho Agent A duyệt khi C-25 đang WIP nhưng đã có đủ ba file `cases_*.json`, hoặc sửa dependency taskboard; không tự ý bỏ qua quy tắc DONE.
+- [S-05][2026-09-22] Smoke test Paste → `process_case()` dừng khi corpus thật tải trọng số `paraphrase-multilingual-MiniLM-L12-v2`: cache có file `.incomplete` 0 byte và lock còn giữ. Chưa thể xác nhận citation ACTIVE, đủ 8 audit event hoặc màn hình kết quả. Không cắt tính năng theo chỉ đạo người dùng; cần Agent B/C khôi phục model/index corpus rồi chạy lại.
+- [A-26/C-25][đã gỡ 2026-09-22] Vòng lặp dependency trong TASKBOARD đã được người dùng cho phép duyệt khi C-25 WIP; Agent C đã chốt ba file case, gồm F02 dùng guard R1.
+- [A-26][2026-09-22] Xác minh sau duyệt: Ruff và 75 pytest xanh; Black đòi định dạng `pages/*`, `streamlit_app.py`, `verify/harness.py`, còn mypy báo thiếu stub `google.generativeai` tại `infra/llm.py`. Các file này ngoài phạm vi Agent A nên không tự sửa.
 
 - [A-22][Agent A][đã gỡ 2026-09-22] Agent C đã sửa type ở page 3; full mypy, Black, Ruff và 72 pytest đều xanh. Controls đã có trong commit `ceee390` trước khi merge sửa blocker.
 
