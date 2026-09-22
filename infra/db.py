@@ -105,15 +105,16 @@ def initialize_database(database_path: str | Path | None = None) -> None:
                 raise RuntimeError(
                     "Dữ liệu thiếu bảng công việc hoặc bản gốc. Hãy phục hồi từ bản sao lưu; không khởi tạo đè."
                 )
-            return
+            source_columns = {row["name"] for row in connection.execute("PRAGMA table_info(source_contents)")}
+            case_columns = {row["name"] for row in connection.execute("PRAGMA table_info(cases)")}
+            if {"extracted_text", "filename"} <= source_columns and "external_id" in case_columns:
+                return
         if tables:
             _backup_database(connection, _database_path(database_path))
         else:
             connection.executescript(MIGRATION_PATH.read_text(encoding="utf-8"))
         with connection:
             connection.execute("BEGIN IMMEDIATE")
-            if connection.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION:
-                return
             for statement in WORKFLOW_MIGRATION_PATH.read_text(encoding="utf-8").split(";"):
                 if statement.strip():
                     connection.execute(statement)
