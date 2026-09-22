@@ -17,7 +17,7 @@ from infra.settings import LLM_RETRIES, LLM_TIMEOUT_S
 LOGGER = logging.getLogger(__name__)
 CASSETTE_DIRECTORY = Path("tests/cassettes")
 CACHE_KEY_PREFIX = "llm_cache:"
-DEFAULT_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_MODEL = "gemini-3.5-flash"
 MILLISECONDS_PER_SECOND = 1_000
 JsonValue = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 JsonObject = dict[str, JsonValue]
