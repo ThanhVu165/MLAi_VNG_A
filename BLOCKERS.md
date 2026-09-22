@@ -34,3 +34,8 @@
 - [A-02][Agent A][đã gỡ] Full `mypy .` was blocked by 17 errors in Agent C's audit page. Black, Ruff, mypy, and pytest now pass.
 
 - [A-01] Full `make check` is unavailable: this repository has no Makefile and Python 3.11 has no `mypy` module. The targeted pytest smoke check plus Black and Ruff pass.
+# S-05 · Checkpoint H28 bị chặn (2026-09-22)
+
+- **Triệu chứng:** case điểm rèn luyện chạy `LLM_MODE=live` qua `process_case()` trong 7.516ms, nhưng `sentence_transformers` không import được vì PyTorch C extensions lỗi.
+- **Hệ quả:** retrieval trả rỗng, case `AWAITING_HUMAN / P02` có 12 audit event nhưng không có citation ACTIVE; chưa thể xác nhận UI nhánh tự động.
+- **Cần xử lý:** sửa môi trường cài PyTorch/SentenceTransformer, sau đó chạy lại S-05 với email điểm rèn luyện và ghi kết quả vào `STATUS.md`.
