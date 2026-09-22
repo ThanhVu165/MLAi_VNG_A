@@ -33,6 +33,7 @@
 [H+00][Agent C] xong C-23 · tám nhóm chỉ số và công thức hiển thị trực tiếp cho Slide 3/5 · không bị chặn
 [H+00][Agent C] đang làm C-25 bản nháp · soạn 15 case từ corpus seed, chờ A-26 duyệt kỳ vọng · không bị chặn
 [H+00][Agent C] C-25 đã có JSON nháp 4+5+15 case · chờ Agent A duyệt A-26 trước khi DONE
+[H+00][Agent C] C-25 hoàn tất · Agent A duyệt 14 case và xác nhận F02 dùng guard R1; đã bỏ nhãn bản nháp khỏi rationale · Black/Ruff/Mypy xanh
 [H+00][Agent C] đang làm C-08 · vẽ và nhúng cùng SVG cho homepage/Slide 2 · không bị chặn
 [H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
 [H+00][Agent B] B-02 đã hoàn tất CRUD nguồn/chunk/version · 7 test xanh · full check còn lỗi format/cấu hình Mypy ngoài phạm vi B

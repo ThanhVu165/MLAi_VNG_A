@@ -11,7 +11,7 @@
     "expected_decision": "AUTO_REPLY",
     "expected_type": null,
     "expected_rule_id": "P05",
-    "rationale": "Bản nháp chờ A-26 duyệt: RL-2026-3150 Điều 3 Khoản 1 quy định thang 100 điểm và Điều 4 Khoản 1 quy định thời điểm công bố; email có khóa và học kỳ nên đủ fact cho điều khoản chuyển tiếp.",
+    "rationale": "RL-2026-3150 Điều 3 Khoản 1 quy định thang 100 điểm và Điều 4 Khoản 1 quy định thời điểm công bố; email có khóa và học kỳ nên đủ fact cho điều khoản chuyển tiếp.",
     "how_to_run": "python -m verify.harness --set verify4 --case V01"
   },
   {
@@ -26,7 +26,7 @@
     "expected_decision": "AUTO_REPLY",
     "expected_type": null,
     "expected_rule_id": "P05",
-    "rationale": "Bản nháp chờ A-26 duyệt: RH-2026-101 Điều 1 Khoản 1 và Điều 2 Khoản 1 quy định điều kiện, cổng nộp và hạn 17 giờ thứ Sáu tuần 8; đây là câu hỏi thông tin bằng tiếng Anh.",
+    "rationale": "RH-2026-101 Điều 1 Khoản 1 và Điều 2 Khoản 1 quy định điều kiện, cổng nộp và hạn 17 giờ thứ Sáu tuần 8; đây là câu hỏi thông tin bằng tiếng Anh.",
     "how_to_run": "python -m verify.harness --set verify4 --case V02"
   },
   {
@@ -41,7 +41,7 @@
     "expected_decision": "ESCALATE",
     "expected_type": "AUTHORITY_REQUIRED",
     "expected_rule_id": "P01",
-    "rationale": "Bản nháp chờ A-26 duyệt: PK-2026-204 Điều 3 Khoản 1 quy định chấp thuận phúc khảo ngoài thời hạn do Trưởng phòng Đào tạo quyết định.",
+    "rationale": "PK-2026-204 Điều 3 Khoản 1 quy định chấp thuận phúc khảo ngoài thời hạn do Trưởng phòng Đào tạo quyết định.",
     "how_to_run": "python -m verify.harness --set verify4 --case V03"
   },
   {
@@ -56,7 +56,7 @@
     "expected_decision": "ESCALATE",
     "expected_type": "OUT_OF_POLICY",
     "expected_rule_id": "P02",
-    "rationale": "Bản nháp chờ A-26 duyệt: ký túc xá không thuộc ba domain corpus (điểm rèn luyện, rút học phần, phúc khảo), nên không có căn cứ ACTIVE để tự trả lời.",
+    "rationale": "ký túc xá không thuộc ba domain corpus (điểm rèn luyện, rút học phần, phúc khảo), nên không có căn cứ ACTIVE để tự trả lời.",
     "how_to_run": "python -m verify.harness --set verify4 --case V04"
   }
 ]
