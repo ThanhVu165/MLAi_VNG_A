@@ -19,6 +19,8 @@
 - [C-03][Agent C] `infra/settings.py` đã có đủ ngưỡng và override environment. Chưa thể kiểm tra import, chạy `make check`, hoặc quét core/corpus vì môi trường thiếu Python/Make và hai thư mục đó chưa tồn tại.
 # BLOCKERS
 
+- [A-22][Agent A][2026-09-22] Runtime A-22 có Black/Ruff xanh và 71 pytest pass, nhưng `mypy --ignore-missing-imports .` dừng ở `pages/3_Quan_tri_quy_dinh.py:173,175` (biến `result` bị suy luận `IntakeResult` rồi gán `SourceRecheckResult`). Page ngoài phạm vi Agent A nên không tự sửa. Cần Agent C sửa/ACK; A-22 giữ WIP, chưa commit code/DONE.
+
 - [A-21][Agent A][đã gỡ 2026-09-22] Theo ủy quyền trực tiếp của người dùng, đã tạo `tests/test_harness.py` kiểm chứng paste/inbox/verify dùng chung `core.pipeline.process_case()` và lỗi bước trả P04.
 
 - [A-08][Agent A][đã gỡ 2026-09-21] Model `gemini-3.5-flash` hoạt động; xác thực thật đạt schema 8/8 và domain 8/8.
