@@ -144,7 +144,7 @@ with upload_tab:
         text_id = st.text_input("Mã tài liệu", key="text-id")
         if st.button("Nạp văn bản đã dán"):
             try:
-                result = ingest_text(
+                text_result = ingest_text(
                     pasted_text,
                     actor=ADMIN_ACTOR,
                     title=text_title or "Văn bản dán trực tiếp",
@@ -153,26 +153,33 @@ with upload_tab:
             except ValueError as error:
                 st.error(str(error))
             else:
-                st.success(f"{result.message}: {result.source.doc_id}")
+                st.success(f"{text_result.message}: {text_result.source.doc_id}")
 
         source_url = st.text_input("URL nguồn", key="source-url")
         url_id = st.text_input("Mã tài liệu URL", key="url-id")
         if st.button("Nạp từ URL"):
             try:
-                result = ingest_url(source_url, actor=ADMIN_ACTOR, document_id=url_id or None)
+                url_result = ingest_url(source_url, actor=ADMIN_ACTOR, document_id=url_id or None)
             except (OSError, ValueError) as error:
                 st.error(f"Không thể nạp URL: {error}")
             else:
-                st.success(f"{result.message}: {result.source.doc_id}")
+                st.success(f"{url_result.message}: {url_result.source.doc_id}")
 
     if st.button("Kiểm tra nguồn mới"):
         with st.spinner("Đang tải lại các URL đã đăng ký..."):
             results = recheck_url_sources(actor=ADMIN_ACTOR)
         if not results:
             st.info("Chưa có URL nguồn nào để kiểm tra.")
-        for result in results:
-            message = f"{result.source.title or result.source.doc_id}: {result.message}"
-            (st.error if result.error else st.warning if result.changed else st.success)(message)
+        for recheck_result in results:
+            message = (
+                f"{recheck_result.source.title or recheck_result.source.doc_id}: "
+                f"{recheck_result.message}"
+            )
+            (
+                st.error
+                if recheck_result.error
+                else st.warning if recheck_result.changed else st.success
+            )(message)
 
     sources = list_sources()
     source_by_id = {source.doc_id: source for source in sources}
