@@ -95,3 +95,4 @@
 [H+00][Agent A] A-26 chặn bởi vòng lặp dependency với C-25; chờ xác nhận duyệt khi C-25 WIP có đủ case files
 [H+00][Agent C] C-20 đã thêm nút E01–E05, nhãn quyết định/phân loại và cột câu hỏi từ pipeline · replay thiếu cassette E01–E05 nên chưa thể xác nhận đủ kết quả thật trong 90 giây · 75 test xanh
 [H+00][Agent C] C-22 hoàn tất · bảng Verify có đầy đủ trường bắt buộc, timestamp +07:00, xuất JSON và liên kết audit theo case · Black/Ruff/Mypy/75 test xanh
+[H+00][Agent C] C-11 hoàn tất · đếm ngược đọc deadline DB, Hủy gửi/Chuyển cho người và Correction Email hoạt động; audit Hủy gửi là HUMAN:demo · Black/Ruff/Mypy/75 test xanh
