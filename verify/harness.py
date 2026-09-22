@@ -12,9 +12,9 @@ from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
-from corpus.api import is_active
 from core.pipeline import process_case
 from core.types import CaseInput, Decision, EscalationType, PipelineResult
+from corpus.api import is_active
 from infra.audit import log_event
 from infra.db import now_iso, to_local
 
@@ -68,12 +68,15 @@ def _case_from_payload(payload: object) -> VerifyCase:
     if received_at.tzinfo is None or received_at.utcoffset() is None:
         raise ValueError("received_at phải có múi giờ.")
     expected_type = payload.get("expected_type")
+    body = input_payload.get("body")
+    if not isinstance(body, str):
+        raise ValueError("input.body phải là chuỗi; cho phép rỗng để kiểm thử INVALID_INPUT.")
     return VerifyCase(
         case_id=_string(payload.get("id"), "id"),
         input=CaseInput(
             sender=_string(input_payload.get("sender"), "input.sender"),
             subject=_string(input_payload.get("subject"), "input.subject"),
-            body=_string(input_payload.get("body"), "input.body"),
+            body=body,
             received_at=received_at,
             channel="verify",
             external_id=_string(payload.get("id"), "id"),
@@ -193,7 +196,7 @@ def main(arguments: list[str] | None = None) -> int:
     except ValueError as error:
         parser.error(str(error))
     sys.stdout.write(f"{format_results(results)}\n")
-    return 0
+    return 0 if all(result.passed for result in results) else 1
 
 
 if __name__ == "__main__":

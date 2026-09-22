@@ -4,7 +4,9 @@ import json
 
 from infra import db
 from infra.audit import recent_events
-from verify.harness import run_cases
+from core.types import Decision, EscalationType
+from verify import harness
+from verify.harness import VerifyResult, run_cases
 
 
 def test_run_cases_uses_pipeline_and_audits_run(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
@@ -39,3 +41,25 @@ def test_run_cases_uses_pipeline_and_audits_run(monkeypatch, tmp_path) -> None: 
         "VERIFY_RUN_STARTED",
         "VERIFY_RUN_FINISHED",
     }
+
+
+def test_main_returns_nonzero_when_any_case_fails(monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
+    failed = VerifyResult(
+        "T01",
+        "Hỏi thông tin",
+        None,
+        Decision.AUTO_REPLY,
+        None,
+        Decision.ESCALATE,
+        EscalationType.FACT_UNRESOLVED,
+        "P04",
+        False,
+        1,
+        "2026-09-22T09:00:00+07:00",
+        "cv_test",
+        "case-test",
+    )
+    monkeypatch.setattr(harness, "run_cases", lambda *_args, **_kwargs: (failed,))
+
+    assert harness.main(["--set", "verify4"]) == 1
+    assert "FAIL" in capsys.readouterr().out
