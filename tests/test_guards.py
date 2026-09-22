@@ -14,7 +14,7 @@ from core.controls import (
     resume_automation,
 )
 from core.explain import explain_plainly
-from core.extract import EXTRACTION_SCHEMA, extract_facts
+from core.extract import EXTRACTION_SCHEMA, _scope_facts, extract_facts
 from core.dispatch import (
     cancel_send,
     create_correction_email,
@@ -277,6 +277,33 @@ def test_retrieval_corpus_error_returns_no_authoritative_source(monkeypatch, tmp
 
     assert result.status is EvidenceStatus.NO_AUTHORITATIVE_SOURCE
     assert result.chunks == []
+
+
+def test_routine_retrieval_excludes_human_only_chunks(monkeypatch, tmp_path) -> None:
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
+    automatic = _evidence_chunk()
+    human_only = _evidence_chunk(label=ChunkLabel.HUMAN_ONLY)
+    monkeypatch.setattr("core.retrieval.search", lambda *args, **kwargs: [automatic, human_only])
+
+    result = retrieve_evidence(
+        case_id="case-routine-retrieval",
+        actor="SYSTEM",
+        inp=_input(),
+        body_clean="Nội dung đã làm sạch",
+        extraction=_evidence_extraction(),
+        corpus_version="cv_test",
+    )
+
+    assert result.chunks == [automatic]
+
+
+def test_scope_facts_are_read_without_llm() -> None:
+    assert _scope_facts("Sinh viên hệ đại học chính quy khóa K48 năm học 2026–2027.") == {
+        "applies_to": "undergraduate",
+        "cohort": "K48",
+        "academic_year": "2026-2027",
+    }
 
 
 def test_retrieval_empty_corpus_returns_no_authoritative_source(monkeypatch, tmp_path) -> None:

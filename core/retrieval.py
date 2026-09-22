@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 
 from corpus.api import search
-from core.types import CaseInput, Domain, EvidenceChunk, EvidenceResult, EvidenceStatus, Extraction
+from core.prepolicy import decision_lock
+from core.types import CaseInput, ChunkLabel, Domain, EvidenceChunk, EvidenceResult, EvidenceStatus, Extraction
 from infra.audit import log_event
 from infra.settings import RETRIEVAL_TOP_K
 
@@ -61,6 +62,8 @@ def retrieve_evidence(
         chunks = search(
             _query(inp, body_clean, extraction), domains, RETRIEVAL_TOP_K, inp.received_at
         )
+        if decision_lock(extraction) is None:
+            chunks = [chunk for chunk in chunks if chunk.label is ChunkLabel.AUTO_ANSWERABLE]
     except Exception as error:
         logger.exception("Không thể truy vấn corpus: %s", error, extra={"case_id": case_id})
         return _result(

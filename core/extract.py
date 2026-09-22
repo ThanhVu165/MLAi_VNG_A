@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from typing import Literal, cast
 
@@ -70,6 +71,17 @@ EXTRACTION_SCHEMA: dict[str, object] = {
     },
 }
 EXTRACTION_PARSE_ATTEMPTS = 2
+
+
+def _scope_facts(body: str) -> dict[str, str]:
+    facts: dict[str, str] = {}
+    if "đại học chính quy" in body.casefold():
+        facts["applies_to"] = "undergraduate"
+    if cohort := re.search(r"\bK\d{2,}\b", body, re.IGNORECASE):
+        facts["cohort"] = cohort.group().upper()
+    if academic_year := re.search(r"\b20\d{2}\s*[-–]\s*20\d{2}\b", body):
+        facts["academic_year"] = academic_year.group().replace("–", "-").replace(" ", "")
+    return facts
 
 
 def _mapping(value: object, field: str) -> Mapping[str, object]:
@@ -167,7 +179,7 @@ def extract_facts(body: str, case_id: str) -> Extraction:
             extraction = Extraction(
                 language=_language(data.get("language")),
                 requests=[_request(request) for request in requests],
-                critical_facts=_facts(data.get("critical_facts")),
+                critical_facts={**_facts(data.get("critical_facts")), **_scope_facts(body)},
                 missing_critical_facts=_strings(
                     data.get("missing_critical_facts"), "missing_critical_facts"
                 ),
