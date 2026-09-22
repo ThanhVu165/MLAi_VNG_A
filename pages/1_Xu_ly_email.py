@@ -8,11 +8,13 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
+from urllib.parse import quote
 
 import streamlit as st
 
+from corpus.api import get_chunk
 from core.pipeline import process_case
-from core.types import CaseInput, PipelineResult
+from core.types import CaseInput, Decision, PipelineResult
 
 
 logger = logging.getLogger(__name__)
@@ -63,12 +65,57 @@ def run_case(case_input: CaseInput) -> tuple[PipelineResult, int]:
     return result, elapsed_ms
 
 
+def render_decision(result: PipelineResult) -> None:
+    """Hiển thị huy hiệu quyết định và lý do từ Policy Engine."""
+    if result.decision.decision is Decision.AUTO_REPLY:
+        st.success("Trả lời tự động")
+    elif result.decision.decision is Decision.ESCALATE:
+        st.warning("Chuyển tiếp chuyên viên")
+    else:
+        st.error("Dữ liệu đầu vào chưa hợp lệ")
+    st.write(f"Quy tắc áp dụng: {result.decision.rule_id}")
+    st.write(f"Lý do: {result.decision.reason}")
+
+
+def render_draft(result: PipelineResult) -> None:
+    """Hiển thị nguyên văn bản nháp khi pipeline tạo được email."""
+    if result.draft is None:
+        st.info("Chưa có email nháp vì case cần chuyên viên xử lý tiếp.")
+        return
+    st.subheader("Nội dung email nháp")
+    st.write(f"Tiêu đề: {result.draft.subject}")
+    st.text(result.draft.body)
+
+
+def render_citations(result: PipelineResult) -> None:
+    """Hiển thị mỗi trích dẫn cùng breadcrumb và nguyên văn điều khoản."""
+    citation_ids = (
+        result.draft.citations if result.draft is not None else result.decision.evidence_ids
+    )
+    if not citation_ids:
+        st.info("Case này không có trích dẫn quy định để tự động trả lời.")
+        return
+    st.subheader("Căn cứ quy định")
+    for citation_id in citation_ids:
+        chunk = get_chunk(citation_id)
+        if chunk is None:
+            st.warning(f"Không mở được trích dẫn {citation_id} trong corpus đang hiệu lực.")
+            continue
+        with st.expander(f"{chunk.breadcrumb} · {chunk.chunk_id}"):
+            st.write(chunk.text)
+
+
 def render_result(result: PipelineResult, elapsed_ms: int) -> None:
-    """Hiển thị kết quả tối thiểu; trang kết quả chi tiết được bổ sung ở C-10."""
+    """Hiển thị kết quả có căn cứ và đường dẫn sang audit của case."""
     st.success("Đã xử lý email.")
+    render_decision(result)
     st.write(f"Thời gian xử lý: {elapsed_ms} ms")
-    st.write(f"Quyết định: {result.decision.decision} · Quy tắc: {result.decision.rule_id}")
     st.write(f"Mã case: {result.case_id} · Trạng thái: {result.status}")
+    st.write(f"Phiên bản corpus: {result.corpus_version}")
+    render_draft(result)
+    render_citations(result)
+    audit_url = f"/Nhat_ky_kiem_toan?case_id={quote(result.case_id)}"
+    st.link_button("Mở nhật ký kiểm toán của case", audit_url)
     with st.expander("Thời gian theo bước R1–R13"):
         for step in STEP_NAMES:
             st.write(f"{step}: {result.step_latencies_ms.get(step, 0)} ms")
