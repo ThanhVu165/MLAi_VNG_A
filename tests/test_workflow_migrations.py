@@ -62,6 +62,20 @@ def test_claimed_current_schema_cannot_hide_missing_workflow_table(tmp_path: Pat
         initialize_database(path)
 
 
+def test_claimed_current_schema_migrates_missing_external_id(tmp_path: Path) -> None:
+    path = tmp_path / "missing-external-id.db"
+    with sqlite3.connect(path) as connection:
+        connection.executescript(MIGRATION_PATH.read_text(encoding="utf-8"))
+        connection.executescript(MIGRATION_PATH.with_name("002_workflow.sql").read_text(encoding="utf-8"))
+        connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+
+    initialize_database(path)
+
+    with sqlite3.connect(path) as connection:
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(cases)")}
+    assert "external_id" in columns
+
+
 def test_audit_uses_callers_transaction_and_rolls_back_with_it(tmp_path: Path) -> None:
     path = tmp_path / "audit.db"
     initialize_database(path)
