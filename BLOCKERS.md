@@ -19,6 +19,8 @@
 - [C-03][Agent C] `infra/settings.py` đã có đủ ngưỡng và override environment. Chưa thể kiểm tra import, chạy `make check`, hoặc quét core/corpus vì môi trường thiếu Python/Make và hai thư mục đó chưa tồn tại.
 # BLOCKERS
 
+- [A-26/C-25][2026-09-22] Vòng lặp dependency trong TASKBOARD: A-26 yêu cầu C-25 DONE, nhưng C-25 lại chỉ DONE sau khi A-26 duyệt. Cần xác nhận cho Agent A duyệt khi C-25 đang WIP nhưng đã có đủ ba file `cases_*.json`, hoặc sửa dependency taskboard; không tự ý bỏ qua quy tắc DONE.
+
 - [A-22][Agent A][đã gỡ 2026-09-22] Agent C đã sửa type ở page 3; full mypy, Black, Ruff và 72 pytest đều xanh. Controls đã có trong commit `ceee390` trước khi merge sửa blocker.
 
 - [A-21][Agent A][đã gỡ 2026-09-22] Theo ủy quyền trực tiếp của người dùng, đã tạo `tests/test_harness.py` kiểm chứng paste/inbox/verify dùng chung `core.pipeline.process_case()` và lỗi bước trả P04.
