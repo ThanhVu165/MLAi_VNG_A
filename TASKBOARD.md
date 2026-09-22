@@ -275,7 +275,7 @@ Thứ tự khuyến nghị: A-01 → A-02..A-07 (R1) → A-08..A-10 → A-11..A-
 - **Tiêu chí:** 6 (4đ can thiệp dừng và ghi đè)
 
 ### A-23 · `explain.py` — Giải thích cho người không chuyên
-- **Trạng thái:** WIP
+- **Trạng thái:** DONE
 - **Khối:** B4 · **Ước lượng:** 1.5h · **Phụ thuộc:** A-21
 - **File:** `core/explain.py`
 - **Việc phải làm:** Sinh đoạn văn ≤ 120 từ trả lời bốn câu: hệ thống đã làm gì · vì sao quyết định như vậy · dựa trên văn bản nào (nói tên văn bản, không nói `chunk_id`) · người dùng có thể làm gì tiếp. **Không có thuật ngữ kỹ thuật**: không `rule_id`, không `similarity`, không `chunk`. Dựng chủ yếu từ dữ liệu deterministic (`reason_vi` + breadcrumb), LLM chỉ làm mượt câu chữ. Ghi audit `EXPLAIN_REQUESTED`.
