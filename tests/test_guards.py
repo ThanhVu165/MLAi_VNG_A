@@ -810,7 +810,9 @@ def test_resume_uses_human_reason_without_inventing_rules(monkeypatch, tmp_path)
     assert "nộp quá hạn 2 ngày" in draft.body
     assert "Điều" not in draft.body and "quy định" not in draft.body.lower()
     assert draft.grounded and row is not None and row["status"] == CaseStatus.PENDING_APPROVAL
-    assert saved_draft is not None and saved_draft["kind"] == "resume" and saved_draft["grounded"] == 1
+    assert (
+        saved_draft is not None and saved_draft["kind"] == "resume" and saved_draft["grounded"] == 1
+    )
     assert [event.action for event in events] == ["CASE_RESUMED"]
 
 
