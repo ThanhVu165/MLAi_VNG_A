@@ -1,120 +1,29 @@
-[H+00][Agent C] S-02 đã có ACK A/B · chặn bởi môi trường thiếu Python/Make để chạy migration và make check
-[H+00][Agent C] xong S-02 · migration tạo đủ bảng và ACTIONS là frozenset · không bị chặn
-[H+00][Agent C] xong C-02 · SQLite WAL, migration và chuẩn UTC/+07:00 đã kiểm tra đồng thời · không bị chặn
-[H+00][Agent C] xong C-03 · mọi ngưỡng có tên và override môi trường đã kiểm tra · không bị chặn
-[H+00][Agent C] xong C-04 · LLM live/replay/record, cache và fail-safe đã kiểm tra offline · không bị chặn
-[H+00][Agent C] C-01 đã cấu hình cục bộ và tạo nhánh · chặn bởi GitHub chưa đăng nhập, thiếu Python/Make để kiểm tra
-[H+00][Agent C] đang làm C-03 · tập trung các ngưỡng có thể override qua môi trường · không bị chặn
-[H+00][Agent C] C-03 đã đặt đủ ngưỡng trong settings · chặn bởi thiếu Python/Make và core/corpus chưa có để kiểm tra
-[H+00][Agent C] đang duy trì S-09 · đã tạo sổ giới hạn với các quan sát thực tế ban đầu · không bị chặn
-[H+00][Agent C] đã thêm infra.db.to_utc_iso · Agent A dùng hàm này cho cases.received_at, không dùng now_iso()
-[H+00][Agent C] đã sửa typing trang Audit · mypy --ignore-missing-imports . xanh (20 file) · Agent A có thể tiếp tục A-02
-[H+00][Agent A] đang làm A-01 · chặn bởi `make check` chưa khả dụng (thiếu Makefile, mypy).
-[H+00][Agent A] xong A-14 · ba YAML chính sách đã kiểm tra xanh.
-[H+00][Agent A] xong A-01 · pipeline fail-safe đã kiểm tra xanh.
-[H+00][Agent A] đang làm A-02 · chặn bởi 17 lỗi mypy có sẵn ở page 4 của Agent C.
-[H+00][Agent A] xong A-02 · intake lưu case/audit và khóa corpus_version · full check xanh.
-[H+00][Agent A] xong A-03 · sanitize HTML, quote, chữ ký và NFC đã kiểm tra xanh.
-[H+00][Agent A] A-08 · prompt/schema và mapper xanh; schema tương thích SDK, nhưng chờ Agent C cấu hình model Gemini khả dụng để kiểm chứng 8 email LLM.
-[H+00][Agent A] xong A-08 · Gemini 3.5 Flash xác thực thật schema 8/8, domain 8/8.
-[H+00][Agent A] A-04 · heuristic vi/en/other đạt 10/10, chờ full check ngoài phạm vi A xanh để DONE.
-[H+00][Agent A] xong A-04 · heuristic vi/en/other đạt 10/10; full check xanh sau ngoại lệ typing indexer được người dùng ủy quyền.
-[H+00][Agent A] xong A-05 · mask MSSV, CCCD, SĐT và email; body_raw giữ nguyên, body_masked và audit không lộ PII.
-[H+00][Agent A] xong A-06 · tước prompt injection trước R2, bật cờ local và audit đoạn đã mask PII.
-[H+00][Agent A] xong A-09 · parse retry đúng một lần, timeout/parse ghi llm_error và audit fail-safe; P04 sẽ tiêu thụ tín hiệu này ở A-13.
-[H+00][Agent A] xong A-10 · R3 khóa AUTHORITY_REQUIRED theo bốn cờ thẩm quyền, không chặn retrieval/evidence.
-[H+00][Agent C] bắt đầu C-05 · hoàn thiện API audit và kiểm tra chuỗi event · không bị chặn
-[H+00][Agent C] xong C-05 · audit validate action/reason, lưu UTC và truy vấn chuỗi event đã kiểm tra · không bị chặn
-[H+00][Agent C] bắt đầu C-06 · tính telemetry trực tiếp từ SQLite, không lưu bản sao · không bị chặn
-[H+00][Agent C] xong C-06 · 15 case kiểm chứng các tỷ lệ, latency và thời gian duyệt từ SQLite · không bị chặn
-[H+00][Agent C] bắt đầu C-16 · trang tra cứu audit có lọc và liên kết theo case_id · không bị chặn
-[H+00][Agent C] xong C-16 · bảng audit lọc được đầy đủ event và xem chi tiết theo múi giờ +07:00 · không bị chặn
-[H+00][Agent C] bắt đầu C-23 · trang đo lường nội bộ với công thức cạnh từng chỉ số · không bị chặn
-[H+00][Agent C] xong C-23 · tám nhóm chỉ số và công thức hiển thị trực tiếp cho Slide 3/5 · không bị chặn
-[H+00][Agent C] đang làm C-25 bản nháp · soạn 15 case từ corpus seed, chờ A-26 duyệt kỳ vọng · không bị chặn
-[H+00][Agent C] C-25 đã có JSON nháp 4+5+15 case · chờ Agent A duyệt A-26 trước khi DONE
-[H+00][Agent C] C-25 hoàn tất · Agent A duyệt 14 case và xác nhận F02 dùng guard R1; đã bỏ nhãn bản nháp khỏi rationale · Black/Ruff/Mypy xanh
-[H+00][Agent C] đang làm C-19 · nút Verify riêng chạy tuần tự V01–V04 · không bị chặn
-[H+00][Agent C] C-19 đã có nút và bảng 4 case · chặn 4 PASS/<60s vì cassette replay V01–V04 chưa có, live vượt thời hạn · 75 test xanh
-[H+00][Agent C] đang làm C-20 · nút riêng E01–E05 và cột câu hỏi chuyển tiếp · không bị chặn
-[H+00][Agent C] đang làm C-08 · vẽ và nhúng cùng SVG cho homepage/Slide 2 · không bị chặn
-[H+00][Agent B] B-01 đã hoàn tất facade corpus giả 12 chunk · B-02 chờ S-02 DONE
-[H+00][Agent B] B-02 đã hoàn tất CRUD nguồn/chunk/version · 7 test xanh · full check còn lỗi format/cấu hình Mypy ngoài phạm vi B
-[H+00][Agent B] B-03 đã hoàn tất nạp file/text/URL, chống trùng SHA-256 và audit · full check 15 test xanh
-[H+00][Agent B] B-04 đã hoàn tất trích xuất PDF/DOCX, bỏ lề lặp và giữ Điều/Khoản/Điểm · 17 test xanh
-[H+00][Agent B] B-16 đã hoàn tất kiểm tra thủ công URL nguồn, tạo bản PENDING_REVIEW khi đổi và ghi audit · 18 test xanh
-[H+00][Agent B] B-05 đã hoàn tất đề xuất metadata LLM từ 3.000 ký tự đầu, giữ dữ liệu không chắc là null · 19 test xanh
-[H+00][Agent B] B-07 đã hoàn tất chunk theo Điều/Khoản/Điểm, giữ breadcrumb và tách Khoản dài trên 800 token · 20 test xanh
-[H+00][Agent B] B-06 đã hoàn tất form metadata, validate và audit diff trường đã sửa · 21 test xanh
-[H+00][Agent B] B-08 đã ghi cờ conflict và lịch supersede; chờ B-12/A-12 nối runtime OUT_OF_POLICY · 22 test xanh
-[H+00][Agent B] B-09 đã hoàn tất gán nhãn thẩm quyền từng chunk, con người chủ động đổi và có audit · 23 test xanh
-[H+00][Agent B] B-12 đã hoàn tất index hybrid BM25/vector chỉ trên nguồn ACTIVE, cache Streamlit và loại ngay tài liệu hạ cấp · 26 test xanh
-[H+00][Agent B] B-15 đã hoàn tất 6 tài liệu seed (72 chunk, 42 auto/30 human, is_synthetic=true) · Black/Ruff và 14 test chunker xanh; mypy bị chặn ở numpy stub ngoài phạm vi B
-[H+00][Agent B] Đã nối corpus.api vào index/nguồn ACTIVE thật · 16 test, Black/Ruff/Mypy mục tiêu xanh · chờ Agent A dùng conflict_flag để hoàn tất B-08
-[H+00][Agent B] B-10 đã hoàn tất hàng chờ duyệt, diff và lý do bắt buộc · 2 test lifecycle xanh
-[H+00][Agent B] đang làm B-13 · thêm audit SUPERSEDE_SOURCE khi kích hoạt nguồn thay thế
-[H+00][Agent B] B-13 hoàn tất supersede, giữ nguồn cũ để audit và loại khỏi index · 54 test xanh
-[H+00][Agent B] đang làm B-17 · ráp bốn tab quản trị quy định
-[H+00][Agent B] B-17 hoàn tất bốn tab quản trị, dữ liệu corpus/nhật ký hiển thị trực tiếp · 54 test xanh
-[H+00][Agent B] đang làm B-14 · quét case dùng nguồn bị thay và rollback có audit
-[H+00][Agent B] B-14 hoàn tất rollback và gắn NEEDS_RECHECK cho case 30 ngày bị ảnh hưởng · 5 test lifecycle xanh
-[H+28][Checkpoint S-05] BLOCKED · đã sửa runtime PyTorch/regex/scipy/scikit-learn cho Python 3.11; embedding, corpus ACTIVE và Gemini live chạy được. Case điểm rèn luyện đi hết pipeline với rule P02/audit 12 event, nhưng retrieval trộn chunk HUMAN_ONLY phân cấp vào câu hỏi thường quy nên R5 hạ P02, chưa có citation ACTIVE/UI auto-result để xác nhận.
-[H+28][Checkpoint S-05] DONE · email điểm rèn luyện live (K48, đại học chính quy, 2026-2027) xử lý đầu-cuối khoảng 29 giây qua Paste UI: P05, evidence OK, 4 citation ACTIVE, 9 audit event và không có exception UI.
-[H+00][Agent A] A-07 đã hoàn tất ba chốt R1: invalid input không vào hàng chờ, ngoài vi/en chuyển OUT_OF_POLICY · 41 test xanh
-[H+00][Agent A] A-11 đã hoàn tất adapter R4 qua corpus.api, audit chunk_id và fail-safe corpus rỗng/lỗi · 44 test xanh
-[H+00][Agent A] A-12 đã hoàn tất bảy kiểm tra evidence theo thứ tự, audit mọi failed_checks · 47 test xanh
-[H+00][Agent B] xong B-11 · kích hoạt nguồn ghi actor/lý do/audit, hạ nguồn theo lịch, tăng corpus_version và làm mới kết quả index · không bị chặn
-[H+00][Agent A] A-13 đã hoàn tất Policy Engine YAML với parser whitelist, P01–P05 và P04 fail-safe · 53 test xanh
-[H+16][S-04] Checkpoint lõi: smoke A/C 5 passed, corpus B 19 passed; A và B đúng tiến độ, C hoàn tất C-05 nhưng rủi ro H28. Chuyển ưu tiên C từ C-25 (chờ A-26) sang C-07→C-10 và C-18; hoãn C-21, B-13 và B-14 tới sau H42 nếu cần cắt thêm.
-[H+00][Agent A] A-15 đã hoàn tất sinh draft chỉ từ evidence, citation mỗi đoạn và đúng ngôn ngữ · 55 test xanh
-[H+00][Agent A] A-17 đã hoàn tất thẻ escalation bốn khối, facts/evidence và câu hỏi có phương án · 56 test xanh
-[H+00][Agent A] A-16 đã hoàn tất Groundedness Guard, hạ cấp P04 và giữ nguyên draft khi fail · 59 test xanh
-[H+00][Agent A] A-18 đã hoàn tất Question Guard, retry một lần rồi fallback YAML khi vẫn lỗi · 61 test xanh
-[H+00][Agent A] A-24 đã hoàn tất một card đa ý định với partial draft và phần cần thẩm quyền · 62 test xanh
-[H+00][Agent A] A-19 đã hoàn tất lifecycle PENDING_SEND DB, hủy gửi, gửi mô phỏng và Correction Email liên kết · 65 test xanh
-[H+00][Agent A] A-21 đang chặn bởi `tests/test_harness.py` ngoài phạm vi A; đã ghi BLOCKERS, chờ Agent C xác nhận đường Verify dùng chung `process_case()`
-[H+00][Agent A] A-21 đã nối R0–R14, persist state/audit/latency và test chung paste/inbox/verify · 67 test xanh
-[H+00][Agent A] A-22 code/test xong nhưng WIP do mypy lỗi 3 dòng ở pages/3_Quan_tri_quy_dinh.py ngoài phạm vi A · 71 pytest xanh
-[H+00][Agent A] A-23 renderer deterministic + audit EXPLAIN_REQUESTED xong nhưng WIP cùng blocker mypy page C · 72 pytest xanh
-[H+00][Agent C] C-08 hoàn tất · SVG nguồn duy nhất đã nhúng trên trang chủ, đánh dấu hai điểm con người quyết định · mypy xanh
-[H+00][Agent C] đang làm C-07 · hoàn thiện trang chủ và điều hướng tiếng Việt · không bị chặn
-[H+00][Agent C] C-07 hoàn tất · trang chủ có hướng dẫn, ô dán, nút, banner và 6 mục điều hướng tiếng Việt · 72 test xanh
-[H+00][Agent C] đang làm C-09 · nối hai đường vào cùng process_case() và hiển thị tiến trình · không bị chặn
-[H+00][Agent C] C-09 hoàn tất · paste/inbox cùng gọi process_case(), UI replay xác nhận 753 ms và 1.158 ms · Mypy/Ruff xanh
-[H+00][Agent C] đang làm C-12 · thẻ escalation bốn khối trên luồng kết quả · không bị chặn
-[H+00][Agent C] C-12 hoàn tất · thẻ bốn khối, breadcrumb mở được và lựa chọn một chạm · Black/Ruff/Mypy/74 test xanh
-[H+00][Agent C] đang làm C-15 · nút giải thích dễ hiểu tại ba màn hình · không bị chặn
-[H+00][Agent C] C-15 hoàn tất · giải thích tại ba màn hình, UI/audit xác nhận EXPLAIN_REQUESTED · Black/Ruff/Mypy/74 test xanh
-[H+00][Agent C] đang làm C-17 · thanh điều khiển quản trị toàn cục · không bị chặn
-[H+00][Agent C] C-17 hoàn tất · pause/resume UI và audit ADMIN:demo đã xác nhận · Black/Ruff/Mypy/74 test xanh
-[H+00][Agent C] đang làm C-18 · harness Verify tuần tự qua process_case() · không bị chặn
-[H+00][Agent C] C-18 hoàn tất · CLI chạy tuần tự qua pipeline và audit đủ; cassette C-25 còn thiếu nên V01–V04 replay hiện fail-safe P04 · 75 test xanh
-[H+00][Agent C] đang làm C-10 · hiển thị kết quả, trích dẫn và liên kết audit · không bị chặn
-[H+00][Agent C] C-10 hoàn tất · kết quả hiển thị quyết định, căn cứ mở rộng và liên kết audit theo case · 74 test xanh
-[H+00][Agent A] A-22 đã hoàn tất pause/resume/override/rerun và pause chặn auto-send · 72 test xanh
-[H+00][Agent A] A-23 đã hoàn tất giải thích deterministic, không thuật ngữ kỹ thuật và audit EXPLAIN_REQUESTED · 72 test xanh
-[H+00][Agent A] A-25 đã thêm hai test không được xóa: E01–E03 không over-escalate, năm lỗi không fail-open · 74 test xanh
-[H+00][Agent A] A-26 chặn bởi vòng lặp dependency với C-25; chờ xác nhận duyệt khi C-25 WIP có đủ case files
-[H+00][Agent C] C-20 đã thêm nút E01–E05, nhãn quyết định/phân loại và cột câu hỏi từ pipeline · replay thiếu cassette E01–E05 nên chưa thể xác nhận đủ kết quả thật trong 90 giây · 75 test xanh
-[H+00][Agent C] C-22 hoàn tất · bảng Verify có đầy đủ trường bắt buộc, timestamp +07:00, xuất JSON và liên kết audit theo case · Black/Ruff/Mypy/75 test xanh
-[H+00][Agent C] C-11 hoàn tất · đếm ngược đọc deadline DB, Hủy gửi/Chuyển cho người và Correction Email hoạt động; audit Hủy gửi là HUMAN:demo · Black/Ruff/Mypy/75 test xanh
-[H+00][Agent A] A-26 hoàn tất · đã duyệt căn cứ 15 case độc lập với code; C-25 đã chốt F02 dùng guard R1 và ba file Verify · 75 pytest/Ruff xanh, Black/mypy còn blocker ngoài phạm vi A
-[H+00][Agent A] S-05 bị chặn · smoke test Paste với email điểm rèn luyện dừng ở tải model embedding corpus 0 byte; chưa có kết quả/citation/audit đủ 8 event · không cắt tính năng
-[H+00][Agent A] A-20 hoàn tất · R11 chỉ diễn đạt quyết định/lý do của người, guard rút gọn authority + citation ratio, lưu draft resume/PENDING_APPROVAL/audit CASE_RESUMED · 77 pytest xanh
+# Project Status
 
-[H+00][Agent C] C-13 đã triển khai hàng chờ, ghi shown_at/decided_at và audit HUMAN_DECISION; 75 test xanh · chờ xác nhận thao tác UI do runtime trình duyệt Windows lỗi ownership
-[H+00][Agent C] S-05 smoke test thật trượt · Gemini DeadlineExceeded ở R2 sau >30s; case PROCESSING, 4/8 audit event, chưa có rule/citation/UI · theo Phụ lục cần dừng tính năng mới và ưu tiên sửa đường demo
+Roadmap: [docs/SPRINT_ROADMAP.md](docs/SPRINT_ROADMAP.md)
 
-[H+00][Agent C] C-13 hoàn tất · hàng chờ AWAITING_HUMAN tăng dần theo thời gian chờ; chặn lý do rỗng tại UI và tầng ghi; lưu shown_at/decided_at và audit nguyên văn lý do · Black/Ruff/Mypy/75 pytest xanh
-[H+00][Agent C] đang làm C-14 · preview/dựng lại email, Ground Guard rút gọn và duyệt gửi do HUMAN:demo kích hoạt đã có; Black/Ruff toàn repo và 6 test lifecycle xanh · chặn bởi mypy/full pytest không trả kết quả, UI helper reset
-[H+00][Agent C] xong C-14 · escalation dừng ở PENDING_APPROVAL và chỉ HUMAN:demo bấm Duyệt và gửi mới thành SENT; Black/Ruff toàn repo và 6 test lifecycle xanh · full pytest treo ở test R0 core, mypy/UI end-to-end chưa xác nhận
-[2026-09-22][Agent C] C-30 DONE · docs/bo_15_ca_kiem_thu.md khớp 15 case đã duyệt; sửa loader nhận body rỗng F01 và CLI trả exit 1 khi FAIL · Python 3.11: Black/Ruff/mypy xanh, pytest replay/offline 94 passed. Chạy full15 thực trên DB tạm: 3 PASS/12 FAIL; E04 PASS theo decision/type nhưng P04 lệch P03, không coi Sprint 1 đạt.
-[2026-09-22][Agent C] C-31 DONE · bổ sung phân loại P01/P02/P03/P04/R1, đối chiếu 7 ca escalation và tách F01 INVALID_INPUT; làm rõ label là quyền quản trị, không phải trường của văn bản pháp lý · không đổi enum/policy/schema/audit; parity test vẫn xanh.
-[2026-09-22][Agent B] B-19 DONE · sáu seed chỉ đổi issuer/text; giữ nguyên mọi dòng điều/khoản/điểm cũ, ngày/domain/status/quyền · 6 nguồn/72 chunk, 42 auto/30 human; QDPQ human_only, conflict chỉ Điều 3 RH/HP · 20 test seed/chunker/conflict xanh; full check 94 passed. Seed mới đã chạy trên DB tạm; không ghi đè corpus local hiện hữu.
-[2026-09-22][Agent C] C-32 DONE · trang chủ/page email không bịa sender/subject, truyền nguyên văn và timestamp UTC; inbox dùng received_at cố định trong seed · 9 test AppTest bấm form thật/đọc DB, không mock process_case; kiểm tra handoff không xử lý lại khi rerun · Black/Ruff/mypy toàn repo xanh; pytest replay/offline 94 passed. Không đổi contract, không push.
+Current Sprint: **M1 — Runtime & LLM Reliability**
 
-[2026-09-22][S-12/A-27/B-20/C-33] Đợt tái cấu trúc theo kế hoạch người dùng: email đầy đủ → trích xuất → chọn căn cứ → trả lời/đặt câu hỏi → xử lý nền/duyệt gửi; lỗi kỹ thuật tách khỏi chuyển tiếp nghiệp vụ. DB v2 có backup, bản gốc, kết quả và hàng công việc; nguồn duyệt theo văn bản, không theo nhãn đoạn. UI năm mục tiếng Việt, trạng thái đọc DB. Mã mới đang chốt, chưa nghiệm thu và chưa commit hoàn tất.
-[2026-09-22][S-13] Người dùng yêu cầu hoàn thành tái cấu trúc trước, kiểm thử end-to-end sau. Đã dừng chạy thêm kiểm thử và gọi LLM thử nghiệm; tiếp tục chỉ đọc/sửa mã, đặc tả và regression chưa chạy. Các số kiểm thử xanh của C-32 hoặc lượt trước không xác nhận bản mã này đạt Sprint 1A. Gemini giữ gemini-3.5-flash-lite, không tự chuyển mô hình để né lỗi.
-[2026-09-22][A-27/B-20/C-33] Đã ghép bàn giao mã của ba phần: xử lý email và soạn theo quyết định dùng hàng công việc; thao tác hủy/chuyển/ghi đè/gửi có bảo vệ và audit; duyệt/kích hoạt nguồn có giao dịch; UI lưu/hiển thị trạng thái từ DB. Chốt đợt chỉnh sửa tại đây, không mở rộng thêm; trạng thái WIP chỉ còn chờ kiểm chứng và commit hoàn tất, không phải bằng chứng đã đạt nghiệm thu.
-[2026-09-23][C-33] Sửa DB v2 bị thiếu `cases.external_id`: migration tạo backup rồi bổ sung cột; regression 6/6 và thao tác email minh họa không còn lỗi schema.
-[2026-09-23][C-33] Thay SDK Gemini legacy bằng `google-genai`, default `gemini-3.6-flash`, timeout 30s và retry 5xx một lần; JSON smoke live thành công sau 5.43s.
+Current Micro-task: **M1.2 — Provider observability**
+
+M1 Gate: **TECHNICAL_FAILURE <= 1/15 on full15 LIVE**
+
+M1 Gate Status: **NOT EVALUATED AFTER RELIABILITY FIX**; M1 chưa PASS.
+
+## Progress
+
+- M1.1 DONE
+- M1.2 NEXT
+- M1.3 NOT STARTED
+- M1.4 NOT STARTED
+- M1.5 NOT STARTED
+- M1.6 NOT STARTED
+
+## Current Evidence
+
+- Python 3.11.9 verified.
+- Gemini credential/auth fixed; R2 diagnostic probe PASS.
+- POST-AUTH full15 = 4 PASS / 11 FAIL.
+- 11 FAIL đều TECHNICAL_ERROR.
+
+Detailed sprint report: [reports/sprints/M1_runtime_reliability.md](reports/sprints/M1_runtime_reliability.md)
