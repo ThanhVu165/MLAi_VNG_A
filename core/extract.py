@@ -27,6 +27,31 @@ asks_appeal, asks_exception, asks_authority_decision đều false. Chỉ đặt 
 Hỏi cách tra cứu kết quả, cách nộp phúc khảo hay ai có quyền duyệt không cần xem hồ sơ.
 Xin miễn điều kiện, xin nộp muộn, xin sửa điểm cá nhân mới là yêu cầu quyết định.
 
+Hỏi quy định nào áp dụng là hỏi thông tin về phạm vi áp dụng, kể cả áp dụng cho cá nhân.
+Ví dụ: "Quy định đánh giá điểm rèn luyện nào đang áp dụng cho em?"
+→ is_informational=true, requires_personal_record=false, asks_exception=false,
+asks_appeal=false, asks_authority_decision=false.
+Cần biết cohort, semester, academic_year hoặc applies_to không tự có nghĩa là cần xem hồ sơ
+riêng tư hay xin quyết định của người có thẩm quyền. Chỉ ghi dữ kiện email đã nêu;
+giữ missing_critical_facts=[] ở bước này, để bước đọc căn cứ xác định dữ kiện còn thiếu.
+Nếu email có yêu cầu riêng về tra cứu hồ sơ, ngoại lệ, phúc khảo, phê duyệt, miễn điều kiện
+hoặc quyết định có thẩm quyền, vẫn tách yêu cầu đó và giữ các cờ tương ứng; không xóa cờ.
+
+requires_personal_record=true chỉ khi trả lời cần xem trạng thái hồ sơ cá nhân riêng tư,
+không chỉ là dữ kiện sinh viên có thể nêu trong email.
+"Điểm rèn luyện hiện tại của em trên hệ thống là bao nhiêu?" cần xem hồ sơ cá nhân.
+"Quy định nào áp dụng cho sinh viên K49?" không cần xem hồ sơ cá nhân.
+Các từ "cho em", "áp dụng cho em", "trường hợp của em" riêng lẻ không chứng minh cần xem hồ sơ.
+
+asks_authority_decision=true chỉ khi sinh viên xin trường hoặc người có thẩm quyền phê duyệt,
+từ chối, quyết định, miễn điều kiện, cho phép hoặc chấp thuận ngoại lệ cho hồ sơ của mình.
+"Quy định nào đang áp dụng cho em?" → asks_authority_decision=false.
+"Em đã quá hạn, xin trường chấp thuận cho em rút học phần." → asks_authority_decision=true.
+"Cho em hỏi ai có quyền duyệt phúc khảo?" chỉ hỏi thông tin: is_informational=true,
+requires_personal_record=false, asks_exception=false, asks_appeal=false, asks_authority_decision=false.
+Yêu cầu phúc khảo thực tế, xin ngoại lệ, tra cứu hồ sơ cá nhân hoặc xin phê duyệt vẫn giữ
+các cờ tương ứng; không coi chúng là câu hỏi thông tin về phạm vi áp dụng.
+
 Email:
 {body}"""
 
