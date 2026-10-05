@@ -62,6 +62,10 @@ QUESTION_SCHEMA: dict[str, object] = {
 }
 
 
+class BasisValidationError(ValueError):
+    """Quote không có provenance nguyên văn, liên tục trong evidence đã lọc."""
+
+
 def _strings(value: object, field: str) -> list[str]:
     if not isinstance(value, list) or not all(
         isinstance(item, str) and item.strip() for item in value
@@ -100,7 +104,7 @@ def _basis(value: object, evidence: EvidenceResult) -> list[tuple[str, str]]:
         quote = _string(item.get("quote"), "basis.quote")
         chunk = chunks.get(chunk_id)
         if chunk is None or quote not in chunk.text:
-            raise ValueError("basis phải trỏ tới trích dẫn thuộc evidence.")
+            raise BasisValidationError("basis phải trỏ tới trích dẫn thuộc evidence.")
         basis.append((chunk.breadcrumb, quote))
     return basis
 
@@ -118,15 +122,16 @@ def generate_escalation_card(
 ) -> EscalationCard:
     """Gọi LLM để tạo bốn khối escalation từ dữ liệu đã lọc."""
     known_facts, missing_facts = _facts(extraction)
+    prompt = QUESTION_PROMPT_V1.format(
+        escalation_type=escalation_type.value,
+        known_facts=known_facts,
+        missing_facts=missing_facts,
+        evidence=_evidence(evidence),
+        email=strip_prompt_injection(f"{inp.subject}\n{inp.body}").body,
+        requests="; ".join(request.intent for request in extraction.requests),
+    )
     result = call_json(
-        QUESTION_PROMPT_V1.format(
-            escalation_type=escalation_type.value,
-            known_facts=known_facts,
-            missing_facts=missing_facts,
-            evidence=_evidence(evidence),
-            email=strip_prompt_injection(f"{inp.subject}\n{inp.body}").body,
-            requests="; ".join(request.intent for request in extraction.requests),
-        ),
+        prompt,
         schema=QUESTION_SCHEMA,
         step="R7_question",
         case_id=case_id,
@@ -134,7 +139,22 @@ def generate_escalation_card(
     )
     if not result.ok:
         raise ValueError(result.error or "LLM không tạo được câu hỏi chuyển tiếp.")
-    basis = _basis(result.data.get("basis"), evidence)
+    try:
+        basis = _basis(result.data.get("basis"), evidence)
+    except BasisValidationError:
+        repair = call_json(
+            prompt + "\nSửa basis: mỗi quote phải sao chép nguyên văn MỘT substring liên tục "
+            "trong chunk được tham chiếu. Không nối các đoạn riêng biệt, không bỏ nhãn "
+            'cấu trúc như "Điểm a)", không diễn đạt lại. Chọn một câu nguyên văn nếu cần.',
+            schema=QUESTION_SCHEMA,
+            step="R7_question_repair",
+            case_id=case_id,
+            temperature=0.0,
+        )
+        if not repair.ok:
+            raise ValueError(repair.error or "LLM không sửa được căn cứ câu hỏi chuyển tiếp.")
+        basis = _basis(repair.data.get("basis"), evidence)
+        result = repair
     card = EscalationCard(
         summary=_string(result.data.get("summary"), "summary"),
         facts=_strings(result.data.get("facts"), "facts"),
@@ -221,8 +241,10 @@ def generate_multi_intent_card(
     card.partial_draft = partial_draft
     card.facts.insert(
         0,
-        "Đã chuẩn bị phần trả lời thông tin; phần còn lại chờ chuyên viên quyết định."
-        if partial_draft.grounded
-        else "Phần trả lời đã soạn chưa đủ căn cứ; chuyên viên cần kiểm tra trước khi dùng.",
+        (
+            "Đã chuẩn bị phần trả lời thông tin; phần còn lại chờ chuyên viên quyết định."
+            if partial_draft.grounded
+            else "Phần trả lời đã soạn chưa đủ căn cứ; chuyên viên cần kiểm tra trước khi dùng."
+        ),
     )
     return card
