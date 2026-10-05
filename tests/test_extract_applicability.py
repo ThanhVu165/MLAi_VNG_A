@@ -13,6 +13,7 @@ from core.types import (
     EscalationType,
     EvidenceResult,
     EvidenceStatus,
+    Extraction,
     RequestItem,
 )
 from infra import db
@@ -22,18 +23,22 @@ from infra.llm import LLMResult
 def test_prompt_distinguishes_applicability_record_access_and_approval() -> None:
     prompt = extract.EXTRACT_PROMPT_V1.format(body="EMAIL_SENTINEL")
     assert prompt.endswith("Email:\nEMAIL_SENTINEL")
+    assert "điểm rèn luyện" not in prompt.casefold()
+    assert "quy định nào đang áp dụng cho em" not in prompt.casefold()
+    assert "xin trường chấp thuận cho em rút học phần" not in prompt.casefold()
     for contract in (
-        '"Quy định đánh giá điểm rèn luyện nào đang áp dụng cho em?"\n'
+        '"Quy định học phí nào áp dụng cho sinh viên chương trình liên kết?"\n'
         "→ is_informational=true, requires_personal_record=false, asks_exception=false,\n"
         "asks_appeal=false, asks_authority_decision=false.",
         "Cần biết cohort, semester, academic_year hoặc applies_to không tự có nghĩa là cần xem hồ sơ",
         "giữ missing_critical_facts=[] ở bước này",
         "requires_personal_record=true chỉ khi trả lời cần xem trạng thái hồ sơ cá nhân riêng tư",
-        '"Điểm rèn luyện hiện tại của em trên hệ thống là bao nhiêu?" cần xem hồ sơ cá nhân.',
-        '"Quy định nào áp dụng cho sinh viên K49?" không cần xem hồ sơ cá nhân.',
+        '"Học phí còn nợ của em trên hệ thống là bao nhiêu?" cần xem hồ sơ cá nhân.',
+        '"Chính sách học bổng nào áp dụng cho sinh viên năm nhất?" không cần xem hồ sơ cá nhân.',
         'Các từ "cho em", "áp dụng cho em", "trường hợp của em" riêng lẻ không chứng minh cần xem hồ sơ.',
         "asks_authority_decision=true chỉ khi sinh viên xin trường hoặc người có thẩm quyền phê duyệt",
-        '"Em đã quá hạn, xin trường chấp thuận cho em rút học phần." → asks_authority_decision=true.',
+        '"Sinh viên chương trình liên kết đóng học phí theo văn bản nào?" → asks_authority_decision=false.',
+        '"Em xin được miễn học phí kỳ này, mong trường phê duyệt." → asks_authority_decision=true.',
         '"Cho em hỏi ai có quyền duyệt phúc khảo?" chỉ hỏi thông tin: is_informational=true,\n'
         "requires_personal_record=false, asks_exception=false, asks_appeal=false, asks_authority_decision=false.",
         "vẫn tách yêu cầu đó và giữ các cờ tương ứng; không xóa cờ.",
@@ -55,7 +60,7 @@ def test_prompt_distinguishes_applicability_record_access_and_approval() -> None
             "Em đã quá hạn nhưng xin được miễn điều kiện và cho rút học phần vì hoàn cảnh gia đình. "
             "Mong trường quyết định chấp thuận cho hồ sơ của em.",
             Domain.COURSE_WITHDRAWAL,
-            (False, True, True, False, True),
+            (False, False, True, False, True),
             EvidenceStatus.FACT_MISSING,
             "P01",
         ),
@@ -131,3 +136,31 @@ def test_intended_extraction_preserves_flags_and_downstream_policy(
     assert decision.rule_id == expected_rule
     assert decision.escalation_type == expected_type
     assert decision.decision is (Decision.AUTO_REPLY if expected_rule == "P05" else Decision.ESCALATE)
+
+
+def test_mixed_applicability_preserves_separate_authority_request(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "offline.db")
+    informational = RequestItem(
+        Domain.COURSE_WITHDRAWAL, "Hỏi quy định rút học phần áp dụng cho K49",
+        True, False, False, False, False,
+    )
+    authority = RequestItem(
+        Domain.COURSE_WITHDRAWAL, "Xin miễn điều kiện để được rút học phần",
+        False, False, True, False, True,
+    )
+    extraction = Extraction("vi", [informational], {}, [], False, "{}")
+    assert decision_lock(extraction) is None
+    extraction.requests.append(authority)
+    lock = decision_lock(extraction)
+    assert lock is EscalationType.AUTHORITY_REQUIRED
+    evidence = EvidenceResult(EvidenceStatus.FACT_MISSING, [], ["facts"])
+    decision = decide_policy(
+        PolicyInput("mixed-case", "SYSTEM", "cv_test", lock, evidence, False, False, False, False)
+    )
+    assert extraction.requests == [informational, authority]
+    assert authority.requires_personal_record is False
+    assert authority.asks_exception is True
+    assert authority.asks_authority_decision is True
+    assert decision.decision is Decision.ESCALATE
+    assert decision.rule_id == "P01"
+    assert decision.escalation_type is EscalationType.AUTHORITY_REQUIRED
