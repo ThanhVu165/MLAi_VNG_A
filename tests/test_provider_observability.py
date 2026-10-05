@@ -42,7 +42,9 @@ def offline(monkeypatch):
         "AIza" + "a" * 35,
         "Bearer short-bearer",
         "student@example.test",
+        "12345678901",
         "012345678901",
+        "0912345678",
         "password=short-password",
         "token: short-token",
         "secret='short-secret'",
@@ -95,6 +97,31 @@ def test_safe_metadata_survives_but_payloads_headers_and_unknown_fields_do_not()
     assert safe["error"]["message"] == "Quota exceeded"
     assert safe["error"]["details"][0]["reason"] == "RATE_LIMIT_EXCEEDED"
     assert "hidden" not in json.dumps(safe)
+
+
+def test_exception_diagnostic_redacts_all_repo_pii_patterns():
+    pii = ("student@example.edu", "12345678901", "012345678901", "0912345678")
+    joined = " ".join(pii)
+
+    class ProviderError(Exception):
+        message = f"Invalid input: {joined}"
+        status = "INVALID_ARGUMENT"
+        reason = "INVALID_SCHEMA"
+        details = {
+            "error": {
+                "code": 400,
+                "status": status,
+                "message": joined,
+                "details": [{"reason": reason, "domain": "googleapis.com"}],
+            }
+        }
+
+    diagnostic = exception_diagnostic(ProviderError(), prompt="private")
+    rendered = json.dumps(diagnostic)
+    assert all(value not in rendered for value in pii)
+    assert diagnostic["provider_status"] == "INVALID_ARGUMENT"
+    assert diagnostic["provider_reason"] == "INVALID_SCHEMA"
+    assert diagnostic["sanitized_details"]["error"]["code"] == 400
 
 
 def test_prompt_json_body_and_output_redaction_and_bounds():
@@ -253,6 +280,7 @@ def test_server_retry_then_success_correlates_and_preserves_request_and_result(m
     assert first["call_id"] == second["call_id"]
     assert [first["attempt_index"], second["attempt_index"]] == [1, 2]
     assert first["http_status"] == 503 and first["will_retry"] is True
+    assert first["event"] == "llm_provider_attempt" and first["retryable"] is True
     assert second["success"] is True and second["will_retry"] is False
     assert second["attempts_remaining_before"] == 3
     assert second["attempts_remaining_after"] == 2
@@ -280,6 +308,7 @@ def test_shared_budget_skips_requests_after_four_attempts(monkeypatch, caplog):
     skipped = [event for event in recorded if event["event"].endswith("skipped")]
     assert len(skipped) == 2
     assert all(event["attempts_remaining_before"] == 0 for event in skipped)
+    assert all(event["retryable"] is False and event["will_retry"] is False for event in skipped)
     assert all(event["stop_reason"] == "case_budget_or_deadline" for event in skipped)
 
 
@@ -294,10 +323,14 @@ def test_deadline_block_and_effective_timeout_are_unchanged(monkeypatch, caplog)
         assert llm._call_live("private", {}, "hash", "model", 50, 0).ok
         assert seen[0][-1] == 7
         llm._BUDGET.get().deadline = 100.0
-        assert not llm._call_live("private", {}, "hash", "model", 50, 0).ok
+        assert not llm._call_live("private", {}, "hash", "model", 50, 1).ok
         assert llm._BUDGET.get().remaining == 3
     assert len(seen) == 1
-    assert events(caplog)[-1]["event"] == "llm_provider_attempt_skipped"
+    skipped = events(caplog)[1:]
+    assert len(skipped) == 2
+    assert all(event["event"] == "llm_provider_attempt_skipped" for event in skipped)
+    assert all(event["retryable"] is False and event["will_retry"] is False for event in skipped)
+    assert all(event["stop_reason"] == "case_budget_or_deadline" for event in skipped)
     assert llm.LLM_MAX_ATTEMPTS == 4 and llm.CASE_TIMEOUT_SECONDS == 60
 
 

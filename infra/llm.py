@@ -212,8 +212,8 @@ def _call_live(
                 request_started=request_started,
                 success=False,
                 error=error,
-                retryable=transient,
-                will_retry=transient and attempt < retry_count,
+                retryable=request_started and transient,
+                will_retry=request_started and transient and attempt < retry_count,
                 stop_reason=(
                     "case_budget_or_deadline"
                     if not request_started

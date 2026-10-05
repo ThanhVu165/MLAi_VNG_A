@@ -26,7 +26,9 @@ _LABELED_VALUE = re.compile(
 _BEARER = re.compile(r"(?i)\bBearer\s+[^\s,;\"']+")
 _API_KEY = re.compile(r"AIza[A-Za-z0-9_-]{20,}")
 _EMAIL = re.compile(r"[\w.!#$%&'*+/=?^`{|}~-]+@[\w.-]+\.[A-Za-z]{2,}")
-_ID = re.compile(r"(?<!\d)\d{12}(?!\d)")
+_MSSV = re.compile(r"(?<!\d)\d{11}(?!\d)")
+_CCCD = re.compile(r"(?<!\d)\d{12}(?!\d)")
+_PHONE = re.compile(r"(?<!\d)(?:\+84|84|0)[35789]\d{8}(?!\d)")
 _OPAQUE_TOKEN = re.compile(r"\b[A-Za-z0-9_-]{32,}(?:\.[A-Za-z0-9_-]+){0,2}\b")
 _UUID = re.compile(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")
 
@@ -65,7 +67,7 @@ def _text(value: str, prompt: str | None) -> str:
         value,
         flags=re.MULTILINE,
     )
-    for pattern in (_BEARER, _API_KEY, _EMAIL, _ID, _OPAQUE_TOKEN):
+    for pattern in (_BEARER, _API_KEY, _EMAIL, _MSSV, _CCCD, _PHONE, _OPAQUE_TOKEN):
         value = pattern.sub(REDACTED, value)
     value = "".join(char if char.isprintable() else " " for char in value)
     return value[:MAX_TEXT]
