@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import inspect
+import json
 import os
+import socket
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+
+import pytest
 
 from core import pipeline
 from core.ground_guard import GroundednessResult
@@ -17,6 +22,7 @@ from core.types import (
     EvidenceChunk,
     EvidenceResult,
     EvidenceStatus,
+    EscalationType,
     Extraction,
     PolicyDecision,
     RequestItem,
@@ -136,3 +142,72 @@ def test_local_env_does_not_override_existing_environment(monkeypatch, tmp_path)
 
     assert os.environ["GOOGLE_API_KEY"] == "from-shell"
     assert os.environ["LLM_MODE"] == "replay"
+
+
+@pytest.mark.parametrize(
+    "provider,configured_model,expected_provider,expected_model",
+    [
+        ("openai", "gpt-6-luna", "openai", "gpt-6-luna"),
+        (" OPENAI ", " gpt-6-luna ", "openai", "gpt-6-luna"),
+        ("gemini", "gemini-configured", "gemini", "gemini-configured"),
+        (None, None, "gemini", "gemini-3.6-flash"),
+    ],
+)
+def test_verify_metadata_uses_production_provider_config(
+    monkeypatch, tmp_path, provider, configured_model, expected_provider, expected_model
+) -> None:
+    from verify import harness
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Network/provider/pipeline calls forbidden in metadata test")
+
+    monkeypatch.setattr(socket.socket, "connect", forbidden)
+    monkeypatch.setattr(socket, "create_connection", forbidden)
+    monkeypatch.setattr(harness, "process_case", forbidden)
+    for name in ("LLM_PROVIDER", "OPENAI_MODEL", "GEMINI_MODEL"):
+        monkeypatch.delenv(name, raising=False)
+    if provider is not None:
+        monkeypatch.setenv("LLM_PROVIDER", provider)
+        model_var = "OPENAI_MODEL" if provider.strip().lower() == "openai" else "GEMINI_MODEL"
+        monkeypatch.setenv(model_var, configured_model)
+    monkeypatch.setenv("LLM_MODE", "live")
+    monkeypatch.setenv("LLM_CACHE", "0")
+    result = harness.VerifyResult(
+        case_id="V03",
+        subject="Synthetic subject",
+        question="Synthetic question?",
+        expected_decision=Decision.ESCALATE,
+        expected_type=EscalationType.AUTHORITY_REQUIRED,
+        actual_decision=Decision.ESCALATE,
+        actual_type=EscalationType.AUTHORITY_REQUIRED,
+        rule_id="P01",
+        passed=True,
+        elapsed_ms=1000,
+        timestamp="2026-10-05T09:00:00+07:00",
+        corpus_version="synthetic-corpus",
+        case_ref="synthetic-case",
+        expected_rule_id="P01",
+    )
+    calls = []
+
+    def offline_results(path, **kwargs):
+        calls.append((path, kwargs))
+        return (result,)
+
+    monkeypatch.setattr(harness, "run_cases", offline_results)
+    clock = iter((10.0, 11.0))
+    monkeypatch.setattr(harness, "perf_counter", lambda: next(clock))
+    output = tmp_path / "verify4.json"
+    assert harness.main(["--set", "verify4", "--output", str(output)]) == 0
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload == {
+        "case_set": "verify4",
+        "llm_mode": "live",
+        "provider": expected_provider,
+        "model": expected_model,
+        "cache_enabled": False,
+        "elapsed_seconds": 1.0,
+        "within_time_limit": True,
+        "results": [asdict(result)],
+    }
+    assert calls == [(harness.CASE_SETS["verify4"], {"run_name": "verify4", "case_id": None})]
