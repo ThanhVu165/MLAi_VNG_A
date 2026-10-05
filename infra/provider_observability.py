@@ -39,7 +39,12 @@ def sanitize_case_id(value: str | None, *, prompt: str) -> object:
         type(value) is str
         and _UUID.fullmatch(value)
         and value not in prompt
-        and value not in (os.getenv("GOOGLE_API_KEY"), os.getenv("GEMINI_API_KEY"))
+        and value
+        not in (
+            os.getenv("GOOGLE_API_KEY"),
+            os.getenv("GEMINI_API_KEY"),
+            os.getenv("OPENAI_API_KEY"),
+        )
     ):
         return value
     return sanitize_diagnostic(value, prompt=prompt)
@@ -54,7 +59,7 @@ def _text(value: str, prompt: str | None) -> str:
             json.dumps(prompt, ensure_ascii=True)[1:-1],
         ):
             value = value.replace(representation, REDACTED)
-    for name in ("GOOGLE_API_KEY", "GEMINI_API_KEY"):
+    for name in ("GOOGLE_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY"):
         secret = os.getenv(name)
         if secret:
             value = value.replace(secret, REDACTED)

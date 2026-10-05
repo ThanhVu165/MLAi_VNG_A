@@ -28,6 +28,7 @@ def offline(monkeypatch):
     monkeypatch.setattr(llm, "execute", forbidden)
     monkeypatch.setattr(llm, "fetch_one", forbidden)
     monkeypatch.setattr(llm, "_record_latency", lambda *args: None)
+    monkeypatch.setattr(llm, "sleep", lambda _: None)
     monkeypatch.setenv("GOOGLE_API_KEY", "runtime-google-key")
     monkeypatch.setenv("GEMINI_API_KEY", "runtime-gemini-key")
     monkeypatch.setenv("LLM_MODE", "live")
@@ -236,6 +237,8 @@ def test_real_sdk_client_error_retains_diagnostics_without_retry(
     )
     seen = []
 
+    monkeypatch.setattr(llm, "sleep", lambda _: pytest.fail("must not sleep"))
+
     def invalid(*args):
         seen.append(args)
         raise error
@@ -258,6 +261,7 @@ def test_real_sdk_client_error_retains_diagnostics_without_retry(
 
 def test_server_retry_then_success_correlates_and_preserves_request_and_result(monkeypatch, caplog):
     seen = []
+    sleeps = []
     expected = llm._success({"answer": "unchanged"}, "hash", "model")
 
     def request(*args):
@@ -268,6 +272,7 @@ def test_server_retry_then_success_correlates_and_preserves_request_and_result(m
 
     monkeypatch.setattr(llm, "_request_gemini", request)
     monkeypatch.setattr(llm, "perf_counter", lambda: 100.0)
+    monkeypatch.setattr(llm, "sleep", sleeps.append)
     schema = {"type": "object"}
     with llm.case_call_budget():
         result = llm._call_live(
@@ -275,13 +280,16 @@ def test_server_retry_then_success_correlates_and_preserves_request_and_result(m
         )
         assert llm._BUDGET.get().remaining == 2
     assert result is expected
+    assert sleeps == [llm.LLM_RETRY_BACKOFF_SECONDS]
     assert seen == [("private", schema, "hash", "model", "runtime-google-key", 20)] * 2
     first, second = events(caplog)
     assert first["call_id"] == second["call_id"]
     assert [first["attempt_index"], second["attempt_index"]] == [1, 2]
     assert first["http_status"] == 503 and first["will_retry"] is True
     assert first["event"] == "llm_provider_attempt" and first["retryable"] is True
+    assert first["retry_backoff_ms"] == 1000
     assert second["success"] is True and second["will_retry"] is False
+    assert second["retry_backoff_ms"] == 0
     assert second["attempts_remaining_before"] == 3
     assert second["attempts_remaining_after"] == 2
     assert second["remaining_case_time_s"] == 60
@@ -289,6 +297,39 @@ def test_server_retry_then_success_correlates_and_preserves_request_and_result(m
     assert second["prompt_hash12"] == hashlib.sha256(b"private").hexdigest()[:12]
     assert second["effective_timeout_s"] == 20
     assert "private" not in caplog.text and "unchanged" not in caplog.text
+
+
+def test_transient_final_attempt_does_not_sleep(monkeypatch, caplog):
+    monkeypatch.setattr(llm, "sleep", lambda _: pytest.fail("must not sleep"))
+    monkeypatch.setattr(
+        llm,
+        "_request_gemini",
+        lambda *args: (_ for _ in ()).throw(
+            ServerError(503, {"error": {"status": "UNAVAILABLE", "message": "Overloaded"}})
+        ),
+    )
+    assert not llm._call_live("private", {}, "hash", "model", 20, 0).ok
+    event = events(caplog)[0]
+    assert event["will_retry"] is False and event["retry_backoff_ms"] == 0
+
+
+def test_retry_backoff_skips_sleep_near_deadline_and_preserves_budget(monkeypatch, caplog):
+    seen = []
+    sleeps = []
+
+    def unavailable(*args):
+        seen.append(args)
+        raise ServerError(503, {"error": {"status": "UNAVAILABLE", "message": "Overloaded"}})
+
+    monkeypatch.setattr(llm, "_request_gemini", unavailable)
+    monkeypatch.setattr(llm, "perf_counter", lambda: 100.0)
+    monkeypatch.setattr(llm, "sleep", sleeps.append)
+    with llm.case_call_budget():
+        llm._BUDGET.get().deadline = 101.5
+        assert not llm._call_live("private", {}, "hash", "model", 20, 1).ok
+        assert llm._BUDGET.get().remaining == 2
+    assert len(seen) == 2 and sleeps == []
+    assert [event["retry_backoff_ms"] for event in events(caplog)] == [0, 0]
 
 
 def test_shared_budget_skips_requests_after_four_attempts(monkeypatch, caplog):
