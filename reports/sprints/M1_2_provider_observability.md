@@ -136,3 +136,15 @@ policy, retrieval, routing, prompts and schemas are not edited.
   no persistent evidence sink was added. A failed logger can drop evidence.
 - LIVE behavior was not tested. No Gemini, targeted LIVE, full15 or evaluation.
 - No sprint/micro-task completion or next-sprint authorization is claimed.
+
+## Subsequent checkpoint status — 2026-10-05
+
+Các mục phía trên giữ nguyên evidence/trạng thái tại thời điểm triển khai M1.2.
+Trạng thái hiện tại theo coordinator và [living M1 report](M1_runtime_reliability.md):
+M1.1–M1.5 **DONE**; M1.3 offline verification/review hoàn tất, M1.4 targeted LIVE
+confirmed Gemini 503 / UNAVAILABLE / high demand, M1.5 thêm quota diagnosis 429 và
+OpenAI provider checkpoint `c4d2f8d`. Không tạo retroactive commit cho M1.3/M1.4.
+M1.5 có 77 targeted offline tests PASS và một production OpenAI adapter smoke PASS
+(một attempt, 4007 ms, extraction validator PASS) theo evidence coordinator cung cấp.
+M1 overall **IN PROGRESS**; M1.6 **NEXT / NOT STARTED**; full15 Gate sau fix
+**NOT EVALUATED / NOT PASS YET**. Compatibility/smoke không thay thế full15 Gate.

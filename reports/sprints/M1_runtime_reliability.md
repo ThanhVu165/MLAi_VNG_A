@@ -11,8 +11,9 @@ Không tuning P01/P02/P03 correctness trong M1.
 
 Status: **NOT PASS YET**.
 
-M1.5 có local patch chưa commit và targeted validation; full15 LIVE Gate sau fix
-chưa chạy, M1.6 **NOT STARTED**. Starting POST-AUTH evidence có
+M1 overall **IN PROGRESS**. M1.5 code checkpoint `c4d2f8d` đã commit và
+validation hoàn tất; full15 LIVE Gate sau reliability fix **NOT EVALUATED**,
+M1.6 **NEXT / NOT STARTED**. Starting POST-AUTH evidence có
 TECHNICAL_FAILURE = 11/15, chưa đạt ngưỡng M1. Không coi credential replacement
 hoặc R2 probe PASS là M1 Gate PASS. Chỉ Sprint Gate Review được phép đóng sprint;
 agent không tự đánh dấu sprint PASS hoặc đổi gate.
@@ -62,7 +63,7 @@ phải kiểm tra khả năng truy cập, không coi link/path là bằng chứn
 ## Micro-task Status
 
 Current Sprint: **M1 — Runtime & LLM Reliability**.
-Current Micro-task: **M1.5 — Evidence-driven reliability fix**.
+Next Micro-task: **M1.6 — Full15 Gate + Sprint Review (NOT STARTED)**.
 
 | Micro-task | Progress |
 |---|---|
@@ -70,8 +71,8 @@ Current Micro-task: **M1.5 — Evidence-driven reliability fix**.
 | M1.2 | DONE — provider observability |
 | M1.3 | DONE — offline verification/review |
 | M1.4 | DONE — targeted LIVE diagnosis |
-| M1.5 | IN PROGRESS — evidence-driven reliability fix |
-| M1.6 | NOT STARTED |
+| M1.5 | DONE — OpenAI provider path + production smoke |
+| M1.6 | NEXT / NOT STARTED |
 
 ### M1.1 — Runtime evidence + LLM call map
 
@@ -229,9 +230,11 @@ Artifacts: `data/validation/m1_4_targeted_live_2026-10-05_*` và diagnostic DB
 
 ### M1.5 — Evidence-driven reliability fix
 
-Status: **IN PROGRESS**.
+Status: **DONE**; không đồng nghĩa M1 Gate PASS.
 
-Current local, uncommitted patch: bounded **1-second backoff** trước existing
+#### Historical targeted backoff checkpoint
+
+Tại thời điểm targeted backoff validation, local patch chưa commit: bounded **1-second backoff** trước existing
 transient retry, kèm `retry_backoff_ms` evidence. Retry count, shared attempt budget,
 model/prompt/schema unchanged. Targeted offline tests: **45 passed**;
 independent review **PASS** theo xác nhận coordinator. Không chạy lại validation
@@ -251,14 +254,42 @@ V02 không tới R7; historical ClientError vẫn chưa exact-classified.
 Artifacts: `data/validation/m1_5_targeted_live_2026-10-05_*` và diagnostic DB
 `data/validation/m1_5_targeted_live.db` (gitignored).
 
-Remaining work:
+#### Completed OpenAI checkpoint
 
-- Classify historical ClientError nếu reproducible.
-- Xác định limiter thực sự chạm trước: per-call retry limit / shared case budget /
-  case deadline / non-retryable error.
-- Analyze attempt/time headroom, gồm unseen-input topology.
-- Evaluate minimal reliability fix dựa trên evidence.
-- Không mặc định backoff 3s, budget 6 hoặc fallback provider.
+- Targeted diagnosis confirmed Gemini **429 / RESOURCE_EXHAUSTED / quota exceeded**.
+  Không dùng observation này để gán exact reason cho các historical ClientError.
+- OpenAI được điều tra như alternate provider candidate. Direct compatibility probe
+  R2/R4/R7: đều **HTTP 200**, existing validators **PASS**; schema normalization
+  required. Probe không gửi temperature, chỉ chứng minh compatibility.
+- Code commit: `c4d2f8d` — `feat(m1.5): add OpenAI provider path and production smoke`.
+  Commit đã tồn tại khi đóng checkpoint; không amend, squash hoặc tạo commit rỗng
+  để đổi message. Diagnostic scripts là công cụ tái lập evidence, không chứa khóa.
+- Public production path vẫn `call_json(...) -> LLMResult`. Provider được chọn bằng
+  config, không automatic cross-provider fallback. OpenAI SDK **max_retries=0**;
+  wrapper giữ retry count, shared budget, timeout và bounded transient backoff.
+- Schema normalization ở adapter OpenAI: deep-copy rồi recursively đặt
+  additionalProperties=false trên object; không sửa core schema/fields/enums.
+- New cache/cassette identity bao gồm provider/model; legacy Gemini reads giữ tương
+  thích. OPENAI_API_KEY được redact, OpenAI exception logs chỉ giữ safe metadata.
+- OPENAI_REASONING_EFFORT mặc định **none**. Khi none, giữ temperature=0.0 trên
+  production path; effort khác bỏ temperature. Gemini/business semantics không đổi.
+- Canonical runtime: `.venv-bootstrap`, Python **3.11.9**, openai **3.24.0**,
+  google-genai **2.25.0**, pytest **8.3.3**.
+- Targeted offline command đã chạy trong implementation session:
+
+  ```powershell
+  .venv-bootstrap/Scripts/python.exe -B -m pytest -q --basetemp=.pytest_cache/m15f-fix tests/test_openai_provider.py tests/test_llm_budget.py tests/test_provider_observability.py
+  ```
+
+  **77 PASS / 0 FAIL**. Không chạy lại tests hoặc LIVE trong docs checkpoint.
+- Production adapter smoke theo evidence coordinator cung cấp: provider=openai,
+  model=gpt-6-luna, reasoning_effort=none, temperature=0.0; ok=true,
+  provider_attempts=**1**, latency_ms=**4007**, extraction_validator=**PASS**,
+  result=**PASS**. Không có standalone raw smoke artifact được thêm vào repo;
+  không suy diễn HTTP success status không được smoke ghi nhận.
+- Compatibility và một smoke PASS **không chứng minh full reliability**; không
+  khẳng định OpenAI categorically more reliable than Gemini.
+- **full15 M1 Gate chưa chạy sau fix**; M1.6 là bước tiếp theo và chưa bắt đầu.
 
 ### M1.6 — Full15 Gate + Sprint Review
 
@@ -275,6 +306,7 @@ Documentation bootstrap trước đây ghi nhận:
 - Tracked `.env.example` đang deleted.
 - Untracked `.env.example.txt` tồn tại.
 
-Đây là historical note, không phải current working-tree state. Docs checkpoint
-hiện tại chỉ stage STATUS, roadmap và living report; ba file M1.5 code/test vẫn
-modified, unstaged và uncommitted.
+Đây là historical note, không phải current working-tree state. Ở docs checkpoint
+trước (`0e5770f`), ba file M1.5 code/test còn modified, unstaged và uncommitted.
+Code checkpoint hiện tại `c4d2f8d` đã lưu chín implementation/test/evidence files;
+checkpoint đóng M1.5 chỉ bổ sung documentation sync, không viết lại lịch sử.

@@ -241,22 +241,27 @@ Không tuning P01/P02/P03 correctness trong M1.
 | M1.2 | Provider observability | DONE |
 | M1.3 | Offline verification + Code Review | DONE |
 | M1.4 | Targeted LIVE diagnosis | DONE |
-| M1.5 | Evidence-driven reliability fix | IN PROGRESS |
-| M1.6 | Full15 Gate + Sprint Review | NOT STARTED |
+| M1.5 | Evidence-driven reliability fix | DONE |
+| M1.6 | Full15 Gate + Sprint Review | NEXT / NOT STARTED |
 
-M1.5 không được định nghĩa cứng trước. Nội dung fix phải dựa trên evidence từ M1.4.
-Remaining work:
+M1 overall: **IN PROGRESS**. M1 Gate: **NOT PASS YET / NOT EVALUATED AFTER
+CURRENT RELIABILITY FIX**.
 
-- Diagnose historical ClientError nếu reproducible.
-- Xác định limiter chạm trước: per-call retry / shared case budget / deadline /
-  non-retryable error.
-- Review call/budget/time headroom, gồm unseen-input topology.
-- Evaluate minimal fix: retry / backoff / case budget / call reduction / provider
-  fallback, chỉ khi evidence hỗ trợ.
+M1.3 offline verification/review và M1.4 targeted LIVE diagnosis đã hoàn tất theo
+living report; không tạo retroactive implementation commits cho các bước này.
+M1.4 confirmed Gemini 503 / UNAVAILABLE / high demand; evidence bounded transient
+retry/backoff tồn tại. M1.5 bổ sung diagnosis Gemini 429 / RESOURCE_EXHAUSTED / quota,
+OpenAI R2/R4/R7 compatibility probe (HTTP 200 + validators PASS, normalization required),
+và config-driven OpenAI adapter. Không có automatic provider fallback; SDK
+max_retries=0, adapter-side schema normalization, provider-aware cache/cassette
+identity và key redaction được giữ trong code checkpoint `c4d2f8d`.
 
-Không mặc định backoff 3s, attempts 6 hoặc provider fallback.
-Current local patch dùng bounded 1-second backoff; targeted LIVE có recovery ở
-V01 nhưng 503 vẫn tồn tại ở E01/V02. M1 **NOT PASS YET**.
+M1.5 validation: **77 targeted offline tests PASS** và một production adapter smoke
+PASS với gpt-6-luna, reasoning_effort=none, temperature=0.0; một attempt, 4007 ms,
+extraction validator PASS. LIVE smoke được coordinator cung cấp, không rerun trong
+docs checkpoint. Compatibility/smoke không chứng minh full reliability hoặc ưu thế
+độ tin cậy tổng quát của OpenAI so với Gemini. Historical full15 và các targeted
+503 outcomes được giữ trong living report, không thay thế Gate sau fix.
 
 M1.6 gồm full15 LIVE Gate, escalation5 latency regression <=90s nếu requirement
 này vẫn applicable với current verify mode, và final M1 review theo Global Workflow.
