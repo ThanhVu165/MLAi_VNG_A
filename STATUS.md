@@ -10,6 +10,8 @@ M1 Gate: **TECHNICAL_FAILURE <= 1/15 on full15 LIVE**
 
 M1 Gate Status: **NOT EVALUATED AFTER RELIABILITY FIX**; M1 chưa PASS.
 
+Sprint transition rule: **Only Gate PASS allows moving to the next mini-sprint.**
+
 ## Progress
 
 - M1.1 DONE

@@ -37,6 +37,144 @@ Micro-task tương lai có thể được điều chỉnh theo evidence; gate gi
 Các micro-task dưới đây là kế hoạch, không phải ủy quyền tự chạy evaluation/provider
 hoặc thực hiện toàn bộ sprint trong một task.
 
+## Sprint Gate Enforcement Rules
+
+### A. Micro-task validation
+
+Sau mỗi micro-task:
+
+1. Chạy validation đúng phạm vi task.
+2. Thu evidence.
+3. Không tự suy diễn DONE nếu validation chưa pass.
+4. Coordinator/reviewer phải review evidence trước khi mở task tiếp theo.
+5. Nếu task fail:
+   - Không mở task kế tiếp.
+   - Triage nguyên nhân.
+   - Sửa hoặc diagnostic bổ sung.
+   - Validate lại.
+
+Implementation hoàn thành không đồng nghĩa micro-task DONE.
+
+### B. Mini-sprint Gate
+
+Mỗi mini-sprint phải kết thúc bằng Sprint Gate Review.
+
+Sprint Gate Review phải gồm tối thiểu:
+
+- Tests/evaluation phù hợp với sprint.
+- Regression check.
+- Code Review.
+- Review Agent.
+- Anti/independent review khi phù hợp.
+- Evidence summary.
+- Kết luận PASS / FAIL.
+
+Chỉ PASS mới được chuyển sang mini-sprint tiếp theo.
+
+### C. Gate FAIL behavior
+
+Nếu Gate FAIL, **KHÔNG được chuyển sang sprint tiếp theo**.
+
+Flow bắt buộc:
+
+```text
+Sprint Gate FAIL
+→ Failure Triage
+→ Root Cause Classification
+→ Targeted Fix
+→ Targeted Validation
+→ Sprint Gate Rerun
+```
+
+Root cause classification tối thiểu:
+
+- TECHNICAL.
+- LOGIC.
+- DATA / RETRIEVAL.
+- TEST / HARNESS.
+- ENVIRONMENT.
+- UNKNOWN.
+
+Không rerun mù chỉ để tìm PASS.
+
+### D. Dynamic micro-task rule
+
+Số micro-task của sprint **KHÔNG cố định**.
+
+Ví dụ, M1 ban đầu có M1.1 → M1.6. Nếu M1.6 Gate FAIL, có thể sinh thêm:
+
+- M1.7 Failure triage.
+- M1.8 Reliability fix.
+- M1.9 Targeted validation.
+- M1.10 Gate rerun.
+
+Tiếp tục cho tới khi:
+
+- Gate PASS; hoặc
+- Coordinator quyết định cần thay đổi roadmap/gate vì có evidence mới.
+
+Agent không được tự tạo task mới ngoài scope mà không báo coordinator.
+
+### E. Gate immutability rule
+
+**KHÔNG được hạ hoặc thay đổi Gate chỉ vì hệ thống không đạt.**
+
+Gate chỉ được thay đổi nếu:
+
+- Requirement ban đầu sai.
+- Metric không đo được.
+- Metric mâu thuẫn với direct stakeholder requirement.
+- Evidence mới chứng minh gate không còn hợp lệ.
+
+Bất kỳ thay đổi gate nào đều cần:
+
+- Evidence.
+- Explicit coordinator approval.
+- Update roadmap.
+- Ghi lý do trong sprint report.
+
+### F. Regression protection
+
+Mỗi sprint PASS phải tạo một last-known-good checkpoint:
+
+- Commit hoặc tag xác định rõ.
+- Sprint report final.
+- Gate evidence lưu lại.
+
+Sprint sau phải kiểm tra không phá gate sprint trước khi cần.
+
+Nếu regression làm sprint trước FAIL lại:
+
+- STOP.
+- Triage regression.
+- Fix hoặc rollback.
+- Chỉ tiếp tục khi previous gate được khôi phục.
+
+### G. Sprint final output format
+
+Cuối mỗi mini-sprint phải báo:
+
+```text
+Sprint: Mx
+Gate: PASS / FAIL
+Evidence:
+Regression còn lại:
+Technical debt:
+Có được sang Mx+1 không: YES / NO
+```
+
+Nếu NO, ghi next remediation step.
+
+### H. Authority
+
+Agent không được tự đánh dấu sprint PASS.
+
+PASS/FAIL cuối sprint chỉ được xác nhận sau:
+
+- Evidence hoàn tất.
+- Review hoàn tất.
+- Coordinator chấp nhận.
+
 ## M1 — Runtime & LLM Reliability
 
 ### Objective
@@ -224,6 +362,14 @@ Mọi Codex/Anti task sau phải:
 3. Đọc living report của sprint hiện tại.
 4. Chỉ đọc raw evidence report khi cần kiểm chứng claim.
 
+Mọi agent trước khi làm task phải kiểm tra:
+
+- Current sprint.
+- Current micro-task.
+- Current gate.
+- Previous sprint gate status.
+- Current task có được phép theo Sprint Gate Enforcement Rules hay không.
+
 Repo files là source of truth cho project state.
 
 Agent không được:
@@ -233,4 +379,6 @@ Agent không được:
 - Tự đánh dấu sprint PASS.
 - Dựa vào memory của chat/session cũ khi repo state có sẵn.
 
+Nếu current sprint Gate = FAIL, agent không được tự nhảy sang sprint kế tiếp.
+Nếu evidence mới làm previous sprint gate không còn đúng: **STOP và báo coordinator**.
 Nếu evidence mới mâu thuẫn roadmap/status: **STOP và báo coordinator**.
