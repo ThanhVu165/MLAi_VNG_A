@@ -171,6 +171,36 @@ def test_basis_repairs_only_provenance_once(monkeypatch, initial, repaired, erro
         )
 
 
+def test_basis_repair_preserves_primary_fields(monkeypatch):
+    primary = dict(
+        payload("Câu đầu. Câu sau."),
+        summary="Primary summary",
+        facts=["Primary fact"],
+        question="Primary question?",
+        options=["Primary yes", "Primary no"],
+    )
+    repaired = dict(
+        payload("Câu sau."),
+        summary="Repair summary",
+        facts=["Repair fact"],
+        question="Repair question?",
+        options=["Repair yes", "Repair no"],
+    )
+    calls = []
+
+    def call(prompt, **kwargs):
+        calls.append(kwargs["step"])
+        data = (primary, repaired)[len(calls) - 1]
+        return llm.LLMResult(True, deepcopy(data), None, 0, "h", "m")
+
+    monkeypatch.setattr(question_gen, "call_json", call)
+    card = generate()
+    for field in ("summary", "facts", "question", "options"):
+        assert getattr(card, field) == primary[field]
+    assert card.basis == [("Điều 1", "Câu sau.")]
+    assert calls == ["R7_question", "R7_question_repair"]
+
+
 @pytest.mark.parametrize("limit", ["available", "attempts_exhausted", "deadline_exhausted"])
 def test_repair_uses_real_public_wrapper_shared_budget(monkeypatch, limit):
     requests = []

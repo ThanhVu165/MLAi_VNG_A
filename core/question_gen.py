@@ -154,7 +154,6 @@ def generate_escalation_card(
         if not repair.ok:
             raise ValueError(repair.error or "LLM không sửa được căn cứ câu hỏi chuyển tiếp.")
         basis = _basis(repair.data.get("basis"), evidence)
-        result = repair
     card = EscalationCard(
         summary=_string(result.data.get("summary"), "summary"),
         facts=_strings(result.data.get("facts"), "facts"),
