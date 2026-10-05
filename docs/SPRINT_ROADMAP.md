@@ -242,10 +242,12 @@ Không tuning P01/P02/P03 correctness trong M1.
 | M1.3 | Offline verification + Code Review | DONE |
 | M1.4 | Targeted LIVE diagnosis | DONE |
 | M1.5 | Evidence-driven reliability fix | DONE |
-| M1.6 | Full15 Gate + Sprint Review | NEXT / NOT STARTED |
+| M1.6 | Full15 Gate + Sprint Review | DONE |
 
-M1 overall: **IN PROGRESS**. M1 Gate: **NOT PASS YET / NOT EVALUATED AFTER
-CURRENT RELIABILITY FIX**.
+M1 overall: **PASS / CLOSED**. M1 Gate: **PASS — TECHNICAL_FAILURE = 0/15**
+trên final full15 LIVE ngày 06/10/2026 (Asia/Saigon); 14/15 semantic labels.
+Final Code Review PASS và independent Anti PASS WITH DOCUMENTED DEBT theo
+coordinator closure decision. [Final evidence + SHA-256](../reports/evidence/m1/README.md).
 
 M1.3 offline verification/review và M1.4 targeted LIVE diagnosis đã hoàn tất theo
 living report; không tạo retroactive implementation commits cho các bước này.
@@ -263,10 +265,16 @@ docs checkpoint. Compatibility/smoke không chứng minh full reliability hoặc
 độ tin cậy tổng quát của OpenAI so với Gemini. Historical full15 và các targeted
 503 outcomes được giữ trong living report, không thay thế Gate sau fix.
 
-M1.6 gồm full15 LIVE Gate, escalation5 latency regression <=90s nếu requirement
-này vẫn applicable với current verify mode, và final M1 review theo Global Workflow.
+Subsequent M1.6 evidence: verify4 4/4 PASS; escalation5 4/5 semantic PASS,
+44.48s <=90s; full15 0/15 TECHNICAL_ERROR. E04 expected P03 / FACT_UNRESOLVED,
+actual P01 / AUTHORITY_REQUIRED là known M2 issue; expected label giữ nguyên.
+Sáu LOW debts và tracked bytecode hygiene debt được ghi trong living report.
 
 ## M2 — Core Decision + Escalation Quality
+
+Current status: **NEXT — chưa bắt đầu**. Entry Gate M1 đã PASS; investigate E04
+provider/model-sensitive correctness issue. Exact non-regression against the old
+Gemini/dev path has not been proven. Không thay đổi M2 Gate hoặc future scope.
 
 ### Objective
 
