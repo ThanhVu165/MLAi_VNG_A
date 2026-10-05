@@ -1,6 +1,7 @@
 # Exodia Sprint 2 — Internal Mini-Sprint Roadmap
 
-Deadline: **15/10/2026** (Asia/Saigon, UTC+07:00).
+Internal submission-ready target: **15/10/2026** (Asia/Saigon, UTC+07:00).
+Buffer: 16/10; onsite/demo-day working day: 17/10.
 
 ## Overall Objective
 
@@ -19,6 +20,40 @@ Biến V1 thành một production-minded prototype:
 Project có **7 internal mini-sprints**, thực hiện theo thứ tự M1–M7.
 Trạng thái hiện tại xem [STATUS.md](../STATUS.md); chi tiết M1 xem
 [living report M1](../reports/sprints/M1_runtime_reliability.md).
+
+## Core Chain, Parallel Prep & Timeline
+
+Core dependency chain: **M1 → M2 → M3 → M4 → M5 → M6 → M7**.
+
+Parallel prep có thể bắt đầu theo scope được giao:
+
+- P1: Recruit/schedule >=3 real users.
+- P2: Author/gold/hash evaluation sets.
+- P3: Live deployment readiness.
+- P4: Defense notes/build log.
+
+Parallel prep không được giả định sprint trước PASS, tune core bằng future
+evaluation results, hoặc implement future core logic trước dependency.
+
+| Mốc | Thời gian mục tiêu (2026, UTC+07:00) |
+|---|---|
+| M1.5 | 05–06/10 |
+| Close M1 Gate | 07/10 |
+| M2 | 07–08/10 |
+| M3 | 08–09/10 |
+| Mandatory scope-compression checkpoint | Tối 08/10 |
+| Evaluation Set A | 09–10/10 |
+| M5 user sessions | 10–11/10 |
+| M6 reproducibility/deployment proof | 11–12/10 |
+| Target freeze | Tối 12/10 |
+| Final Sealed Set B on frozen revision | 13/10 |
+| Slides/video/build log/interview rehearsal | 14/10 |
+| Internal submission-ready target | 15/10 |
+| Buffer | 16/10 |
+| Onsite/demo-day working day | 17/10 |
+
+Nếu hết 07/10 M1 chưa PASS: ghi **AT RISK** trong STATUS và không tự mở M2 core.
+Timeline không override Gate rules; sprint sau chỉ mở khi dependency Gate PASS.
 
 ## Global Workflow
 
@@ -203,17 +238,43 @@ Không tuning P01/P02/P03 correctness trong M1.
 | Micro-task | Nội dung | Trạng thái hiện tại |
 |---|---|---|
 | M1.1 | Runtime evidence + LLM call map | DONE |
-| M1.2 | Provider observability | NEXT |
-| M1.3 | Offline verification + Code Review | NOT STARTED |
-| M1.4 | Targeted LIVE diagnosis | NOT STARTED |
-| M1.5 | Evidence-driven reliability fix | NOT STARTED |
-| M1.6 | Full15 Gate + Sprint Review | NOT STARTED |
+| M1.2 | Provider observability | DONE |
+| M1.3 | Offline verification + Code Review | DONE |
+| M1.4 | Targeted LIVE diagnosis | DONE |
+| M1.5 | Evidence-driven reliability fix | DONE |
+| M1.6 | Full15 Gate + Sprint Review | DONE |
 
-M1.5 không được định nghĩa cứng trước. Nội dung fix phải dựa trên evidence từ M1.4.
-M1.6 gồm chuỗi review cuối sprint trong Global Workflow.
-M1 chưa PASS; gate sau reliability fix chưa được đánh giá.
+M1 overall: **PASS / CLOSED**. M1 Gate: **PASS — TECHNICAL_FAILURE = 0/15**
+trên final full15 LIVE ngày 06/10/2026 (Asia/Saigon); 14/15 semantic labels.
+Final Code Review PASS và independent Anti PASS WITH DOCUMENTED DEBT theo
+coordinator closure decision. [Final evidence + SHA-256](../reports/evidence/m1/README.md).
 
-## M2 — Core Decision Correctness
+M1.3 offline verification/review và M1.4 targeted LIVE diagnosis đã hoàn tất theo
+living report; không tạo retroactive implementation commits cho các bước này.
+M1.4 confirmed Gemini 503 / UNAVAILABLE / high demand; evidence bounded transient
+retry/backoff tồn tại. M1.5 bổ sung diagnosis Gemini 429 / RESOURCE_EXHAUSTED / quota,
+OpenAI R2/R4/R7 compatibility probe (HTTP 200 + validators PASS, normalization required),
+và config-driven OpenAI adapter. Không có automatic provider fallback; SDK
+max_retries=0, adapter-side schema normalization, provider-aware cache/cassette
+identity và key redaction được giữ trong code checkpoint `c4d2f8d`.
+
+M1.5 validation: **77 targeted offline tests PASS** và một production adapter smoke
+PASS với gpt-6-luna, reasoning_effort=none, temperature=0.0; một attempt, 4007 ms,
+extraction validator PASS. LIVE smoke được coordinator cung cấp, không rerun trong
+docs checkpoint. Compatibility/smoke không chứng minh full reliability hoặc ưu thế
+độ tin cậy tổng quát của OpenAI so với Gemini. Historical full15 và các targeted
+503 outcomes được giữ trong living report, không thay thế Gate sau fix.
+
+Subsequent M1.6 evidence: verify4 4/4 PASS; escalation5 4/5 semantic PASS,
+44.48s <=90s; full15 0/15 TECHNICAL_ERROR. E04 expected P03 / FACT_UNRESOLVED,
+actual P01 / AUTHORITY_REQUIRED là known M2 issue; expected label giữ nguyên.
+Sáu LOW debts và tracked bytecode hygiene debt được ghi trong living report.
+
+## M2 — Core Decision + Escalation Quality
+
+Current status: **NEXT — chưa bắt đầu**. Entry Gate M1 đã PASS; investigate E04
+provider/model-sensitive correctness issue. Exact non-regression against the old
+Gemini/dev path has not been proven. Không thay đổi M2 Gate hoặc future scope.
 
 ### Objective
 
@@ -233,6 +294,10 @@ Phải có evidence đúng cho:
 - AUTO_REPLY / P05.
 
 P04/TECHNICAL failure không được tính thay P03.
+Numeric M2 Gate chưa được chốt; không tự đặt ngưỡng.
+
+Trước first M2 evaluation phải lock DEV protocol, pass criteria,
+question-quality rubric và evaluator. Mọi DEV metrics phải ghi **DEV-ONLY**.
 
 ### Scope
 
@@ -241,8 +306,14 @@ P04/TECHNICAL failure không được tính thay P03.
 - Deterministic policy behavior.
 - Routing.
 - Groundedness/error analysis.
+- P01/P02/P03/P05.
+- Missed escalation và unnecessary escalation trên DEV.
+- Escalation question quality.
 
-## M3 — Human Control & Safety
+M2 phải xác định có real soft decision threshold nào phù hợp để hỗ trợ M3
+adaptation hay không; không tạo threshold giả chỉ để có adaptation.
+
+## M3 — Human Control + Feedback Adaptation
 
 ### Objective
 
@@ -264,7 +335,15 @@ E2E evidence cho:
 - Payload-bound approval.
 - Audit trail.
 
-## M4 — Evaluation & Locked Held-out
+Adaptation chỉ áp dụng với suitable soft decision variables; không nới hard P01
+authority rule, hard OUT_OF_POLICY rule hoặc suspicious-input safety behavior.
+Adaptation phải versioned, bounded, auditable, reversible; final evaluation dùng
+frozen adaptation state.
+
+Cuối M3 phải có live/study environment available. Tách dev DB, study DB và
+demo/judge DB, kèm reset/seed procedure.
+
+## M4 — Evaluation Set A + Final Sealed Set B
 
 ### Objective
 
@@ -272,13 +351,17 @@ Xây evaluation protocol không contamination.
 
 ### Exit Gate
 
-- DEV/REGRESSION tách HELD-OUT.
-- Held-out mới được khóa.
-- Predefined gold labels.
+- DEV/REGRESSION tách independent evaluation sets.
+- Evaluation Set A: author/gold/hash trước M2 tuning; chạy sau M3. Khi mở results,
+  Set A trở thành DEV/diagnostic và không được gọi final held-out nữa.
+- Final Sealed Set B: author/gold/hash independently; không tuning từ results;
+  chạy một lần trên frozen revision trong M7, làm final independent evidence.
 - Harness reproducible.
 - Metrics predefined.
 - Wilson CI cho proportion metrics.
-- Held-out chưa dùng để tuning.
+- Final Sealed Set B chưa dùng để tuning.
+
+Nếu final Set B kém: báo trung thực, không tune sau khi xem results.
 
 Các set đã dùng để tune/test trước đó phải coi là DEV/REGRESSION,
 bao gồm full15 đã dùng trong các lượt hiện tại.
@@ -295,15 +378,21 @@ Exploratory evidence gồm:
 
 - Review time.
 - Final human decision.
-- Acceptance/rejection planted-wrong AI recommendation.
+- Acceptance/rejection AI recommendation trong session.
 - Raw n/N.
 - Qualitative notes.
 - Participants ngoài team.
 - Consented participants.
 
+Phải có >=3 participants thực sự xử lý loại workflow này; consent,
+identity/role evidence theo yêu cầu và written feedback từ participant.
+Phải có >=1 concrete product change từ feedback, kèm commit evidence.
+Ưu tiên synthetic/anonymized session data; ghi rõ real vs synthetic data.
+Extended planted-wrong study là optional scope, không thay các yêu cầu trên.
+
 Không claim automation-bias prevalence từ sample nhỏ.
 
-## M6 — Reproducibility & Production Readiness
+## M6 — Reproducibility & Deployment Proof
 
 ### Objective
 
@@ -312,17 +401,18 @@ Chứng minh project không chỉ chạy trên máy dev hiện tại.
 ### Exit Gate
 
 - Fresh clone setup thành công.
+- Live URL và clean-clone runbook.
 - Python 3.11 reproducible.
 - Docker image chạy.
 - Migration/seed reproducible.
 - Cassette record/replay trong exact Docker image.
 - Replay cassette miss = 0.
-- Basic concurrency/stress evidence.
-- Production-scale architecture/migration story.
+- Verify judge-runnable và DB reset procedure.
+- 2–3 concurrent-session smoke.
 
-Không migrate thật Kafka/Postgres nếu chưa có evidence cần thiết.
+Không yêu cầu large stress test hoặc real Postgres/Kafka migration.
 
-## M7 — Freeze, Final Evaluation & Submission
+## M7 — Freeze + Final Evaluation + Submission + Defense
 
 ### Objective
 
@@ -332,26 +422,46 @@ Khóa hệ thống và tạo final evidence.
 
 | Mốc | Thời gian mục tiêu (2026, UTC+07:00) |
 |---|---|
-| Hard freeze | Tối 09/10 |
-| Final held-out LIVE | Khoảng 10/10 |
-| Reproduce/evidence/report | 11–13/10 |
-| Package | 14/10 |
-| Submit | 15/10 |
+| Target freeze | Tối 12/10 |
+| Final Sealed Set B on frozen revision | 13/10 |
+| Slides/video/build log/interview rehearsal | 14/10 |
+| Internal submission-ready target | 15/10 |
+| Buffer | 16/10 |
+| Onsite/demo-day working day | 17/10 |
 
 Đây là target timeline; không thay thế các sprint gate.
 
 ### Exit Gate
 
 - Frozen revision/tag.
-- Final held-out run.
+- Final Sealed Set B run một lần.
 - Protocol được tuân thủ.
 - Reproducibility evidence.
 - Final metrics/report.
 - Demo/package.
 - Repo clean.
 - Submission ready.
+- Final test-data package.
+- 5 slides, <=3 minute video và 1-page build log.
+- Limitations, real/synthetic disclosure và defense notes.
+- Onsite 17/10 kit: clean-clone runnable, runbook, known-good environment,
+  API key/quota preflight, live path, cassette cho known demo only, video fallback,
+  DB seed/reset và revision provenance.
 
 Sau freeze không tuning dựa trên held-out.
+
+## Scope Compression / Cut Policy
+
+Mandatory scope-compression checkpoint: tối 08/10.
+
+**DO NOT CUT:** live reliability; unseen-input robustness; independent evaluation;
+missed/over-escalation metrics; minimal compliant adaptation; >=3 real users;
+>=1 feedback-driven change; live URL; human control/audit; runbook/reproducibility;
+5 slides; video; build log; test-data package; consent/evidence; interview preparation.
+
+**CUT FIRST:** extended planted-wrong study; extra dashboard/UI polish; large
+stress testing; real Postgres/Kafka migration; architecture polish; adaptation
+depth beyond minimal compliant version.
 
 ## Agent Context Protocol
 

@@ -15,6 +15,11 @@ ARTICLE_PATTERN = re.compile(r"Điều \d+", re.IGNORECASE)
 FORM_PATTERN = re.compile(r"Mẫu [A-Z0-9-]+", re.IGNORECASE)
 SENTENCE_PATTERN = re.compile(r"(?<=[.!?])\s+")
 CITATION_MARKER_PATTERN = re.compile(r"\[[^\]]+\]")
+CLOCK_PATTERN = re.compile(
+    r"(?<![\w:])(?P<hour>1[0-2]|[1-9])(?::(?P<minute>[0-5]\d))?\s*"
+    r"(?P<period>[ap])\.?m\.?(?!\w)",
+    re.IGNORECASE,
+)
 FORBIDDEN_AUTHORITY_PHRASES = (
     "chúng tôi đồng ý",
     "đã được duyệt",
@@ -38,6 +43,26 @@ def _citation_failure(draft: DraftReply, evidence: EvidenceResult) -> bool:
     )
 
 
+def _without_grounded_clocks(body: str, evidence_text: str) -> str:
+    """Chỉ bỏ clock 12 giờ khi có giờ 24 tương đương nguyên vẹn trong evidence."""
+
+    def replace_clock(match: re.Match[str]) -> str:
+        hour = int(match["hour"])
+        minute = match["minute"] or "00"
+        if match["period"].lower() == "a":
+            hour = 0 if hour == 12 else hour
+        elif hour != 12:
+            hour += 12
+        hour_pattern = f"0?{hour}" if hour < 10 else str(hour)
+        time_pattern = rf"{hour_pattern}\s*(?::|giờ|h)\s*{minute}(?![\d:])"
+        if minute == "00":
+            time_pattern += rf"|{hour_pattern}\s+giờ(?!\s*\d)"
+        grounded = re.search(rf"(?<![\w:])(?:{time_pattern})(?!\w)", evidence_text)
+        return " " if grounded else match.group()
+
+    return CLOCK_PATTERN.sub(replace_clock, body)
+
+
 def _unsupported_value_failure(
     draft: DraftReply, evidence: EvidenceResult, extra_text: str = ""
 ) -> bool:
@@ -55,7 +80,10 @@ def _unsupported_value_failure(
     source_numbers = {
         normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(evidence_text)
     }
-    draft_numbers = {normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(body)}
+    numeric_body = _without_grounded_clocks(body, evidence_text)
+    draft_numbers = {
+        normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(numeric_body)
+    }
     return not draft_numbers <= source_numbers or any(
         value not in evidence_text for value in values
     )

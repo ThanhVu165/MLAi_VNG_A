@@ -1,6 +1,7 @@
 black==24.10.0
 google-genai==2.25.0
 mypy==1.13.0
+openai==3.24.0
 pdfplumber==0.11.4
 PyYAML==6.0.2
 pytest==8.3.3

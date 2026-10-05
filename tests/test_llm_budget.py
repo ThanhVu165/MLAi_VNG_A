@@ -5,6 +5,11 @@ import pytest
 from infra import llm
 
 
+@pytest.fixture(autouse=True)
+def no_retry_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(llm, "sleep", lambda _: None)
+
+
 def test_budget_counts_retries_and_never_exceeds_four_attempts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
