@@ -9,9 +9,10 @@ Không tuning P01/P02/P03 correctness trong M1.
 
 ## Gate
 
-Status: **NOT EVALUATED AFTER RELIABILITY FIX**.
+Status: **NOT PASS YET**.
 
-Reliability fix chưa được thực hiện. Starting POST-AUTH evidence có
+M1.5 có local patch chưa commit và targeted validation; full15 LIVE Gate sau fix
+chưa chạy, M1.6 **NOT STARTED**. Starting POST-AUTH evidence có
 TECHNICAL_FAILURE = 11/15, chưa đạt ngưỡng M1. Không coi credential replacement
 hoặc R2 probe PASS là M1 Gate PASS. Chỉ Sprint Gate Review được phép đóng sprint;
 agent không tự đánh dấu sprint PASS hoặc đổi gate.
@@ -59,6 +60,18 @@ Các raw artifacts/DB dưới `data/validation` được gitignore; session trê
 phải kiểm tra khả năng truy cập, không coi link/path là bằng chứng file hiện diện.
 
 ## Micro-task Status
+
+Current Sprint: **M1 — Runtime & LLM Reliability**.
+Current Micro-task: **M1.5 — Evidence-driven reliability fix**.
+
+| Micro-task | Progress |
+|---|---|
+| M1.1 | DONE |
+| M1.2 | DONE — provider observability |
+| M1.3 | DONE — offline verification/review |
+| M1.4 | DONE — targeted LIVE diagnosis |
+| M1.5 | IN PROGRESS — evidence-driven reliability fix |
+| M1.6 | NOT STARTED |
 
 ### M1.1 — Runtime evidence + LLM call map
 
@@ -154,8 +167,10 @@ Confirmed:
    - Tất cả lỗi chỉ do 5xx.
    - V02 fail vì global attempt budget exhausted.
 
-Open question: exact HTTP status / provider status / reason / sanitized message
-hiện chưa được lưu.
+Historical open question: exact HTTP status / provider status / reason của nhiều
+failures vẫn **UNVERIFIED**. Historical ClientError/ServerError evidence có trước
+observability hiện tại; không dùng targeted evidence mới để gán ngược exact status
+cho historical failures.
 
 Observability limitation đã xác minh: pipeline rows R0–R14 luôn ghi ok=1;
 stage bị skip được điền 0 ms; R14 là finalize marker. Không dùng các rows này
@@ -177,7 +192,7 @@ chuyển M1.2. DONE của micro-task không đồng nghĩa sprint Gate PASS.
 
 ### M1.2 — Provider observability
 
-Status: **NEXT**.
+Status: **DONE**.
 
 Goal: ghi sanitized provider-level evidence theo từng attempt để phân biệt:
 
@@ -191,21 +206,59 @@ Không in/lưu credential, auth headers hoặc email payload thô trong diagnost
 M1.2 có local implementation + offline validation PASS trên branch
 `task/llm-observability`; evidence và progress log xem
 [M1.2 implementation evidence](M1_2_provider_observability.md).
-Chưa có coordinator/reviewer acceptance; không tự đánh dấu DONE, không mở M1.3.
+Provider observability và PII redaction đã hoàn tất; M1.3 verification/review DONE
+theo trạng thái được coordinator xác nhận. Implementation report ở trên giữ log
+lịch sử tại thời điểm triển khai.
 
 ### M1.3 — Offline verification + Code Review
 
-Status: **NOT STARTED**.
+Status: **DONE**.
+
+Offline verification/review hoàn tất; targeted tests PASS, independent review
+PASS theo evidence/trạng thái do coordinator cung cấp. Không đồng nghĩa M1 Gate PASS.
 
 ### M1.4 — Targeted LIVE diagnosis
 
-Status: **NOT STARTED**.
+Status: **DONE**.
+
+Targeted LIVE ngày 05/10/2026 confirmed Gemini HTTP **503 / UNAVAILABLE / high
+demand**. E01 và V01: R2 success, R4 nhận 503 ở cả hai attempts, final
+TECHNICAL_ERROR. Stop rule kích hoạt sau V01; V02 không chạy trong M1.4.
+Artifacts: `data/validation/m1_4_targeted_live_2026-10-05_*` và diagnostic DB
+`data/validation/m1_4_targeted_live.db` (gitignored).
 
 ### M1.5 — Evidence-driven reliability fix
 
-Status: **NOT STARTED**.
+Status: **IN PROGRESS**.
 
-Nội dung fix chưa khóa. Phải dựa vào M1.4.
+Current local, uncommitted patch: bounded **1-second backoff** trước existing
+transient retry, kèm `retry_backoff_ms` evidence. Retry count, shared attempt budget,
+model/prompt/schema unchanged. Targeted offline tests: **45 passed**;
+independent review **PASS** theo xác nhận coordinator. Không chạy lại validation
+trong docs checkpoint này.
+
+Targeted LIVE after patch (mỗi case một lần):
+
+| Case | Provider sequence | Final case result |
+|---|---|---|
+| E01 | R4: 503 → 1s → 503 | TECHNICAL_ERROR |
+| V01 | R7: 503 → 1s → success | PASS / P05 |
+| V02 | R4: 503 → 1s → 503 | TECHNICAL_ERROR |
+
+Observed recovery không chứng minh backoff là nguyên nhân duy nhất của success.
+Không generalize ba targeted cases thành provider-wide frequency claims.
+V02 không tới R7; historical ClientError vẫn chưa exact-classified.
+Artifacts: `data/validation/m1_5_targeted_live_2026-10-05_*` và diagnostic DB
+`data/validation/m1_5_targeted_live.db` (gitignored).
+
+Remaining work:
+
+- Classify historical ClientError nếu reproducible.
+- Xác định limiter thực sự chạm trước: per-call retry limit / shared case budget /
+  case deadline / non-retryable error.
+- Analyze attempt/time headroom, gồm unseen-input topology.
+- Evaluate minimal reliability fix dựa trên evidence.
+- Không mặc định backoff 3s, budget 6 hoặc fallback provider.
 
 ### M1.6 — Full15 Gate + Sprint Review
 
@@ -215,11 +268,13 @@ Exit: **TECHNICAL_FAILURE <= 1/15** trên full15 LIVE.
 Cuối sprint phải có tests, Code Review, Review Agent, Anti review và Sprint Gate
 Review theo roadmap. Chỉ Gate PASS mới chuyển M2.
 
-## Known Git Hygiene Issue
+## Historical Git Hygiene Note
 
-Chỉ ghi nhận, **KHÔNG sửa** trong documentation bootstrap:
+Documentation bootstrap trước đây ghi nhận:
 
 - Tracked `.env.example` đang deleted.
 - Untracked `.env.example.txt` tồn tại.
 
-Phải xử lý trước commit. Bootstrap này không commit/merge.
+Đây là historical note, không phải current working-tree state. Docs checkpoint
+hiện tại chỉ stage STATUS, roadmap và living report; ba file M1.5 code/test vẫn
+modified, unstaged và uncommitted.
