@@ -13,8 +13,14 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from time import perf_counter
 from typing import cast
+from uuid import uuid4
 
 from infra.db import execute, fetch_one, now_iso
+from infra.provider_observability import (
+    exception_diagnostic,
+    sanitize_case_id,
+    sanitize_diagnostic,
+)
 from infra.settings import CASE_TIMEOUT_SECONDS, LLM_MAX_ATTEMPTS, LLM_RETRIES, LLM_TIMEOUT_S
 
 LOGGER = logging.getLogger(__name__)
@@ -93,7 +99,16 @@ def call_json(
         elif timeout_s <= 0:
             result = _failure("timeout_s phải lớn hơn 0.", prompt_hash, model)
         else:
-            result = _run_mode(prompt, schema, prompt_hash, model, timeout_s, retries)
+            result = _run_mode(
+                prompt,
+                schema,
+                prompt_hash,
+                model,
+                timeout_s,
+                retries,
+                case_id=case_id,
+                step=step,
+            )
     except Exception as error:
         LOGGER.exception("Lỗi không mong đợi khi gọi LLM", extra={"case_id": case_id, "step": step})
         result = _failure(f"Lỗi LLM: {type(error).__name__}", prompt_hash, model)
@@ -111,6 +126,9 @@ def _run_mode(
     model: str,
     timeout_s: int,
     retries: int,
+    *,
+    case_id: str | None = None,
+    step: str | None = None,
 ) -> LLMResult:
     mode = os.getenv("LLM_MODE", "live").lower()
     if mode == "replay":
@@ -122,7 +140,9 @@ def _run_mode(
     if cached is not None:
         return cached
 
-    result = _call_live(prompt, schema, prompt_hash, model, timeout_s, retries)
+    result = _call_live(
+        prompt, schema, prompt_hash, model, timeout_s, retries, case_id=case_id, step=step
+    )
     if result.ok:
         _store_cache(result)
         if mode == "record":
@@ -137,6 +157,9 @@ def _call_live(
     model: str,
     timeout_s: int,
     retries: int,
+    *,
+    case_id: str | None = None,
+    step: str | None = None,
 ) -> LLMResult:
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
@@ -146,11 +169,21 @@ def _call_live(
             model,
         )
 
+    call_id = uuid4().hex
     retry_count = min(max(retries, 0), LLM_RETRIES, 1)
     for attempt in range(retry_count + 1):
+        budget = _BUDGET.get()
+        attempts_before = budget.remaining if budget is not None else None
+        remaining_case_time = (
+            max(0.0, budget.deadline - perf_counter()) if budget is not None else None
+        )
+        started = perf_counter()
+        remaining_timeout = None
+        request_started = False
         try:
             remaining_timeout = _attempt_timeout(timeout_s)
-            return _request_gemini(prompt, schema, prompt_hash, model, api_key, remaining_timeout)
+            request_started = True
+            result = _request_gemini(prompt, schema, prompt_hash, model, api_key, remaining_timeout)
         except Exception as error:
             LOGGER.warning("Lần gọi LLM %s thất bại: %s", attempt + 1, type(error).__name__)
             transient = isinstance(error, (TimeoutError, ConnectionError)) or type(
@@ -165,6 +198,32 @@ def _call_live(
                 "ConnectTimeout",
                 "ConnectionError",
             }
+            _record_provider_attempt(
+                prompt=prompt,
+                model=model,
+                case_id=case_id,
+                step=step,
+                call_id=call_id,
+                attempt_index=attempt + 1,
+                started=started,
+                effective_timeout_s=remaining_timeout,
+                attempts_before=attempts_before,
+                remaining_case_time_s=remaining_case_time,
+                request_started=request_started,
+                success=False,
+                error=error,
+                retryable=request_started and transient,
+                will_retry=request_started and transient and attempt < retry_count,
+                stop_reason=(
+                    "case_budget_or_deadline"
+                    if not request_started
+                    else (
+                        "non_retryable"
+                        if not transient
+                        else "retry_limit" if attempt == retry_count else None
+                    )
+                ),
+            )
             if not transient or attempt == retry_count:
                 error_name = type(error).__name__
                 if error_name in {
@@ -191,7 +250,83 @@ def _call_live(
                     prompt_hash,
                     model,
                 )
+        else:
+            _record_provider_attempt(
+                prompt=prompt,
+                model=model,
+                case_id=case_id,
+                step=step,
+                call_id=call_id,
+                attempt_index=attempt + 1,
+                started=started,
+                effective_timeout_s=remaining_timeout,
+                attempts_before=attempts_before,
+                remaining_case_time_s=remaining_case_time,
+                request_started=True,
+                success=result.ok,
+                error=None,
+                retryable=False,
+                will_retry=False,
+                stop_reason=None,
+            )
+            return result
     return _failure("Dịch vụ AI chưa sẵn sàng; email được giữ lại để thử sau.", prompt_hash, model)
+
+
+def _record_provider_attempt(
+    *,
+    prompt: str,
+    model: str,
+    case_id: str | None,
+    step: str | None,
+    call_id: str,
+    attempt_index: int,
+    started: float,
+    effective_timeout_s: int | None,
+    attempts_before: int | None,
+    remaining_case_time_s: float | None,
+    request_started: bool,
+    success: bool,
+    error: Exception | None,
+    retryable: bool,
+    will_retry: bool,
+    stop_reason: str | None,
+) -> None:
+    """Reuse the existing logger; diagnostics must never mask the original outcome."""
+    try:
+        budget = _BUDGET.get()
+        event = {
+            "event": "llm_provider_attempt" if request_started else "llm_provider_attempt_skipped",
+            "case_id": sanitize_case_id(case_id, prompt=prompt),
+            # No trace_id is propagated to this wrapper; do not invent one or query/write DB.
+            "trace_id": None,
+            "call_id": call_id,
+            "step": sanitize_diagnostic(step, prompt=prompt),
+            "attempt_index": attempt_index,
+            "elapsed_ms": round((perf_counter() - started) * MILLISECONDS_PER_SECOND),
+            "effective_timeout_s": effective_timeout_s,
+            "attempts_remaining_before": attempts_before,
+            "attempts_remaining_after": budget.remaining if budget is not None else None,
+            "remaining_case_time_s": remaining_case_time_s,
+            "model": sanitize_diagnostic(model, prompt=prompt),
+            "prompt_chars": len(prompt),
+            "prompt_hash12": hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:12],
+            "success": success,
+            "retryable": retryable,
+            "will_retry": will_retry,
+            "stop_reason": stop_reason,
+        }
+        if error is not None:
+            event.update(exception_diagnostic(error, prompt=prompt))
+        # WARNING ensures successful attempts are retained alongside failures by default.
+        LOGGER.warning(
+            "LLM provider evidence %s",
+            json.dumps(event, ensure_ascii=False),
+            extra={"provider_attempt": event},
+        )
+    except Exception:
+        # Logging/SDK metadata failures cannot change retry, budget, or return values.
+        pass
 
 
 def _request_gemini(

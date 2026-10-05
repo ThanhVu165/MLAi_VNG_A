@@ -188,7 +188,10 @@ Goal: ghi sanitized provider-level evidence theo từng attempt để phân bi�
 
 Constraint: **Không thay đổi retry/policy/runtime behavior trong observability task.**
 Không in/lưu credential, auth headers hoặc email payload thô trong diagnostics.
-M1.2 chưa implement; nội dung observability hiện là đề xuất cần coordinator review.
+M1.2 có local implementation + offline validation PASS trên branch
+`task/llm-observability`; evidence và progress log xem
+[M1.2 implementation evidence](M1_2_provider_observability.md).
+Chưa có coordinator/reviewer acceptance; không tự đánh dấu DONE, không mở M1.3.
 
 ### M1.3 — Offline verification + Code Review
 
