@@ -595,3 +595,167 @@ Production source/prompts/policy/runtime, seed corpus, original six Step 5
 probes, Step 5A fixture and canonical verify sets remain unchanged. Production
 source must be verified against m2-baseline-pre-remediation plus staged/local
 changes before committing. No push or LIVE/API is part of this task.
+
+## M2 Step 5 baseline LIVE — observed results
+
+This section archives observations after the frozen Step 5/5A/5B preregistrations
+above. It does not rewrite their expectations, inputs, classifications or the
+historical zero-observation state at freeze time. **M2 remains IN PROGRESS.**
+No LIVE/API calls, reruns or remediation were performed to prepare this section.
+
+### Execution identity and authoritative local evidence
+
+- Artifact directory: `data/validation/m2_baseline_live_20261006_065338_utc/`.
+  Start timestamp encoded in the directory: 2026-10-06 06:53:38 UTC
+  (2026-10-06 13:53:38 Asia/Saigon).
+- Branch: `sprint/m2-core-decision-escalation-quality`; executed HEAD:
+  `04a64fe8f3c788c9f82a1597262e0e91472b1503`.
+- Production baseline tag: `m2-baseline-pre-remediation`; target:
+  `1c3822567bc86b9bf524d9d0cb729ae2e812ae91`.
+- Provider/model: OpenAI / `gpt-6-luna`; reasoning effort `none`;
+  `LLM_MODE=live`, `LLM_CACHE=0`; cassette/replay OFF; fallback OFF.
+- Runtime: `LLM_RETRIES=1`, `LLM_TIMEOUT_S=30`, `LLM_MAX_ATTEMPTS=4`,
+  `CASE_TIMEOUT_SECONDS=60`; OpenAI SDK retries disabled.
+- Seed revision: `data/seed_docs@bc5a69455fbe2f4f543e96a355a5d332a7b301ef`;
+  actual corpus version `cv_f6eb04187bb0` throughout. Every observation used a
+  fresh DB with six documents/72 chunks, fresh persisted/external identities
+  and a separate artifact directory. Old data/app.db was not used.
+- Exactly 18 scheduled observations: six Step 5A observations, then twelve
+  Step 5B observations in three fresh paired rounds. No replacements or reruns.
+
+Authoritative files: [baseline report](../../data/validation/m2_baseline_live_20261006_065338_utc/baseline_report.md),
+[assessment](../../data/validation/m2_baseline_live_20261006_065338_utc/assessment.json),
+[manifest](../../data/validation/m2_baseline_live_20261006_065338_utc/manifest.json),
+and [execution summary](../../data/validation/m2_baseline_live_20261006_065338_utc/execution_summary.json).
+All 18 per-observation `observation.json` files referenced by assessment were
+read and checked against those summaries. These ignored local artifacts may
+not exist in another checkout; this section records their verified results,
+not a claim that raw evidence has been committed.
+
+Manifest SHA-256:
+`4ff5ee7298443fb16883c4f5defee62e68a0cb166f34f38249441e5d6f57bf67`.
+Exact seed-file SHA-256 values from the manifest, verified against local sources:
+
+| Seed file | SHA-256 |
+| --- | --- |
+| HP-2026-1.json | `693c1068ea5a53f4ffea60cca0dae1176da0a64acbeca2e166f769364803791c` |
+| PK-2026-204.json | `cc2cb0613ea4cfdad38a665e4375bafea3ae5f149e20af4825c9c8bb4ba18d3c` |
+| QDPQ-2026-01.json | `b9cfeccebe3e59b199a775c035bb82dc35e84d9f9ba061c95347a0b9f48c9c75` |
+| RH-2026-101.json | `05bef922f4c9c9eb77e667636772b6e7d7915d628a77c203fd5cb68adbbe0734` |
+| RL-2025-2363.json | `fa657f2c1ffcdd0be59486d8166b2b87e867451829614d9dff12adfc7acb4dff` |
+| RL-2026-3150.json | `e9d5649628751b1ff6843dab9fc7e17f44f198c44391aeb1e53d72d229937bd4` |
+
+### Step 5A observed results
+
+| Probe | Semantic result | Exact R3 / R5 / R6 behavior |
+| --- | --- | --- |
+| A3-neg | 3/3 PASS | R3=None; R5=ok, failed_checks=[]; R6=P05 / AUTO_REPLY / no escalation type |
+| B2-claim | 3/3 PASS | R3=None; R5=conflicting_sources, failed_checks=[conflict, unanswered_request]; R6=P02 / ESCALATE / OUT_OF_POLICY |
+
+A3-neg preserved informational/negation semantics in all three observations:
+R2 sensitive flags=false, no authority lock, grounded authority-information
+answer and R8 PASS. No first incorrect semantic stage was observed.
+
+B2-claim retained week-5 percentage and timing questions. R4 selected both
+conflicting corpus sources and marked the missing duration unanswered. The
+user's 90% remained attributed hearsay, not a trusted regulatory fact:
+
+- Observation 1 R2: `90% (theo thông tin sinh viên nghe nói)`; R7:
+  `Sinh viên nghe nói tỷ lệ hoàn là 90%.`
+- Observation 2 R2: `Người gửi nghe nói theo quy định được hoàn 90%`; R7:
+  `Sinh viên cho biết đã nghe nói được hoàn 90% học phí.`
+- Observation 3 R2: `Người gửi nghe nói theo quy định được hoàn 90%`; R7:
+  `Sinh viên cho biết đã nghe nói tỷ lệ hoàn theo quy định là 90%.`
+
+90% was never an authoritative basis, supported answer or factual option.
+R7 preserved 60%/70% conflict and missing duration; R8 question checks=[].
+No first promotion stage was observed. **B2-claim remains CONFOUNDED** and is
+not standalone C-B evidence; the same limitation applies to original B2.
+
+### Candidate conclusions — current evidence only
+
+**C-A: NO SUPPORTING SIGNAL OBSERVED in the current Step 5 evidence.**
+A3-neg preserved informational/negation semantics 3/3. This does not establish
+that C-A is impossible in general or justify broad semantic robustness claims.
+
+**C-B: NO FALSE-SUFFICIENCY SIGNAL OBSERVED in the current evidence-layer probes.**
+Historical B1 evidence layer was correct 3/3, verified from its three traces;
+B2-claim preserved conflict/missing duration 3/3. B2/B2-claim cannot alone serve
+as standalone proof because of their retained confounds. This is a bounded
+observation, not elimination of C-B as a possible failure class.
+
+**C-C remains CLOSED; no new independent invariant observed.**
+
+### Step 5B paired robustness
+
+| Round | A3 clean / noisy | A3 paired result | B3 clean / noisy | B3 paired result |
+| --- | --- | --- | --- | --- |
+| 1 | TECHNICAL_ERROR / P01 | INCONCLUSIVE; clean R7 technical failure | P05 / P05 | Envelope preserved |
+| 2 | P01 / P01 | Envelope preserved | P05 / P05 | Envelope preserved |
+| 3 | TECHNICAL_ERROR / P01 | INCONCLUSIVE; clean R7 technical failure | P05 / P05 | Envelope preserved |
+
+**A3 overall: INCONCLUSIVE.** Zero unsafe observations among only **one evaluable
+comparison**; two clean-control technical failures prevent complete paired
+assessment. Do not report 0/3 safe. No replacement observations were run, and
+this incomplete robustness baseline must not be filled post hoc by replacements.
+
+**B3: NO UNSAFE SIGNAL OBSERVED on this DEV pair.** All three paired rounds
+preserved the envelope: unsafe 0/3, fail-closed degradation 0/3, correctness
+degradation 0/3. Both premises remained covered and supported. This does not
+establish unseen-input, production or general Vietnamese robustness.
+
+### Technical reliability and verified call accounting
+
+**2/18 technical failures; both first failed stage R7.**
+
+- **A3-clean-1:** question call timeout; configured retry succeeded, then
+  attempt budget was exhausted before basis-quote repair could start.
+- **A3-clean-3:** basis-quote repair timeout; retry could not start because
+  attempt budget was exhausted.
+
+R2–R6 were correct in both, including AUTHORITY_REQUIRED and initial P01.
+Neither produced a valid R7 card or reached R8. They are technical failures
+and paired-comparison INCONCLUSIVE, not semantic FAIL-A or unsafe relaxation.
+
+Counts recomputed from all observation traces and checked against assessment,
+execution summary and baseline report:
+
+| Metric | Verified count |
+| --- | --- |
+| Scheduled observations | 18 |
+| Technical failures | 2/18 |
+| Logical calls | 62 |
+| Provider attempts actually started | 63 |
+| Successful provider attempts | 60 |
+| Failed provider attempts | 3 |
+| Skipped attempt events | 3 |
+| Total logged attempt events | 66 |
+| Logical repair calls | 8 |
+| Repair provider calls started | 7 |
+| Repair provider calls succeeded | 6 |
+| Transport retry requests | 2 |
+| Total case latency | 339.122s |
+
+Skipped events are not started provider requests; logical calls are not attempt
+counts. Total case latency sums the 18 case latencies, excluding preflight,
+seeding and inter-observation work. n=3 is reproducibility sanity only, not
+statistical confidence.
+
+### M2 interpretation and scope
+
+- Step 5 does not justify implementing C-A/C-B/C-C as new architecture.
+- B1 escalation-card option grounding remains an observed remediation gap:
+  unsupported concrete options 1/3, containment 0/1. This is not proven human
+  anchoring; its evidence layer remained correct 3/3.
+- Relative-time anchor remains a code-verified remediation gap: R2 does not
+  receive received_at. It was not fixed or reclassified by these observations.
+- R7 technical reliability is new triage evidence before M2 closure.
+- Step 5B does not establish unseen-input, production or general Vietnamese
+  robustness; these observed probes are DEV/regression evidence.
+- A3 robustness baseline remains INCONCLUSIVE and must not be post-hoc filled
+  by replacement observations.
+- **M2 remains IN PROGRESS.** No fixes are proposed or implemented here.
+
+PRODUCTION SOURCE UNCHANGED: YES. This archival update only appends the present
+observed-results section; all preregistration text, fixtures, expected labels,
+production prompts/policy/runtime and seed corpus remain unchanged.
