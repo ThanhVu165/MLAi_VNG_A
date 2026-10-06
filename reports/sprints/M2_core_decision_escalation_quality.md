@@ -759,3 +759,103 @@ statistical confidence.
 PRODUCTION SOURCE UNCHANGED: YES. This archival update only appends the present
 observed-results section; all preregistration text, fixtures, expected labels,
 production prompts/policy/runtime and seed corpus remain unchanged.
+
+## M2 B1 option-duration remediation — closure
+
+### Baseline và remediation
+
+Trước fix, evidence layer B1 đúng 3/3; R6 giữ P02 / ESCALATE / OUT_OF_POLICY.
+Một RAW R7 card sinh options `Có, tối đa 5 ngày` và `Có, tối đa 10 ngày`
+không có căn cứ; R8 không chặn. Unsupported generation **1/3**, containment
+**0/1** là existence proof của escalation-card option grounding gap;
+không dùng n=3 làm frequency estimate hoặc bằng chứng human anchoring.
+Evidence lịch sử: `data/validation/step5_b1_repeats_20261006_1c38225/combined_assessment.json`.
+
+Commit remediation: `8859a9be2834fa9e2d52083a74753c6f26535fed`.
+R7 prompt hướng dẫn không tự điền duration cụ thể nếu quote basis không support.
+R8 thêm deterministic guard `unsupported_option_duration`, chỉ đối chiếu số +
+đơn vị thời gian trong options với quote của basis đã xác thực. Khi lỗi,
+containment thay question/options bằng fallback, không regenerate LLM;
+giữ nguyên summary, facts, basis, partial_draft, escalation_type và route.
+
+### Offline evidence
+
+- B1 unsupported-duration regression: PASS; có audit failure, không gọi regenerate,
+  giữ nguyên context và loại bỏ options duration unsupported.
+- Supported-duration deterministic control: PASS.
+- Categorical/placeholder control: PASS.
+- Question-guard focused tests: 5 PASS; không thêm model call cho duration containment.
+- Code Review: PASS, không blocker/high/medium, theo verdict được cung cấp trong task closure.
+
+### Exact B1 post-fix LIVE
+
+Artifact: `data/validation/m2_b1_postfix_live_20261006_150548/`.
+Ba independent observations `B1-postfix-1`, `B1-postfix-2`, `B1-postfix-3`
+đều PASS, không rerun hoặc replacement; mỗi lượt dùng fresh seeded DEV DB.
+
+| Stage / metric | Kết quả cả ba observations |
+| --- | --- |
+| R2 | Giữ cả fee + SLA request, informational; authority flags false |
+| R3 | None |
+| R4 | Fee supported; numeric result-return SLA unanswered |
+| R5 | no_authoritative_source / unanswered_request |
+| R6 | P02 / ESCALATE / OUT_OF_POLICY |
+| Technical failures | 0/3 |
+| RAW unsupported duration | 0/3 |
+| FINAL unsupported duration | 0/3 |
+| Containment trigger | 0/0 — không có trigger |
+
+R7 dùng categorical/placeholder options; R8 giữ nguyên card. Tổng B1: 9 calls /
+9 provider attempts, không repair/transport retry/guard regenerate.
+**0/0 không phải LIVE proof của containment.**
+
+### Supported-duration control V1 — giữ nguyên lịch sử
+
+CONTROL-ONLY / NOT POLICY EVIDENCE, cùng artifact directory với B1 post-fix.
+Evidence ID `CONTROL:duration:1`; quote `Kết quả được trả trong 5 ngày.`.
+RAW options: `Có, 5 ngày`; `Không`. Initial và basis repair đều trả
+`[CONTROL:duration:1]`; exact lookup thất bại và R7 dừng với BasisValidationError.
+R8 NOT REACHED. Verdict giữ nguyên: **FAIL / TECHNICAL**.
+Hai provider calls thành công; lỗi ở ID resolution, không phải transport timeout.
+V1 không bị xóa, thay thế hoặc chấm lại sau fix.
+
+### Provenance contract fix
+
+Triage xác định ambiguity trong production contract: evidence render `[chunk_id]`,
+schema yêu cầu chunk_id string nhưng chưa phân biệt delimiter với ID literal.
+Commit: `25c58f66fe2499eaa94690564f49a3db70da92d9`.
+Parser ưu tiên exact lookup; chỉ khi exact miss mới unwrap đúng một cặp `[]`
+ngoài cùng, inner ID không rỗng/không chứa ngoặc và phải exact-match selected evidence.
+Quote vẫn phải exact substring của đúng chunk; không fuzzy matching.
+Offline targeted R7/basis/B1 checks: 21 PASS; Code Review PASS theo verdict
+được cung cấp trong task closure. Hai failures khi chạy toàn test_guards.py
+vẫn là PRE-EXISTING (evidence audit wording và pending-send wording), không sửa.
+
+### Supported-duration control V2 — fresh observation
+
+Artifact: `data/validation/m2_b1_supported_duration_control_v2_live_20261006_171921/`.
+Một observation mới, CONTROL-ONLY / NOT POLICY EVIDENCE / NOT A REPLACEMENT FOR CONTROL V1.
+RAW ID `PK-2026-204:chunk:9999` dạng bare; exact lookup PASS. Quote
+`Kết quả được trả trong 5 ngày.`; parsed basis PASS.
+R8 RAW/FINAL options đều `["Có", "Không"]`, question_failures `[]`;
+không fallback, không regenerate. Một call / một provider attempt, không repair/retry.
+Verdict: **NOT EXERCISED**, không gọi control V2 là PASS.
+Options không chứa duration cụ thể nên supported-duration-in-option acceptance
+chưa được LIVE exercise. Wrapped-ID normalization cũng chưa được LIVE exercise
+vì model trả bare ID. Không rerun để ép hai nhánh này.
+
+### Kết luận và giới hạn
+
+**B1 OPTION-DURATION REMEDIATION: CLOSED WITH BOUNDED EVIDENCE**
+
+Exact B1 post-fix LIVE 3/3 không có unsupported final duration. Deterministic
+offline tests chứng minh duration unsupported được containment và duration
+supported không bị chặn. P02 routing giữ nguyên; containment không thêm model call.
+
+Giới hạn: LIVE containment branch chưa trigger post-fix; LIVE acceptance của
+supported duration trong options chưa được exercise; wrapped-ID normalization
+chưa được LIVE exercise. Không claim semantic entailment hoặc general factual
+grounding. n=3 không phải frequency estimate. Closure chỉ áp dụng gap B1 này.
+
+PRODUCTION SOURCE UNCHANGED: YES. Cập nhật documentation-only, append section;
+giữ nguyên preregistration/baseline history, STATUS.md và roadmap.
