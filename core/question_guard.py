@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from pathlib import Path
 from typing import cast
 
@@ -19,7 +20,15 @@ logger = logging.getLogger(__name__)
 BLOCKLIST_PATH = Path(__file__).parents[1] / "policies" / "blocklist.yaml"
 FALLBACK_PATH = Path(__file__).parents[1] / "policies" / "fallback_questions.yaml"
 WORD_PATTERN = re.compile(r"\b\w+\b")
+DURATION_PATTERN = re.compile(
+    r"(?<![\w.,])([0-9]+(?:[.,][0-9]+)?)\s*(giây|phút|giờ|ngày|tuần|tháng|năm)\b"
+)
 NO_SOURCE_BREADCRUMB = "Không tìm thấy quy định đang hiệu lực"
+
+
+def _durations(text: str) -> set[tuple[str, str]]:
+    # ponytail: chỉ đối chiếu số + đơn vị, không suy luận nghĩa hay quy đổi thời lượng.
+    return set(DURATION_PATTERN.findall(text.casefold()))
 
 
 def _load_blocklist() -> tuple[tuple[str, ...], int, int]:
@@ -65,6 +74,9 @@ def question_failures(card: EscalationCard) -> list[str]:
         failures.append("breadcrumb")
     if any(phrase.casefold() in question.casefold() for phrase in phrases):
         failures.append("blocklist")
+    supported = {duration for _, quote in card.basis for duration in _durations(quote)}
+    if any(_durations(option) - supported for option in card.options):
+        failures.append("unsupported_option_duration")
     return failures
 
 
@@ -133,7 +145,7 @@ def guard_question(
     card: EscalationCard,
     regenerate: Callable[[], EscalationCard] | None,
 ) -> EscalationCard:
-    """Chặn card lỗi, regenerate đúng một lần rồi dùng fallback nếu vẫn lỗi."""
+    """Contain duration sai ngay; lỗi chất lượng khác regenerate tối đa một lần."""
     failures = question_failures(card)
     if not failures:
         return card
@@ -144,6 +156,9 @@ def guard_question(
         card=card,
         failures=failures,
     )
+    if "unsupported_option_duration" in failures:
+        fallback = _fallback(card)
+        return replace(card, question=fallback.question, options=fallback.options)
     if regenerate is None:
         # Email đa yêu cầu đã dùng lượt đọc, chọn nguồn, soạn phần đáp án và đặt câu hỏi.
         return _fallback(card)
@@ -162,4 +177,7 @@ def guard_question(
         card=regenerated,
         failures=retry_failures,
     )
-    return _fallback(regenerated)
+    fallback = _fallback(regenerated)
+    if "unsupported_option_duration" in retry_failures:
+        return replace(regenerated, question=fallback.question, options=fallback.options)
+    return fallback

@@ -991,6 +991,79 @@ def test_question_guard_reports_each_quality_rule() -> None:
         assert expected_failure in question_failures(card)
 
 
+def test_question_guard_contains_unsupported_option_duration(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    partial_draft = DraftReply("Lệ phí", "Lệ phí là 150.000 đồng.", [], True, [])
+    card = _card(
+        summary="Sinh viên hỏi lệ phí và nghe nói kết quả trả trong 5 ngày.",
+        facts=["Lệ phí: 150.000 đồng.", "Sinh viên nghe nói 10 ngày."],
+        basis=[
+            ("PK-204 / 5 ngày / 10 ngày", "Lệ phí phúc khảo là 150.000 đồng mỗi học phần."),
+            ("PK-204", "Kết quả được thông báo sau khi Hội đồng chuyên môn hoàn tất."),
+        ],
+        question="Anh/chị xác nhận có thời hạn tối đa trả kết quả phúc khảo không?",
+        options=[
+            "Không có thời hạn tối đa được quy định",
+            "Có, tối đa 5 ngày",
+            "Có, tối đa 10 ngày",
+            "Có, thời hạn khác",
+        ],
+        escalation_type=EscalationType.OUT_OF_POLICY,
+        partial_draft=partial_draft,
+    )
+    assert question_failures(card) == ["unsupported_option_duration"]
+
+    def regenerate() -> EscalationCard:
+        pytest.fail("Unsupported duration phải containment mà không regenerate.")
+
+    contained = guard_question(
+        case_id="case-b1-duration",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=card,
+        regenerate=regenerate,
+    )
+    assert contained.options == [
+        "Tiếp nhận và xử lý thủ công",
+        "Hướng dẫn sinh viên liên hệ đơn vị phù hợp",
+    ]
+    assert question_failures(contained) == []
+    assert contained.summary == card.summary
+    assert contained.facts is card.facts
+    assert contained.basis is card.basis
+    assert contained.partial_draft is partial_draft
+    assert contained.escalation_type is card.escalation_type
+    events = events_for_case("case-b1-duration")
+    assert any(
+        event.action == "QUESTION_GUARD_FAILED"
+        and "unsupported_option_duration" in event.reason
+        for event in events
+    )
+    for unit in ("giây", "phút", "giờ", "ngày", "tuần", "tháng", "năm"):
+        assert "unsupported_option_duration" in question_failures(
+            replace(card, options=[f"Trong 3 {unit}", "Chưa xác định"])
+        )
+    # Số 5 không được khớp nhầm với 15 hoặc với đơn vị khác.
+    for quote in ("Trả trong 15 ngày.", "Trả trong 5 tuần."):
+        assert "unsupported_option_duration" in question_failures(
+            replace(card, basis=[("PK-204", quote)])
+        )
+
+
+def test_question_guard_accepts_supported_option_duration() -> None:
+    for unit in ("giây", "phút", "giờ", "ngày", "tuần", "tháng", "năm"):
+        card = _card(
+            basis=[("Quy định", f"Kết quả được trả trong 5 {unit}.")],
+            options=[f"Trong 5 {unit}", "Chưa xác định"],
+        )
+        assert question_failures(card) == []
+
+
+def test_question_guard_accepts_non_factual_and_placeholder_options() -> None:
+    for options in (["Có", "Không"], ["... ngày", "Chưa xác định"]):
+        assert question_failures(_card(options=options)) == []
+
+
 def test_question_guard_regenerates_once_then_uses_yaml_fallback(monkeypatch, tmp_path) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
