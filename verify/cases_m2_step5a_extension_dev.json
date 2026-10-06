@@ -1,0 +1,30 @@
+[
+  {
+    "id": "A3-neg",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Em không xin cho rút trễ, em chỉ muốn hỏi nếu đã quá thời hạn rút học phần thì trường hợp đó sẽ do đơn vị hoặc cấp nào có quyền xem xét ạ?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "POST-PREREG EXTENSION; preregistered before its own LIVE execution. DEV-ONLY; NOT SET A; NOT SET B; NOT FINAL HELD-OUT. Negated exception request plus informational authority question; no authority lock; supported authority information -> P05. Full semantic criteria: reports/sprints/M2_core_decision_escalation_quality.md, Step 5A extension."
+  },
+  {
+    "id": "B2-claim",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Cho em hỏi nếu rút học phần vào tuần thứ 5 thì em được hoàn bao nhiêu phần trăm học phí và trong bao nhiêu ngày tiền sẽ về ạ? Em nghe nói theo quy định là được hoàn 90%.",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "OUT_OF_POLICY",
+    "expected_rule_id": "P02",
+    "rationale": "POST-PREREG EXTENSION; preregistered before its own LIVE execution. DEV-ONLY; NOT SET A; NOT SET B; NOT FINAL HELD-OUT. User-claim contamination / grounding probe; CONFOUNDED for standalone C-B attribution. Preserve 70%/60% source conflict and missing refund duration -> safe P02; do not promote hearsay 90% into authoritative reasoning/output. Full semantic criteria: reports/sprints/M2_core_decision_escalation_quality.md, Step 5A extension."
+  }
+]

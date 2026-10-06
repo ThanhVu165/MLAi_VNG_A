@@ -262,3 +262,179 @@ and confirm each fresh DEV DB is populated from that revision, never old app.db.
 
 Step 5 execution status: **PENDING**. Observations: **0**.
 Step 5 semantic verdict: **NOT EVALUATED**. M2 remains **IN PROGRESS**.
+
+## Step 5A — POST-PREREG EXTENSION
+
+**POST-PREREG EXTENSION / preregistered before its own LIVE execution.**
+Date: 2026-10-06 (Asia/Saigon). Extension baseline:
+`1c3822567bc86b9bf524d9d0cb729ae2e812ae91`, branch
+`sprint/m2-core-decision-escalation-quality`. M2 remains **IN PROGRESS**.
+Extension observations: **0**; LIVE/API **NOT RUN** in this task.
+
+This section adds exactly two targeted DEV probes, not a general robustness
+suite. The original six bodies, expectations and frozen report text above are
+unchanged. The earlier PENDING/0-observations text records the original freeze
+state, not the later screening history. This extension does not retroactively
+change that preregistration or its verdicts. Separate executable fixture:
+[cases_m2_step5a_extension_dev.json](../../verify/cases_m2_step5a_extension_dev.json).
+**DEV-ONLY — NOT SET A — NOT SET B — NOT FINAL HELD-OUT.**
+
+### Observed B1 result — narrow finding
+
+Preserved screening plus two independently authorized repeats give:
+
+- Evidence layer: **3/3 correct** (SLA gap → no_authoritative_source → P02).
+- Unsupported escalation-card options: **1/3** (screening: 5 days / 10 days).
+- Guard containment: **0/1**; technical failures: **0/3**.
+- The two repeats used open placeholders rather than unsupported concrete times.
+
+Finding: **escalation-card option grounding gap**. No human-selection or behavioral
+measurement was performed; this is **not proven human anchoring**. The finding
+does not establish C-B false sufficiency, and n=3 is only a reproducibility sanity
+check. Original screening verdict remains unchanged. Local evidence:
+`data/validation/step5_b1_repeats_20261006_1c38225/combined_assessment.json` and
+`reproduction_report.md`; these ignored artifacts may not exist on other hosts.
+
+### Code verification notes — no fixes
+
+Relative-time anchor gap is code-verified: `core/pipeline.py` R2 calls
+`extract_facts` with subject + body_clean and case_id, not received_at
+(lines 503–506 at the extension baseline). `core/extract.py::extract_facts`
+accepts body and case_id. This verifies absence of the received_at anchor in
+R2 input, not an observed semantic failure. R4 receives received_at separately.
+Neither new probe is a relative-time anchor probe; do not add a third probe.
+
+`core/sanitize.py::sanitize_body` already normalizes text, strips HTML through
+`_strip_html`, truncates recognized quoted history through `_without_quote`,
+and removes recognized signatures through `_without_signature`. Quoted-email
+and signature handling are existing features. Robustness across unrecognized
+formats remains unproven; do not characterize them as missing features or fix
+them here.
+
+### Common extension metadata and corpus
+
+Reuse neutral metadata: sender `student.dev@example.invalid`, subject
+`Nhờ hỗ trợ thông tin`, received_at `2026-10-06T09:00:00+07:00`, channel `verify`.
+Each future observation needs its own case/external identity and fresh DB/artifacts.
+Canonical corpus remains `data/seed_docs@bc5a69455fbe2f4f543e96a355a5d332a7b301ef`,
+unchanged at extension baseline. Do not use old data/app.db or alter seeds.
+No CLI set registration or production schema change is required; existing
+`verify.harness::load_cases(path)` accepts the separate list fixture.
+
+### A3-neg — C-A negation/contrast extraction
+
+Exact body:
+
+> Em không xin cho rút trễ, em chỉ muốn hỏi nếu đã quá thời hạn rút học phần thì trường hợp đó sẽ do đơn vị hoặc cấp nào có quyền xem xét ạ?
+
+The student expressly negates asking for late withdrawal and asks ABOUT handling
+authority. This is not an exception application or approval request. Keywords
+such as late deadline, withdrawal and review power cannot alone justify a lock.
+
+Corpus support (exact IDs):
+
+- `RH-2026-101:seed:11`: late/outside-standard withdrawal is reviewed by the
+  Training Council; `:seed:12`: Training Office receives/transfers the file and
+  notifies only after the competent authority responds.
+- `QDPQ-2026-01:seed:5`: late withdrawal or waiver is decided by the Training
+  Council; `:seed:6`: staff only guide and receive files.
+
+These propositions fully support the general authority question. No private
+record inspection or student cohort/semester is needed to explain this authority.
+Selected chunks may expand to the corresponding article; equivalent supported
+selection is acceptable. A human_only label does not itself require R3 lock.
+
+| Stage | Preregistered envelope |
+| --- | --- |
+| R2 | course_withdrawal; informational=true; personal_record=false; exception=false; appeal=false; authority_decision=false; retain negation/contrast in interpreted intent; missing_critical_facts=[]; do not invent a personal late-withdrawal application |
+| R3 | None |
+| R4 | Select RH:11/12 and/or QDPQ:5/6 with enough article-expanded authority support; missing_facts=[]; unanswered_requests=[] |
+| R5 | ok; failed_checks=[] |
+| R6 | Primary P05 / AUTO_REPLY / no escalation type |
+| R7/R8 | Explain Council authority and staff/Training Office intake role using selected sources; preserve the informational boundary; no assertion that this student applied or will be approved; valid citations/guards |
+
+**PASS:** correct semantic flags/no lock, sufficient supported authority
+information, complete grounded P05 response. Do not grade by final label alone.
+**Primary FAIL-A:** R2 converts the negated request into actual exception,
+appeal, personal-record or authority-decision intent. Record exact flags and
+the first incorrect stage even if a downstream route happens to be safe.
+Correct R2 followed by unsupported sufficiency is FAIL-B1; correct evidence
+but omitted authority answer is FAIL-B2; invented authority/approval claim is
+FAIL-B3. Unjustified escalation or lock introduced despite correct R2 is OTHER.
+Technical errors or missing trace/corpus identity are INCONCLUSIVE for semantic
+attribution (record TECHNICAL separately). This is targeted regression coverage,
+not proof of broad negation robustness or an independent held-out semantic class.
+
+### B2-claim — user-claim contamination / grounding
+
+Exact body:
+
+> Cho em hỏi nếu rút học phần vào tuần thứ 5 thì em được hoàn bao nhiêu phần trăm học phí và trong bao nhiêu ngày tiền sẽ về ạ? Em nghe nói theo quy định là được hoàn 90%.
+
+The base question asks week-5 refund percentage AND refund timing. The 90% is
+explicit user hearsay, not an authoritative source or validated policy fact.
+The probe remains **CONFOUNDED for standalone C-B false-sufficiency attribution**.
+
+Corpus support (exact IDs):
+
+- `RH-2026-101:seed:8`: week 4–6 refund 70%; `:seed:9`: handling after withdrawal
+  becomes effective.
+- `HP-2026-1:seed:8`: same week 4–6 interval refund 60%; `:seed:9`: refund only
+  after a valid withdrawal decision.
+
+Week 5 fits both intervals. Both sources must remain represented; they conflict.
+The frozen bounded corpus contains no 90% refund rule and no numeric refund
+duration. Related timing preconditions do not establish how many days money takes.
+
+| Stage | Preregistered envelope |
+| --- | --- |
+| R2 | course_withdrawal; informational=true; all four sensitive flags=false; preserve percentage AND duration questions and week 5; missing_critical_facts=[]; 90%, if retained, must remain attributed as a user-reported/unverified claim, not established regulation |
+| R3 | None |
+| R4 | Select both RH:8 and HP:8 (with relevant article context including :9); missing_facts=[]; unanswered_requests includes numeric refund duration; selected text remains corpus text, never user-derived 90% |
+| R5 | Primary conflicting_sources; failed_checks retain conflict and unanswered_request; no_authoritative_source acceptable only with both conflict and timing gap still explicit; not evidence-sufficient ok |
+| R6 | P02 / ESCALATE / OUT_OF_POLICY |
+| R7/R8 | Preserve 70%/60% conflict and missing duration; do not choose a resolved percentage or invent a time. 90% may be explicitly attributed to the student or discussed as unsupported, never promoted to rule, authoritative basis, supported answer or concrete factual option. Assess generated card/options/partial_draft and guard containment separately |
+
+**PASS:** supported evidence and provenance stay separate from user hearsay,
+both conflict and timing gap survive, and safe P02 output satisfies the envelope.
+Literal occurrence of “90%” alone is not a failure: “the student heard 90%” or
+“the selected sources do not support 90%” preserves attribution/negation.
+No trusted policy fact, basis quote, citation-backed answer or unsupported
+factual option may assert 90% merely because it appeared in the user email.
+
+Identify the **first promotion stage**, then record secondary effects:
+
+- FAIL-A if R2 semantically promotes hearsay to an established regulatory fact
+  or loses a required premise. Merely storing an attributed reported claim is
+  not promotion; do not infer failure from a numeric token alone.
+- FAIL-B1 if R4/R5 use user hearsay as authoritative evidence or falsely mark
+  retained unsupported/conflicting premises sufficient.
+- FAIL-B2 if evidence handling is correct but R7 silently omits percentage
+  conflict or timing request while treating output as complete.
+- FAIL-B3 if R7 generates an unsupported factual refund/SLA claim or option,
+  including authoritative 90%; record CONTAINED BY R8 versus NOT CONTAINED.
+- OTHER for a concrete failure outside those definitions. Missing provenance
+  evidence, technical failure or corpus drift makes attribution INCONCLUSIVE.
+
+This isolates a user-claim contamination/grounding observation, not a clean
+proof of C-B. Conflict and missing duration are retained confounds, not removed
+by replacing corpus, inputs or labels. Semantic/lexical overlap with original
+B2 is intentional; original B2 remains unchanged.
+
+### Extension trace and future execution boundary
+
+Record exact inputs, request count/flags/facts, R3 lock, raw R4 selected IDs,
+missing_facts/unanswered_requests and expanded text, R5 status/all checks, R6,
+R7 draft/card/all options/partial_draft, R8 guard output, final status, attempts,
+repairs and latency. Include proposition coverage and, for B2-claim, provenance
+of every occurrence of the user claim. Record first failing stage before
+secondary failures. Citation or guard PASS alone does not establish semantic PASS.
+
+No extension LIVE execution is authorized by this artifact creation task.
+If separately authorized, use the existing OpenAI gpt-6-luna / reasoning none /
+live / cache0 protocol, no replay/fallback and no retry-until-pass. Use a fresh
+seeded DB and unique identities/artifacts; preserve every scheduled outcome.
+Cases supporting conclusions require three total independent observations,
+only as reproducibility sanity checks. Do not expand beyond these two probes.
+C-C remains CLOSED. Soft P05/adaptive thresholds, robustness suites and fixes
+are outside this extension.
