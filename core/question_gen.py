@@ -106,6 +106,10 @@ def _basis(value: object, evidence: EvidenceResult) -> list[tuple[str, str]]:
         chunk_id = _string(item.get("chunk_id"), "basis.chunk_id")
         quote = _string(item.get("quote"), "basis.quote")
         chunk = chunks.get(chunk_id)
+        if chunk is None and chunk_id.startswith("[") and chunk_id.endswith("]"):
+            inner_id = chunk_id[1:-1]
+            if inner_id and "[" not in inner_id and "]" not in inner_id:
+                chunk = chunks.get(inner_id)
         if chunk is None or quote not in chunk.text:
             raise BasisValidationError("basis phải trỏ tới trích dẫn thuộc evidence.")
         basis.append((chunk.breadcrumb, quote))

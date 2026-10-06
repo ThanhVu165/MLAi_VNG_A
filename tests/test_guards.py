@@ -26,7 +26,12 @@ from core.prepolicy import decision_lock
 from core.evidence import validate_evidence
 from core.generate import generate_reply
 from core.ground_guard import GroundednessResult, guard_groundedness, guard_resume_groundedness
-from core.question_gen import generate_escalation_card, generate_multi_intent_card
+from core.question_gen import (
+    BasisValidationError,
+    _basis,
+    generate_escalation_card,
+    generate_multi_intent_card,
+)
 from core.question_guard import guard_question, question_failures
 from core.retrieval import retrieve_evidence
 from core.sanitize import detect_language, mask_pii, sanitize_body
@@ -754,8 +759,54 @@ def test_generate_reply_rejects_uncited_paragraph(monkeypatch) -> None:
         )
 
 
+@pytest.mark.parametrize("model_id", ["abc", "[abc]"])
+def test_basis_resolves_exact_and_single_wrapped_ids(model_id) -> None:
+    chunk = replace(_evidence_chunk(), chunk_id="abc", text="Kết quả được trả trong 5 ngày.")
+    evidence = EvidenceResult(EvidenceStatus.OK, [chunk], [])
+    assert _basis([{"chunk_id": model_id, "quote": chunk.text}], evidence) == [
+        (chunk.breadcrumb, chunk.text)
+    ]
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    ["[xyz]", "[[abc]]", "[abc", "abc]", "[]", "[ABC]", "[ab]", "[ abc ]"],
+)
+def test_basis_rejects_invalid_wrapped_ids(model_id) -> None:
+    chunk = replace(_evidence_chunk(), chunk_id="abc")
+    with pytest.raises(BasisValidationError):
+        _basis(
+            [{"chunk_id": model_id, "quote": chunk.text}],
+            EvidenceResult(EvidenceStatus.OK, [chunk], []),
+        )
+
+
+@pytest.mark.parametrize("quote", ["Kết quả được trả trong 10 ngày.", "Căn cứ chunk khác."])
+def test_basis_wrapped_id_keeps_quote_provenance_strict(quote) -> None:
+    chunk = replace(_evidence_chunk(), chunk_id="abc", text="Kết quả được trả trong 5 ngày.")
+    other = replace(chunk, chunk_id="xyz", text="Căn cứ chunk khác.")
+    with pytest.raises(BasisValidationError):
+        _basis(
+            [{"chunk_id": "[abc]", "quote": quote}],
+            EvidenceResult(EvidenceStatus.OK, [chunk, other], []),
+        )
+
+
+def test_basis_exact_bracket_id_takes_precedence_over_unwrapped_id() -> None:
+    bare = replace(_evidence_chunk(), chunk_id="abc", text="Quote bare.")
+    wrapped = replace(bare, chunk_id="[abc]", breadcrumb="Exact bracket ID", text="Quote wrapped.")
+    evidence = EvidenceResult(EvidenceStatus.OK, [bare, wrapped], [])
+    assert _basis([{"chunk_id": "[abc]", "quote": wrapped.text}], evidence) == [
+        (wrapped.breadcrumb, wrapped.text)
+    ]
+    # Exact ID có quote sai phải fail, không thử chunk abc để cứu quote.
+    with pytest.raises(BasisValidationError):
+        _basis([{"chunk_id": "[abc]", "quote": bare.text}], evidence)
+
+
+@pytest.mark.parametrize("model_id", ["chunk-1", "[chunk-1]"])
 def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, model_id
 ) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
@@ -767,8 +818,10 @@ def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
         False,
         "{}",
     )
+    calls = []
 
     def fake_call(prompt: str, **kwargs: object) -> LLMResult:
+        calls.append(kwargs["step"])
         assert "450.000₫ hoặc 480.000₫" in prompt
         assert "Ảnh hóa đơn bị mờ" in prompt
         assert "Điều 1" in prompt and "FACT_UNRESOLVED" in prompt
@@ -778,7 +831,7 @@ def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
             {
                 "summary": "Hóa đơn mờ nên chưa xác định được số tiền.",
                 "facts": ["Số tiền có thể là 450.000₫ hoặc 480.000₫."],
-                "basis": [{"chunk_id": "chunk-1", "quote": "Căn cứ."}],
+                "basis": [{"chunk_id": model_id, "quote": "Căn cứ."}],
                 "question": "Hóa đơn ghi 450.000₫ hay 480.000₫?",
                 "options": ["450.000₫", "480.000₫"],
             },
@@ -803,6 +856,7 @@ def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
     assert "450.000₫" in card.question and "480.000₫" in card.question
     assert card.options == ["450.000₫", "480.000₫"]
     assert card.basis == [("Điều 1", "Căn cứ.")]
+    assert calls == ["R7_question"]
     assert [event.action for event in events] == ["QUESTION_GENERATED"]
 
 
