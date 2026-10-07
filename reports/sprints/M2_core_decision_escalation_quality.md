@@ -859,3 +859,80 @@ grounding. n=3 không phải frequency estimate. Closure chỉ áp dụng gap B1
 
 PRODUCTION SOURCE UNCHANGED: YES. Cập nhật documentation-only, append section;
 giữ nguyên preregistration/baseline history, STATUS.md và roadmap.
+
+## M2 relative-time contract — triage conclusion
+
+Triage code/corpus tại HEAD `baa385e1ec335d790df95b64e9a417aee6232ace`.
+**Classification C — NO ACTION NEEDED cho việc thêm received_at vào R2
+trong scope M2 hiện tại.** Không sửa code hoặc chạy LIVE để đưa ra kết luận này.
+
+Nhận định trước đây rằng R2 chỉ nhận subject + body_clean, không nhận received_at,
+vẫn đúng về code. Tuy nhiên, đây chưa phải production correctness gap đã được
+chứng minh, và không đủ để gọi là current M2 blocker. Section này bổ sung kết quả
+triage toàn data flow; không rewrite preregistration hay baseline history.
+
+### Temporal data flow hiện tại
+
+| Stage | Timestamp và dependency |
+| --- | --- |
+| R0 / DB | CaseInput.received_at phải timezone-aware; lưu UTC ISO. Đây là ngày nhận email, không phải ngày sự kiện. |
+| R2 | core/extract.py nhận subject + body_clean; schema không yêu cầu normalized event date. |
+| R3 | Lock theo semantic flags; không so sánh ngày. |
+| R4 | core/retrieval.py truyền inp.received_at vào available_evidence và ISO timestamp vào SELECT_PROMPT_V1, cùng email gốc và extraction. |
+| R5 / R6 | Kiểm evidence/missing facts rồi chọn policy; không có dependency bắt buộc vào absolute event date do R2 tạo. |
+| R7 | Prompt nhận email, extraction và evidence, không nhận riêng received_at; không có contract bắt buộc tính ngày tuyệt đối. |
+
+R4 đã có temporal grounding cho document effective date: corpus/api.py lọc
+nguồn ACTIVE và effective_from/effective_to theo ngày nhận email. Cơ chế này
+không phải historical-rule lookup theo ngày sự kiện của người dùng. R4 vẫn nhận
+raw relative phrase trong email gốc cùng anchor để đối chiếu; không bắt buộc
+chỉ dựa vào ngày tuyệt đối từ R2.
+
+### Current corpus evidence
+
+- RH-2026-101:seed:5 và HP-2026-1:seed:5, Điều 2: deadline 17 giờ 00 thứ Sáu
+  tuần học thứ 8; tuần học tính theo lịch đào tạo. Seed không có lịch quy đổi
+  tuần học sang ngày dương lịch.
+- RH-2026-101:seed:8 và HP-2026-1:seed:8, Điều 3: refund tuần 4–6;
+  giữ conflict 70%/60%, không thể giải quyết bằng thêm timestamp vào R2.
+- PK-2026-204:seed:5, Điều 2: nộp trong thời hạn công bố điểm;
+  seed không có thông báo từng đợt với deadline cụ thể.
+- RL-2026-3150:seed:6, Điều 2: sinh viên bảo lưu áp dụng theo thời điểm quay lại học tập.
+- PK-2026-204:seed:11, Điều 4: kết quả sau khi Hội đồng hoàn tất, không có numeric SLA.
+
+Đã đọc sáu current seed documents: không tìm thấy rule dạng trong N ngày kể từ
+sự kiện yêu cầu R2 normalize event date, hoặc lịch học kỳ/deadline phúc khảo
+theo ngày cụ thể. Corpus có điều kiện thời gian thực sự, không chỉ metadata
+hiệu lực, nhưng thêm anchor vào R2 riêng lẻ không cung cấp lịch/thông báo còn thiếu.
+
+### Rủi ro và giới hạn của kết luận
+
+Ví dụ câu hỏi "Ngày mai em còn rút học phần được không?": R2 giữ informational
+request, R3 None; R4 có câu gốc, received_at và deadline tuần 8. Khi chưa có lịch
+hoặc tuần học để áp dụng, R4 cần ghi missing facts, R5 fact_missing, R6 P03.
+Nếu R4 bỏ sót dữ kiện cần thiết thì P05 có thể được chọn vì R5 không có temporal
+checker độc lập. Đây là rủi ro evidence sufficiency, không phải observation
+chứng minh thiếu anchor tại R2 gây sai; không chạy probe LIVE cho chain này.
+
+R4 chỉ cập nhật missing_critical_facts, không sửa critical_facts hoặc lock đã
+tạo trước đó. R7 không có timestamp riêng. Các giới hạn này chưa chứng minh
+blocker do R2 thiếu received_at; không claim mọi câu hỏi temporal đều đúng,
+không claim historical applicability hoặc general temporal reasoning đã được validate.
+
+Tests đã đọc: extraction/applicability, retrieval/prepolicy/evidence trong
+tests/test_guards.py, tests/test_policy_engine.py, tests/test_corpus_api.py và
+tests/test_seed_fidelity.py. Existing retrieval test kiểm timestamp được truyền
+đến available_evidence; các mock tests không chứng minh LIVE temporal adherence.
+
+### Scope decision
+
+Không thêm temporal subsystem, date parser, schema hoặc model call trong M2.
+Không tự biến ngày nhận email thành critical fact do sinh viên nêu. Chỉ cân nhắc
+contract received_at ở R2 khi có yêu cầu/dependency hoặc failure evidence cụ thể;
+hiện không có implementation bắt buộc phải trì hoãn sang M4/M5.
+
+M2 chưa được tuyên bố hoàn tất: reliability R7 (timeout/attempt-budget) vẫn
+cần triage; A3 robustness baseline giữ INCONCLUSIVE. Không bắt đầu Deep Research.
+
+PRODUCTION SOURCE UNCHANGED: YES. Chỉ append living report; không sửa code,
+tests, corpus, STATUS.md, roadmap hoặc kết quả lịch sử.
