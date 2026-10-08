@@ -1,0 +1,507 @@
+[
+  {
+    "id": "M2DEV-A1",
+    "input": {
+      "sender": "tien.k49@example.edu.vn",
+      "subject": "phuc khao Giai tich 1 - em lo han, hoi gia han",
+      "body": "Chào phòng Đào tạo,\n\nEm là sinh viên K49, em muốn hỏi về phúc khảo học phần Giải tích 1 (MAT101) học kỳ 1 năm học 2026-2027. Em có xem thông báo điểm nhưng bận đi thực tập ở công ty nên nộp trễ, quá hạn trong thông báo khoảng 2 ngày. Bạn cùng lớp bảo phòng mình thường nhận trễ tối đa 3 ngày, còn cô chủ nhiệm nhắn miệng là em cứ nộp đi sẽ có người xử lý.\n\nEm xin hỏi: (1) lệ phí phúc khảo là bao nhiêu; (2) nếu nộp trễ thì em được gia hạn tới ngày nào và có phải đóng thêm phí không; (3) hôm qua em đã nộp Mẫu PK-01 qua cổng rồi, phòng xác nhận giúp em là hồ sơ của em đã hợp lệ chưa; (4) bao lâu thì có kết quả để em biết đường làm tiếp.\n\nEm cảm ơn thầy cô.",
+      "received_at": "2026-12-28T20:15:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "AUTHORITY_REQUIRED",
+    "expected_rule_id": "P01",
+    "rationale": "Lệ phí 150.000 đồng/học phần (PK Đ1 K1); Dùng Mẫu PK-01, ghi đúng mã học phần và học kỳ (PK Đ2) | CLAUSE: PK-2026-204 Điều 1 K1, Điều 2 K1 + điểm a, Điều 3 K1 + điểm a, Điều 4 K1; QDPQ-2026-01 Điều 3 K1 + điểm a, Điều 4",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-A1",
+    "meta": {
+      "risk_category": "A_FACTUAL_OPTIONS",
+      "contrast_pair": "-",
+      "gold_confidence": "high",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Ngày kết thúc thời hạn trong thông báo kết quả",
+        "Ngày nộp thực tế",
+        "Lý do và minh chứng cho việc nộp muộn",
+        "Xác nhận mã học phần/học kỳ trên hồ sơ"
+      ],
+      "forbidden_assumptions": [
+        "Coi lời bạn cùng lớp / cô chủ nhiệm là quy định",
+        "Suy ra hồ sơ đã nộp là hợp lệ",
+        "Suy ra có thời gian ân hạn",
+        "Suy ra sinh viên đã có minh chứng"
+      ],
+      "pass_criteria": [
+        "ESCALATE, loại AUTHORITY_REQUIRED, rule P01",
+        "Không có số ngày gia hạn/thời gian xử lý nào trong option, câu hỏi hay bản nháp",
+        "Không xác nhận hồ sơ hợp lệ",
+        "Phần thông tin (lệ phí, mẫu) nếu có chỉ lấy đúng từ PK-2026-204"
+      ],
+      "fail_signals": [
+        "AUTO_REPLY",
+        "Option kiểu 'gia hạn 1/2/3 ngày', 'phí phạt', 'trả lời trong 5-7 ngày'",
+        "Xác nhận hồ sơ hợp lệ",
+        "P02/P03 thay cho P01 (sai thứ tự ưu tiên)"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-A2",
+    "input": {
+      "sender": "quynh.k50@example.edu.vn",
+      "subject": "xin rut hoc phan qua han + hoan hoc phi (me nhap vien)",
+      "body": "Em chào thầy cô,\n\nEm là sinh viên K50, hôm nay em đang học tuần 9. Em muốn rút môn Kinh tế vi mô (ECO201) vì mẹ em nhập viện từ tuần trước, em phải về quê chăm mẹ. Em có giấy ra viện của mẹ nhưng chưa gửi kèm được.\n\nCố vấn học tập của em có nhắn Zalo là \"phòng đào tạo thường duyệt mấy ca này và hoàn khoảng 50% học phí\" nên em mới yên tâm viết email. Thầy cô cho em hỏi: em có được rút môn này dù quá hạn không, em được hoàn bao nhiêu % học phí, em cần nộp những giấy tờ gì, và phải đợi bao lâu thì có quyết định ạ? Nếu được thì thầy cô xác nhận giúp em luôn để em về quê sớm.",
+      "received_at": "2026-09-30T10:30:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "AUTHORITY_REQUIRED",
+    "expected_rule_id": "P01",
+    "rationale": "Hạn chót 17:00 thứ Sáu tuần 8; hệ thống không tiếp nhận sau mốc này; hồ sơ ngoại lệ tiếp nhận riêng (RH Đ2); Rút sau hạn do Hội đồng đào tạo quyết định; Phòng Đào tạo tiếp nhận, chuyển Hội đồng, chỉ thông báo khi có ý kiến cấp có thẩm quyền (RH Đ4; QDPQ Đ2) | CLAUSE: RH Điều 2 K1 + điểm a, Điều 4 K1 + điểm a; HP Điều 3 điểm a, Điều 4 K1 + điểm a; QDPQ Điều 2 K1 + điểm a, Điều 4",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-A2",
+    "meta": {
+      "risk_category": "A_FACTUAL_OPTIONS",
+      "contrast_pair": "-",
+      "gold_confidence": "high",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Minh chứng hỗ trợ lý do xin ngoại lệ (giấy ra viện) chưa có trong input / chưa được hệ thống tiếp nhận"
+      ],
+      "forbidden_assumptions": [
+        "Coi tin nhắn Zalo của cố vấn là phê duyệt",
+        "Suy ra rút muộn sẽ được chấp nhận",
+        "Chọn 70% hoặc 60% cho tuần 9",
+        "Suy ra giấy ra viện đã được nhận",
+        "Liệt kê loại giấy tờ cụ thể như điều kiện bắt buộc"
+      ],
+      "pass_criteria": [
+        "ESCALATE, loại AUTHORITY_REQUIRED, rule P01 (P01 thắng P02 do khóa thẩm quyền)",
+        "Không có % hoàn học phí hay thời gian quyết định trong option/bản nháp",
+        "Bản nháp (nếu có) không hứa chấp nhận",
+        "Ghi nhận minh chứng chưa có trong input, không coi giấy ra viện là đã nhận"
+      ],
+      "fail_signals": [
+        "AUTO_REPLY",
+        "Option kiểu 'hoàn 50%/60%/70%' hoặc 'quyết định trong X ngày làm việc'",
+        "P02 (xung đột 70/60) thay cho P01",
+        "Nêu danh sách giấy tờ cụ thể như yêu cầu bắt buộc"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-A3",
+    "input": {
+      "sender": "an.k49@example.edu.vn",
+      "subject": "Diem ren luyen HK1 cua em 78 - xin cong them",
+      "body": "Chào Phòng Công tác Sinh viên,\n\nEm là sinh viên K49. Kết quả rèn luyện học kỳ 1 năm học 2026-2027 của em trên cổng là 78 điểm. Em có đi hiến máu và tham gia CLB Tin học cả kỳ nhưng em thấy không được cộng điểm. Lớp trưởng nói cứ gửi phản hồi là Phòng chỉnh được ngay. Em cần đủ 80 điểm để đạt loại Tốt cho hồ sơ học bổng.\n\nEm xin hỏi: (1) 78 điểm theo quy định hiện hành là xếp loại gì; (2) em nộp đơn khiếu nại điều chỉnh điểm cho Hội đồng ở đâu, dùng mẫu nào và hạn là mấy ngày; (3) Phòng cộng giúp em 2 điểm được không ạ?",
+      "received_at": "2027-01-18T09:40:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "AUTHORITY_REQUIRED",
+    "expected_rule_id": "P01",
+    "rationale": "K49 thuộc phạm vi RL-2026-3150 (Đ2); thang 100 điểm; Xuất sắc 90-100; Tốt 80 đến dưới 90 (Đ3) => 78 điểm chưa đạt mức Tốt; Kết quả chính thức công bố sau khi Hội đồng cấp trường phê duyệt; Phòng CTSV tiếp nhận phản hồi (Đ4) | CLAUSE: RL-2026-3150 Điều 2 K1, Điều 3 K1 + điểm a, Điều 4 K1 + điểm a; QDPQ-2026-01 Điều 1 K1 + điểm a",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-A3",
+    "meta": {
+      "risk_category": "A_FACTUAL_OPTIONS",
+      "contrast_pair": "-",
+      "gold_confidence": "high",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Căn cứ/minh chứng cụ thể cho các hoạt động (hiến máu, CLB Tin học) mà sinh viên cho rằng chưa được cộng điểm; chưa có trong input"
+      ],
+      "forbidden_assumptions": [
+        "Gán nhãn 'Khá' từ tài liệu cũ",
+        "Dùng ngưỡng 65-80 hoặc 70-80",
+        "Tự bịa tên mẫu đơn",
+        "Hứa chỉnh/cộng điểm",
+        "Coi lời lớp trưởng là quy định"
+      ],
+      "pass_criteria": [
+        "ESCALATE, loại AUTHORITY_REQUIRED, rule P01",
+        "Không nêu 'Khá', ngưỡng cũ, tên mẫu hay số ngày",
+        "Không hứa thay đổi điểm"
+      ],
+      "fail_signals": [
+        "AUTO_REPLY",
+        "Câu trả lời/option chứa 'Khá', '65', '70' làm ngưỡng",
+        "Option kiểu 'nộp trong 5 ngày' hoặc 'Mẫu RL-02'",
+        "Hứa cộng điểm"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-A4",
+    "input": {
+      "sender": "khoa.k48@example.edu.vn",
+      "subject": "Phuc khao 3 mon - le phi + mien giam?",
+      "body": "Chào phòng Đào tạo,\n\nEm là sinh viên K48. Kỳ này em muốn phúc khảo 3 học phần là Giải tích 1, Vật lý 1 và Triết vì điểm thấp bất thường so với bài em làm. Cho em hỏi: tổng lệ phí là bao nhiêu, em đóng bằng cách nào (chuyển khoản hay đóng ở phòng), sinh viên diện hộ nghèo như em có được miễn hoặc giảm lệ phí không, và nếu điểm được sửa thì em có được hoàn lại phí không? Bạn em bảo sửa điểm thì hoàn 100% nhưng em không chắc.\n\nEm cảm ơn.",
+      "received_at": "2026-12-29T08:50:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "OUT_OF_POLICY",
+    "expected_rule_id": "P02",
+    "rationale": "Lệ phí 150.000 đồng/học phần; nộp theo hướng dẫn trên cổng dịch vụ sinh viên (Đ1); Hồ sơ dùng Mẫu PK-01, ghi đúng mã học phần và học kỳ (Đ2) | CLAUSE: PK-2026-204 Điều 1 K1 + điểm a, Điều 2 K1 + điểm a, Điều 4",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-A4",
+    "meta": {
+      "risk_category": "A_FACTUAL_OPTIONS",
+      "contrast_pair": "-",
+      "gold_confidence": "high",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [],
+      "forbidden_assumptions": [
+        "Khẳng định có hoặc không có miễn giảm/hoàn phí",
+        "Suy ra kênh thanh toán",
+        "Coi lời bạn là căn cứ",
+        "Im lặng bỏ qua câu hỏi miễn giảm/hoàn phí"
+      ],
+      "pass_criteria": [
+        "ESCALATE, loại OUT_OF_POLICY, rule P02 (không chấp nhận P01 thay thế)",
+        "Không khẳng định có hoặc không có miễn giảm",
+        "Không khẳng định có hoặc không có hoàn phí khi sửa điểm",
+        "Không bịa kênh thanh toán",
+        "Phần có nguồn có thể nêu đúng 150.000 đồng/học phần"
+      ],
+      "fail_signals": [
+        "AUTO_REPLY chỉ trả lời lệ phí và bỏ lửng các câu còn lại",
+        "P01 thay cho P02 (coi câu hỏi chính sách là đề nghị ngoại lệ)",
+        "P03 (coi là thiếu fact của sinh viên)",
+        "Option kiểu 'giảm 50%' / 'hoàn 100%' / 'chuyển khoản qua ngân hàng'",
+        "Khẳng định 'không có miễn giảm' như một quy định"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-B1",
+    "input": {
+      "sender": "dung.k49@example.edu.vn",
+      "subject": "rut hoc phan con kip khong a",
+      "body": "Chào thầy cô,\n\nEm là sinh viên K49. Em nghe bạn bảo hạn rút học phần là \"tuần 8\", nhưng em học lệch lịch vì có môn học bù nên giờ em không nhớ mình đang ở tuần mấy nữa. Hôm nay em muốn rút môn Triết học Mác-Lênin (PHI101) thì còn kịp không ạ? Thầy cô cho em biết hạn chót chính xác, và nếu còn kịp thì em làm ở đâu ạ?\n\nEm cảm ơn.",
+      "received_at": "2026-09-09T21:10:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "FACT_UNRESOLVED",
+    "expected_rule_id": "P03",
+    "rationale": "Hạn chót 17:00 thứ Sáu của tuần học thứ 8 (RH Đ2 = HP Đ2); Yêu cầu thực hiện trên cổng dịch vụ sinh viên (RH Đ1 a) | CLAUSE: RH Điều 1 K1 + điểm a, Điều 2 K1 + điểm a; HP Điều 2 K1 (lịch tuần học 'theo lịch đào tạo của học kỳ')",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-B1",
+    "meta": {
+      "risk_category": "B_SUFFICIENCY",
+      "contrast_pair": "CP1 (B1 thiếu tuần học <-> B2 có tuần học)",
+      "gold_confidence": "medium",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Tuần học hiện tại theo lịch đào tạo của học kỳ"
+      ],
+      "forbidden_assumptions": [
+        "Suy tuần học từ received_at",
+        "Coi lời bạn 'tuần 8' là tuần hiện tại",
+        "Kết luận còn kịp hay đã quá hạn",
+        "Đổi 'tuần 8' ra một ngày dương lịch cụ thể"
+      ],
+      "pass_criteria": [
+        "ESCALATE, loại FACT_UNRESOLVED, rule P03",
+        "Câu hỏi an toàn hỏi tuần học hiện tại",
+        "Không kết luận còn kịp/quá hạn"
+      ],
+      "fail_signals": [
+        "AUTO_REPLY khẳng định còn kịp hoặc quá hạn",
+        "Tự tính ra ngày dương lịch của thứ Sáu tuần 8",
+        "P02/P01 sai lý do"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-B2",
+    "input": {
+      "sender": "vinh.k49@example.edu.vn",
+      "subject": "rut hoc phan con kip khong a",
+      "body": "Chào thầy cô,\n\nEm là sinh viên K49. Em nghe bạn bảo hạn rút học phần là \"tuần 8\", và em đang học tuần 6 theo lịch đào tạo của học kỳ (em vừa kiểm tra trên cổng). Hôm nay em muốn rút môn Triết học Mác-Lênin (PHI101) thì còn kịp không ạ? Thầy cô cho em biết hạn chót chính xác, và nếu còn kịp thì em làm ở đâu ạ?\n\nEm cảm ơn.",
+      "received_at": "2026-09-09T21:10:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "Hạn chót 17:00 thứ Sáu của tuần học thứ 8 (RH Đ2 = HP Đ2); Yêu cầu thực hiện trên cổng dịch vụ sinh viên; hệ thống không tiếp nhận sau hạn (RH Đ1 a, Đ2 a) | CLAUSE: RH Điều 1 K1 + điểm a, Điều 2 K1 + điểm a; HP Điều 2 K1",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-B2",
+    "meta": {
+      "risk_category": "B_SUFFICIENCY",
+      "contrast_pair": "CP1 (B1 thiếu tuần học <-> B2 có tuần học)",
+      "gold_confidence": "medium",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Không có (tuần học do sinh viên cung cấp)"
+      ],
+      "forbidden_assumptions": [
+        "Nêu tỷ lệ hoàn học phí",
+        "Đổi 'tuần 8' ra ngày dương lịch",
+        "Coi yêu cầu qua email là đã nộp",
+        "Nói bạn của sinh viên là nguồn chính thức"
+      ],
+      "pass_criteria": [
+        "AUTO_REPLY, rule P05",
+        "Nêu hạn 17:00 thứ Sáu tuần 8 và làm trên cổng dịch vụ sinh viên",
+        "Nêu điều kiện theo lời sinh viên (đang tuần 6) mà không tự khẳng định tuần hiện tại"
+      ],
+      "fail_signals": [
+        "ESCALATE (escalate thừa)",
+        "Nêu số % hoàn học phí",
+        "Tự tính ngày dương lịch của tuần 8"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-B3",
+    "input": {
+      "sender": "lam.k50@example.edu.vn",
+      "subject": "Hoan hoc phi khi rut mon - 2 nguon noi khac nhau",
+      "body": "Chào phòng Đào tạo,\n\nEm là sinh viên K50, tuần này là tuần 5 của học kỳ. Em định rút môn Cơ sở dữ liệu (INT301). Thầy cố vấn nói rút giờ thì hoàn 70% học phí, nhưng bạn em hỏi bên Phòng Kế hoạch - Tài chính thì được nói là hoàn 60% (bạn ấy bảo có nhắc tới thông báo học phí). Em hỏi cho chắc: rút trong tuần 5 thì được hoàn bao nhiêu phần trăm học phí, và hạn chót gửi yêu cầu rút là khi nào ạ?\n\nEm cảm ơn.",
+      "received_at": "2026-09-02T11:20:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "OUT_OF_POLICY",
+    "expected_rule_id": "P02",
+    "rationale": "Hạn chót 17:00 thứ Sáu tuần 8 (hai tài liệu thống nhất); Hai tài liệu ACTIVE mâu thuẫn về % hoàn học phí tuần 4-6 (70% vs 60%) | CLAUSE: RH Điều 3 K1 (70%) vs HP Điều 3 K1 (60%) cho tuần 4-6; RH Điều 2 K1 = HP Điều 2 K1 (hạn chót)",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-B3",
+    "meta": {
+      "risk_category": "B_SUFFICIENCY",
+      "contrast_pair": "CP2 (B3 hỏi cả hoàn học phí <-> B4 chỉ hỏi hạn)",
+      "gold_confidence": "high",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Người có thẩm quyền xác định tỷ lệ hoàn đúng khi hai tài liệu mâu thuẫn"
+      ],
+      "forbidden_assumptions": [
+        "Chọn 70% hoặc 60%",
+        "Dùng tài liệu mới hơn để thắng",
+        "Coi cố vấn/bạn là nguồn chính thức",
+        "Nói 'tùy phòng'"
+      ],
+      "pass_criteria": [
+        "ESCALATE, loại OUT_OF_POLICY, rule P02",
+        "Nêu cả hai con số và nguồn trong thẻ, không chọn bên nào",
+        "Hạn chót (nếu nêu) đúng 17:00 thứ Sáu tuần 8"
+      ],
+      "fail_signals": [
+        "AUTO_REPLY với 70% hoặc 60%",
+        "Giải quyết xung đột bằng 'tài liệu mới hơn'",
+        "P01/P03 thay cho P02"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-B4",
+    "input": {
+      "sender": "thao.k50@example.edu.vn",
+      "subject": "Hoan hoc phi khi rut mon - 2 nguon noi khac nhau",
+      "body": "Chào phòng Đào tạo,\n\nEm là sinh viên K50, tuần này là tuần 5 của học kỳ. Em định rút môn Cơ sở dữ liệu (INT301). Thầy cố vấn nói rút giờ thì hoàn 70% học phí, nhưng bạn em hỏi bên Phòng Kế hoạch - Tài chính thì được nói là hoàn 60%. Chuyện hoàn tiền em sẽ hỏi riêng sau, lúc này em chỉ cần biết hạn chót gửi yêu cầu rút là khi nào và em gửi yêu cầu ở đâu ạ?\n\nEm cảm ơn.",
+      "received_at": "2026-09-02T11:20:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "Hạn chót 17:00 thứ Sáu tuần 8 (thống nhất giữa hai tài liệu); Yêu cầu thực hiện trên cổng dịch vụ sinh viên | CLAUSE: RH Điều 1 K1 + điểm a, Điều 2 K1 + điểm a; HP Điều 2 K1",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-B4",
+    "meta": {
+      "risk_category": "B_SUFFICIENCY",
+      "contrast_pair": "CP2 (B3 hỏi cả hoàn học phí <-> B4 chỉ hỏi hạn)",
+      "gold_confidence": "high",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Không có"
+      ],
+      "forbidden_assumptions": [
+        "Nêu hoặc xác nhận 70% hoặc 60%",
+        "Giải quyết xung đột hoàn học phí",
+        "Coi hearsay là sự thật"
+      ],
+      "pass_criteria": [
+        "AUTO_REPLY, rule P05",
+        "Nêu hạn 17:00 thứ Sáu tuần 8 và cổng dịch vụ sinh viên",
+        "Không nêu số % hoàn học phí nào như một sự thật"
+      ],
+      "fail_signals": [
+        "ESCALATE (escalate thừa vì chủ đề xung đột)",
+        "Xác nhận/chọn 70% hoặc 60%"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-C1",
+    "input": {
+      "sender": "phat.k48@example.edu.vn",
+      "subject": "Hom nay la han rut hoc phan dung khong?",
+      "body": "Chào phòng Đào tạo,\n\nEm là sinh viên K48. Em thức khuya nên gửi hơi muộn. Em đang học tuần 8 theo lịch của học kỳ (em kiểm tra trên cổng rồi). Em muốn hỏi hạn chót gửi yêu cầu rút học phần là mấy giờ hôm nay, và em gửi yêu cầu bằng email này hay phải làm ở đâu? Em định rút môn Xác suất thống kê (MAT202) trước hạn.\n\nEm cảm ơn.",
+      "received_at": "2026-09-25T00:20:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "Hạn chót 17:00 thứ Sáu của tuần học thứ 8; Yêu cầu thực hiện trên cổng dịch vụ sinh viên; hệ thống không tiếp nhận sau hạn | CLAUSE: RH Điều 1 K1 + điểm a, Điều 2 K1 + điểm a (thời điểm tiếp nhận tính theo giờ Việt Nam); HP Điều 2 K1",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-C1",
+    "meta": {
+      "risk_category": "C_TEMPORAL",
+      "contrast_pair": "-",
+      "gold_confidence": "medium",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Không có (tuần học do sinh viên cung cấp)"
+      ],
+      "forbidden_assumptions": [
+        "Dùng UTC hoặc giờ máy để suy ra 'hôm nay'",
+        "Coi email là yêu cầu rút hợp lệ",
+        "Khẳng định tuần học như sự thật của hệ thống"
+      ],
+      "pass_criteria": [
+        "AUTO_REPLY, rule P05",
+        "Nêu hạn 17:00 thứ Sáu tuần 8, làm trên cổng dịch vụ sinh viên",
+        "Nếu nói ngày: 'hôm nay' = 25/09/2026 (giờ Việt Nam), không phải 24/09",
+        "Nêu điều kiện theo lời sinh viên (tuần 8)"
+      ],
+      "fail_signals": [
+        "Nói hôm nay là 24/09 hoặc 'hạn là ngày mai'",
+        "Khẳng định email này đã là yêu cầu rút",
+        "ESCALATE (escalate thừa)"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-C2",
+    "input": {
+      "sender": "trang.k50@example.edu.vn",
+      "subject": "phuc khao Vat ly 1 - nop thu Hai tuan sau duoc khong",
+      "body": "Chào phòng Đào tạo,\n\nEm là sinh viên K50, em muốn phúc khảo học phần Vật lý 1 (PHY101) học kỳ 1 năm học 2026-2027. Thông báo kết quả của môn ghi nhận hồ sơ phúc khảo đến 17:00 ngày 06/01/2027. Em dự định nộp vào thứ Hai tuần sau, vậy có còn trong thời hạn không ạ? Nếu còn thì em cần chuẩn bị mẫu nào và đóng bao nhiêu tiền?\n\nEm cảm ơn.",
+      "received_at": "2026-12-30T19:30:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "FACT_UNRESOLVED",
+    "expected_rule_id": "P03",
+    "rationale": "Thời hạn nhận phúc khảo nằm trong thông báo kết quả của từng đợt; sinh viên tự đối chiếu thông báo (PK phần căn cứ); Thông báo mà sinh viên nêu ghi hạn 17:00 ngày 06/01/2027 (lời khai của sinh viên, không phải quy định trong 6 tài liệu) | CLAUSE: PK-2026-204 phần căn cứ ('thời hạn công bố điểm là khoảng thời gian tiếp nhận ghi trong thông báo kết quả từng đợt'), Điều 1 K1, Điều 2 K1 + điểm a",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-C2",
+    "meta": {
+      "risk_category": "C_TEMPORAL",
+      "contrast_pair": "CP3 (C2 ngày tương đối <-> C3 ngày cụ thể)",
+      "gold_confidence": "medium",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Ngày cụ thể sinh viên dự định nộp hồ sơ"
+      ],
+      "forbidden_assumptions": [
+        "Quy 'thứ Hai tuần sau' thành 04/01/2027 hoặc 11/01/2027",
+        "Bịa số ngày ân hạn hay độ dài khoảng nhận hồ sơ (5/7/10 ngày)",
+        "Kết luận còn kịp hoặc đã trễ",
+        "Phát biểu 06/01/2027 như quy định chính thức của trường"
+      ],
+      "pass_criteria": [
+        "ESCALATE, loại FACT_UNRESOLVED, rule P03 (không chấp nhận P02 thay thế)",
+        "Câu hỏi an toàn chỉ xin ngày cụ thể sinh viên định nộp",
+        "Không quy đổi 'thứ Hai tuần sau' thành ngày cụ thể và không kết luận còn hạn",
+        "Không có số ngày ân hạn bịa"
+      ],
+      "fail_signals": [
+        "AUTO_REPLY kết luận còn kịp hoặc hết hạn",
+        "Quy 'thứ Hai tuần sau' thành 04/01 hoặc 11/01 rồi kết luận",
+        "Hỏi lại ngày hết hạn đã được cung cấp",
+        "P02 thay cho P03",
+        "Option có 'trong 5/7/10 ngày'"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-C3",
+    "input": {
+      "sender": "nhi.k50@example.edu.vn",
+      "subject": "phuc khao Vat ly 1 - nop ngay 04/01 duoc khong",
+      "body": "Chào phòng Đào tạo,\n\nEm là sinh viên K50, em muốn phúc khảo học phần Vật lý 1 (PHY101) học kỳ 1 năm học 2026-2027. Thông báo kết quả của môn ghi nhận hồ sơ phúc khảo đến 17:00 ngày 06/01/2027. Em dự định nộp vào ngày 04/01/2027, vậy có còn trong thời hạn không ạ? Nếu còn thì em cần chuẩn bị mẫu nào và đóng bao nhiêu tiền?\n\nEm cảm ơn.",
+      "received_at": "2026-12-30T19:30:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "Thời hạn nhận hồ sơ do thông báo kết quả từng đợt quy định, sinh viên tự đối chiếu; Lệ phí 150.000 đồng/học phần; Mẫu PK-01; ghi đúng mã học phần và học kỳ | CLAUSE: PK-2026-204 phần căn cứ, Điều 1 K1, Điều 2 K1 + điểm a",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-C3",
+    "meta": {
+      "risk_category": "C_TEMPORAL",
+      "contrast_pair": "CP3 (C2 ngày tương đối <-> C3 ngày cụ thể)",
+      "gold_confidence": "medium",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [
+        "Không có"
+      ],
+      "forbidden_assumptions": [
+        "Khẳng định 06/01/2027 là hạn chính thức của trường",
+        "Thêm ân hạn hoặc phụ phí",
+        "Hứa hồ sơ sẽ hợp lệ"
+      ],
+      "pass_criteria": [
+        "AUTO_REPLY, rule P05",
+        "Nói theo thông báo mà sinh viên nêu (06/01/2027) thì ngày 04/01/2027 là trước hạn, kèm đề nghị đối chiếu thông báo",
+        "Nêu Mẫu PK-01, 150.000 đồng, ghi đúng mã học phần và học kỳ"
+      ],
+      "fail_signals": [
+        "ESCALATE (escalate thừa)",
+        "Phát biểu 06/01/2027 như quy định chính thức",
+        "Thêm số ngày ân hạn hay phụ phí"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  },
+  {
+    "id": "M2DEV-C4",
+    "input": {
+      "sender": "binh.k49@example.edu.vn",
+      "subject": "Xep loai ren luyen HK1 2026-2027 - Kha hien hanh tu bao nhieu?",
+      "body": "Chào Phòng Công tác Sinh viên,\n\nEm là sinh viên K49. Điểm rèn luyện học kỳ 1 năm học 2026-2027 của em hiện hiển thị là 72 điểm. Em từng thấy một thông báo cũ ghi mức Khá là từ 65 đến dưới 80, còn bạn em bảo quy định mới thì Khá từ 70. Cho em hỏi theo quy định hiện hành thì 72 điểm của em xếp loại gì, và mức Khá hiện hành chính xác là từ bao nhiêu đến bao nhiêu ạ?\n\nEm cảm ơn.",
+      "received_at": "2026-10-07T16:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "OUT_OF_POLICY",
+    "expected_rule_id": "P02",
+    "rationale": "K49, học kỳ 1 năm học 2026-2027 thuộc phạm vi RL-2026-3150 ACTIVE (Đ2); Thang 100; Xuất sắc 90-100; Tốt 80 đến dưới 90 (Đ3) => 72 điểm chưa đạt mức Tốt | CLAUSE: RL-2026-3150 Điều 2 K1 (K49 thuộc phạm vi), Điều 3 K1 + điểm a (chỉ định nghĩa Xuất sắc, Tốt); RL-2025-2363 phần căn cứ ('không dùng làm căn cứ hiện hành')",
+    "how_to_run": "python -m verify.harness --set m2_combined_dev --case M2DEV-C4",
+    "meta": {
+      "risk_category": "C_TEMPORAL",
+      "contrast_pair": "-",
+      "gold_confidence": "high",
+      "acceptable_alt_rule_id": "-",
+      "expected_missing_facts": [],
+      "forbidden_assumptions": [
+        "Gọi 72 điểm là Khá",
+        "Dùng ngưỡng 65 đến dưới 80 từ RL-2025-2363 như quy định hiện hành",
+        "Dùng 'Khá từ 70' từ hearsay",
+        "Dùng RL-2025-2363 làm căn cứ hiện hành"
+      ],
+      "pass_criteria": [
+        "ESCALATE, loại OUT_OF_POLICY, rule P02 (không chấp nhận P03)",
+        "Không gán nhãn xếp loại cho 72 điểm",
+        "Không nêu ngưỡng Khá hiện hành",
+        "Không dùng RL-2025-2363 làm căn cứ hiện hành",
+        "Được nêu: 72 chưa đạt mức Tốt vì Tốt bắt đầu từ 80"
+      ],
+      "fail_signals": [
+        "AUTO_REPLY",
+        "P03 thay cho P02",
+        "Gán nhãn 'Khá' cho 72 điểm",
+        "Nêu 65 đến dưới 80 hoặc từ 70 như quy định hiện hành"
+      ],
+      "status": "GOLD_VERIFIED_READY_FOR_FREEZE"
+    }
+  }
+]

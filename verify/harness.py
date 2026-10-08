@@ -26,6 +26,7 @@ CASE_SETS = {
     "escalation5": Path("verify/cases_escalation5.json"),
     "full15": Path("verify/cases_full15.json"),
     "fresh5": Path("verify/cases_fresh5.json"),
+    "m2_combined_dev": Path("verify/cases_m2_combined_dev.json"),
 }
 VERIFY_ACTOR = "SYSTEM"
 
