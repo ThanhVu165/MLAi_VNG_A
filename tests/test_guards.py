@@ -1050,6 +1050,111 @@ def test_ground_guard_escalates_unsupported_number_without_editing_draft(
     assert [event.action for event in events] == ["GROUNDEDNESS_FAILED"]
 
 
+@pytest.mark.parametrize(
+    ("body", "course_code", "input_text", "source", "number_failure"),
+    [
+        ("INT301", "INT301", "Em hỏi môn Cơ sở dữ liệu (INT301).", "Căn cứ.", False),
+        ("ECO201", "ECO201", "Em hỏi học phần ECO201.", "Căn cứ.", False),
+        ("INT301", "", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("INT301", "INT301", "Em nghe nói INT301.", "Căn cứ.", True),
+        ("INT301", "INT301", "Em hỏi môn INT3010.", "Căn cứ.", True),
+        ("MAT999", "MAT999", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("USD450", "", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("VAT100", "", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("Hạn 15 ngày", "", "", "Hạn 15 ngày.", False),
+        ("Phí 450.000 đồng", "", "", "Phí 450000 đồng.", False),
+        ("Hoàn 60%", "", "", "Hoàn 60 phần trăm.", False),
+        ("Hạn 16 ngày", "", "", "Hạn 15 ngày.", True),
+        ("Phí 950.000 đồng", "", "", "Phí 450.000 đồng.", True),
+        ("Hoàn 70%", "", "", "Hoàn 60 phần trăm.", True),
+        ("INT301: hoàn 70%", "INT301", "Em hỏi môn INT301.", "Hoàn 60%.", True),
+        ("INT301: hạn 15 ngày", "INT301", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("INT301: phí 450.000 đồng", "INT301", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("INT301%", "INT301", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("INT301 đồng", "INT301", "Em hỏi môn INT301.", "Căn cứ.", True),
+        (
+            "INT301: hoàn 90%",
+            "INT301",
+            "Em hỏi môn INT301. Em nghe nói được hoàn 90%.",
+            "Hoàn 60%.",
+            True,
+        ),
+    ],
+)
+def test_numeric_guard_only_exempts_input_backed_course_identifier(
+    monkeypatch, body, course_code, input_text, source, number_failure
+) -> None:
+    monkeypatch.setattr("core.ground_guard.is_active", lambda _: True)
+    draft = _draft(f"{body} [chunk-1].")
+    evidence = EvidenceResult(EvidenceStatus.OK, [replace(_evidence_chunk(), text=source)], [])
+
+    result = guard_groundedness(
+        case_id="offline-numeric",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=draft,
+        evidence=evidence,
+        record_event=False,
+        course_code=course_code,
+        input_text=input_text,
+    )
+
+    assert ("number" in result.failed_checks) is number_failure
+    assert result.draft.body == draft.body
+    if not number_failure:
+        assert result.draft.grounded and result.decision is None
+
+
+def test_b4_synthetic_pipeline_replay_preserves_citations_and_completes_auto(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    _install_routine_pipeline(monkeypatch, Domain.COURSE_WITHDRAWAL)
+    monkeypatch.setattr(pipeline, "guard_groundedness", guard_groundedness)
+    monkeypatch.setattr("core.ground_guard.is_active", lambda _: True)
+    extraction = _evidence_extraction(
+        domain=Domain.COURSE_WITHDRAWAL, facts={"course_code": "INT301"}
+    )
+    deadline = "Hạn chót gửi yêu cầu rút học phần là 17 giờ 00 thứ Sáu của tuần học thứ 8."
+    portal = "Yêu cầu được thực hiện trên cổng dịch vụ sinh viên."
+    chunks = [
+        replace(_evidence_chunk(), chunk_id="HP-2026-1:seed:5", text=deadline),
+        replace(_evidence_chunk(), chunk_id="RH-2026-101:seed:3", text=portal),
+    ]
+    evidence = EvidenceResult(EvidenceStatus.OK, chunks, [])
+    draft = _draft(
+        f"{deadline}[HP-2026-1:seed:5] Yêu cầu rút môn Cơ sở dữ liệu (INT301) "
+        "được thực hiện trên cổng dịch vụ sinh viên.[RH-2026-101:seed:3]",
+        [chunk.chunk_id for chunk in chunks],
+    )
+    monkeypatch.setattr(pipeline, "extract_facts", lambda body, case_id: extraction)
+    monkeypatch.setattr(pipeline, "retrieve_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "validate_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "generate_reply", lambda **kwargs: draft)
+
+    result = pipeline.process_case(_input(body="Em hỏi hạn rút môn Cơ sở dữ liệu (INT301)."))
+
+    assert result.decision.decision is Decision.AUTO_REPLY
+    assert result.decision.rule_id == "P05"
+    assert result.status is CaseStatus.PENDING_SEND
+    assert result.draft is not None and result.draft.grounded
+    assert result.draft.body == draft.body
+    assert result.draft.citations == draft.citations
+
+    monkeypatch.setattr("core.ground_guard.is_active", lambda _: False)
+    rejected = guard_groundedness(
+        case_id="offline-b4-inactive",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=draft,
+        evidence=evidence,
+        record_event=False,
+        course_code="INT301",
+        input_text="Em hỏi môn INT301.",
+    )
+    assert rejected.failed_checks == ["citation"]
+
+
 def test_ground_guard_covers_citation_authority_and_ratio(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
     evidence = EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], [])

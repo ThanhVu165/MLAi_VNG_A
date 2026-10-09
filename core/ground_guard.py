@@ -64,7 +64,12 @@ def _without_grounded_clocks(body: str, evidence_text: str) -> str:
 
 
 def _unsupported_value_failure(
-    draft: DraftReply, evidence: EvidenceResult, extra_text: str = ""
+    draft: DraftReply,
+    evidence: EvidenceResult,
+    extra_text: str = "",
+    *,
+    course_code: str = "",
+    input_text: str = "",
 ) -> bool:
     evidence_text = "\n".join([extra_text] + [chunk.text for chunk in evidence.chunks]).casefold()
     body = CITATION_MARKER_PATTERN.sub("", draft.body)
@@ -81,12 +86,26 @@ def _unsupported_value_failure(
         normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(evidence_text)
     }
     numeric_body = _without_grounded_clocks(body, evidence_text)
+    numeric_body = _without_input_course_code(numeric_body, course_code, input_text)
     draft_numbers = {
         normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(numeric_body)
     }
     return not draft_numbers <= source_numbers or any(
         value not in evidence_text for value in values
     )
+
+
+def _without_input_course_code(body: str, course_code: str, input_text: str) -> str:
+    """Chỉ bỏ mã R2 nhận diện khi input gắn chính mã đó với môn/học phần."""
+    if not re.fullmatch(r"[A-Z]{2,4}[0-9]{3}", course_code):
+        return body
+    token = rf"(?<!\w){re.escape(course_code)}(?!\w)"
+    context = rf"\b(?:môn(?: học)?|học phần)\s+[^.!?\n;:]*?{token}"
+    if not re.search(context, input_text, re.IGNORECASE):
+        return body
+    # Không miễn kiểm tra khi token được dùng như một giá trị có đơn vị nghiệp vụ.
+    units = r"%|₫|đồng\b|vnd\b|ngày\b|giờ\b|tuần\b|tháng\b|năm\b|phần\s+trăm\b"
+    return re.sub(rf"{token}(?!\s*(?:{units}))", " ", body, flags=re.IGNORECASE)
 
 
 def _authority_failure(draft: DraftReply) -> bool:
@@ -128,11 +147,18 @@ def guard_groundedness(
     draft: DraftReply,
     evidence: EvidenceResult,
     record_event: bool = True,
+    course_code: str = "",
+    input_text: str = "",
 ) -> GroundednessResult:
     """Kiểm tra bốn điều kiện groundedness, giữ nguyên draft khi hạ cấp."""
     checks = (
         ("citation", _citation_failure(draft, evidence)),
-        ("number", _unsupported_value_failure(draft, evidence)),
+        (
+            "number",
+            _unsupported_value_failure(
+                draft, evidence, course_code=course_code, input_text=input_text
+            ),
+        ),
         ("authority", _authority_failure(draft)),
         ("citation_ratio", _citation_ratio_failure(draft)),
     )

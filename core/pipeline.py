@@ -596,6 +596,8 @@ def _process_case(
                     corpus_version=intake.corpus_version,
                     draft=generated_draft,
                     evidence=evidence,
+                    course_code=extraction.critical_facts.get("course_code", ""),
+                    input_text=inp.body,
                 ),
                 latencies,
             )
