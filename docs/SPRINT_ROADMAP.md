@@ -90,7 +90,8 @@ Mỗi mini-sprint dùng Trello và [TEAM_WORKFLOW.md](TEAM_WORKFLOW.md):
 3. Chia khoảng 3–7 micro-task theo dependency.
 4. Chỉ thực hiện micro-task hiện tại.
 5. Sau mỗi micro-task: thu evidence, coordinator review, cập nhật living sprint report.
-6. Cuối sprint: tests, Code Review, Review Agent, Anti review, Sprint Gate Review.
+6. Cuối sprint: thu validation và evidence phù hợp; independent review theo rủi ro
+   và thành phần bị ảnh hưởng; Project Coordinator chấp nhận Gate cuối.
 7. Chỉ chuyển sprint khi Gate PASS hoặc khi Coordinator ghi rõ một disposition
    conditional cùng authorization/carryover như M2 → M3.
 
