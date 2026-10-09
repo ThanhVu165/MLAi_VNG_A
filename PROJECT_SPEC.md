@@ -1,16 +1,24 @@
-# PROJECT_SPEC.md — Escalation Referee · Sprint 1A
+# PROJECT_SPEC.md — Escalation Referee
 
 ## 1. Hiệu lực đặc tả và trạng thái nghiệm thu
 
-Bản này đồng bộ cấu trúc tái thiết kế đã được người dùng cho phép ngày 22/09/2026. Nó thay thế các chỉ dẫn cũ mâu thuẫn về quyền trả lời ở cấp đoạn, chặn email theo số từ, gộp lỗi kỹ thuật vào chuyển tiếp và bố cục sáu trang. Lịch sử thiết kế cũ được giữ trong Git, không duy trì hai bộ quy tắc song song.
+Bản này đồng bộ cấu trúc tái thiết kế đã được người dùng cho phép ngày 22/09/2026.
+Nguồn gốc Sprint 1A là lịch sử; các technical contract bên dưới tiếp tục áp dụng
+trong Sprint 2 nếu Task Contract không thay đổi chúng theo quy trình được duyệt.
 
-Thứ tự áp dụng: yêu cầu trực tiếp mới nhất của người dùng → brief Đề A và yêu cầu tối thiểu Sprint 1 → đặc tả này → AGENT.md → TASKBOARD.md. Quyết định cho phép tái cấu trúc bao gồm thay đổi contract, schema và UI cần thiết; không cho phép sửa kỳ vọng kiểm thử để che lỗi.
+Task Contract/authorization mới nhất của Project Coordinator quyết định scope;
+brief Đề A và technical contract trong tài liệu này vẫn là ranh giới sản phẩm.
+[TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md) và `AGENT.md` điều phối cách thực hiện.
+Task Contract chỉ đổi technical contract khi ghi rõ `CONTRACT-CHANGE` và qua review.
+`TASKBOARD.md` là lịch sử Sprint 1, không quản lý task Sprint 2. Không sửa kỳ vọng
+kiểm thử để che lỗi.
 
-**Chỉ đạo hiện hành: hoàn thành tái cấu trúc trước, nghiệm thu sau. Không chạy thêm kiểm thử, lint, format, type-check, SDK converter, LLM live hoặc UI/E2E khi người dùng chưa đổi chỉ đạo.** Có thể đọc mã, sửa mã và viết kiểm tra chưa chạy.
+Offline tests, lint, format, type-check và E2E local được phép khi Task Contract yêu
+cầu. LIVE/API luôn cần authorization cụ thể; việc gọi dịch vụ lặp lại khi đang lỗi
+không thay thế chẩn đoán nguyên nhân. Trạng thái milestone xem `STATUS.md`; technical
+spec không tự chứng nhận một gate đã PASS.
 
-Trạng thái: **đã/đang triển khai cấu trúc, CHƯA NGHIỆM THU bản cuối**. Nội dung mô tả dưới đây là yêu cầu và thiết kế hiện hành, không phải chứng nhận hoạt động. Kết quả xanh của bản trước chỉ là bằng chứng lịch sử, không được dùng để đánh DONE cho bản sau. Việc gọi dịch vụ liên tục khi đang lỗi không thay thế sửa nguyên nhân trong mã.
-
-## 2. Phạm vi Sprint 1A
+## 2. Phạm vi sản phẩm đã chốt từ Sprint 1A
 
 Một quy trình duy nhất: tiếp nhận và xử lý email hành chính sinh viên của văn phòng Công tác Sinh viên.
 
@@ -66,7 +74,11 @@ Không chép lại enum/dataclass/chữ ký API trong tài liệu vì sẽ tạo
 | Gọi LLM, ngân sách gọi, audit | infra/llm.py, infra/audit.py |
 | Dữ liệu và tiêu chí so kết quả kiểm thử | verify/cases_*.json, verify/harness.py |
 
-Phân công: A — core/ và policies/; B — corpus/, trang Quy định và kiểm thử nguồn; C — infra/, UI còn lại, Verify và tích hợp. core/types.py và tài liệu chung phải được điều phối trước khi sửa. Corpus có thể dùng kiểu chung trong core/types.py, không gọi pipeline hoặc UI. Runtime đọc corpus qua corpus/api.py. Worker thuộc core/, không đặt logic nghiệp vụ vào infra/.
+Task Owner và phạm vi file do Trello Task Contract xác định. Ranh giới module vẫn
+giữ: Corpus có thể dùng kiểu chung trong `core/types.py`, không gọi pipeline hoặc
+UI; Runtime đọc corpus qua `corpus/api.py`; worker thuộc `core/`, không đặt logic
+nghiệp vụ vào `infra/`. `core/types.py` và contract dùng chung cần Coordinator phê
+duyệt cùng independent review trước khi sửa.
 
 Python 3.11 và các phụ thuộc trong requirements.txt là môi trường dự án. Không thêm dependency, adapter hoặc dịch vụ chỉ để giải quyết việc vài dòng stdlib/phụ thuộc sẵn có đã làm được.
 
@@ -235,16 +247,22 @@ verify/cases_fresh5.json là dữ liệu bổ sung để phát hiện học thu�
 
 ## 11. Nghiệm thu và điều kiện DONE
 
-Sau khi hoàn thành tái cấu trúc và người dùng cho phép kiểm chứng lại:
+Validation chọn theo Task Contract và rủi ro thay đổi:
 
 - Kiểm tra format/lint/type/unit trên **trạng thái mã cuối**, ghi lệnh, môi trường, exit code và phạm vi; không đổi code chỉ để làm xanh expected sai.
 - Chạy riêng verify4, escalation5 và full15 bằng đường chung. Báo từng kết quả/rule/căn cứ, tổng thời gian và nhánh lỗi; giữ tiêu chí 90 giây.
-- Kiểm chứng LLM live với email mới và nguồn mới: nạp → đề xuất → xác nhận nguồn → hỏi được từ nguồn đó. Không dùng replay/cache cũ để tuyên bố đã gọi dịch vụ thật.
+- Khi được cấp quyền LIVE cụ thể, kiểm chứng LLM với email mới và nguồn mới: nạp →
+  đề xuất → xác nhận nguồn → hỏi được từ nguồn đó. Không dùng replay/cache cũ để
+  tuyên bố đã gọi dịch vụ thật.
 - Kiểm chứng thiếu trường, injection, đa ý định, thiếu fact, ngoài phạm vi, ngoại lệ, lỗi SDK/dịch vụ và hồi phục; lỗi kỹ thuật không lọt vào ba nhóm nghiệp vụ.
 - Thao tác thật: tạm dừng, hủy, chuyên viên quyết định/soạn lại/duyệt gửi, đổi trang/tải lại, worker bị gián đoạn, nguồn đổi trong lúc xử lý/chờ gửi.
 - Kiểm chứng DB cũ qua migration có backup, seed không ghi đè, snapshot không mất căn cứ, lỗi giữa giao dịch nguồn rollback toàn bộ và không lộ nguồn duyệt dở cho worker.
 
-Local đạt mới là cơ sở triển khai public; không suy ra URL công khai, trải nghiệm điện thoại/ẩn danh hay yêu cầu hồ sơ nộp đã đạt từ unit test. Các mục live URL, repo/lịch sử phát triển, slide/video/build log, phương pháp đo và người dùng thực tế tiếp tục đối chiếu brief, TASKBOARD và RUNBOOK; chưa có bằng chứng thì ghi chưa hoàn tất.
+Local đạt mới là cơ sở triển khai public; không suy ra URL công khai, trải nghiệm
+điện thoại/ẩn danh hay yêu cầu hồ sơ nộp đã đạt từ unit test. Các mục live URL,
+repo/lịch sử phát triển, slide/video/build log, phương pháp đo và người dùng thực tế
+tiếp tục đối chiếu brief, `docs/SPRINT_ROADMAP.md`, `docs/TEAM_WORKFLOW.md` và
+`docs/RUNBOOK.md`; chưa có bằng chứng thì ghi chưa hoàn tất.
 
 Chỉ ghi DONE khi đủ kết quả nghiệm thu và tài liệu trạng thái đúng sự thật. Không bịa số liệu tác động, người dùng hoặc ý kiến phản hồi. Danh sách hạn chế nuôi docs/known_failures.md và phần giới hạn của bài thi; không xóa lịch sử thất bại sau khi sửa.
 

@@ -1,8 +1,9 @@
-# Vận hành local — Sprint 1A
+# Vận hành local — Exodia Sprint 2
 
-> Trạng thái bàn giao mã ngày 22/09/2026: tái cấu trúc trước, nghiệm thu sau theo yêu cầu người dùng.
-> Không chạy thêm test, kiểm tra định dạng/kiểu dữ liệu, LLM live hay thao tác E2E trong đợt chốt mã này.
-> Các lệnh ở mục Kiểm chứng dành cho giai đoạn tiếp theo, không phải kết quả đã đạt.
+Offline tests, format/lint/type checks và E2E local được phép theo Task Contract.
+LIVE/API chỉ được chạy khi Project Coordinator cấp authorization cụ thể về run,
+scope và budget; cấu hình môi trường không tự tạo quyền gọi provider. Quy trình đội:
+[TEAM_WORKFLOW.md](TEAM_WORKFLOW.md).
 
 ## Khởi động
 
@@ -85,7 +86,8 @@ chỉ seed khi chưa có nguồn và khôi phục bản gốc seed khi hash kh�
 
 ## Cấu hình LIVE không dùng cache
 
-Chỉ cấu hình, chưa gọi OpenAI:
+Các lệnh dưới đây chỉ cấu hình, chưa gọi OpenAI. Không chạy pipeline/harness LIVE
+nếu Task Contract chưa cấp quyền:
 
 ```powershell
 $env:LLM_PROVIDER='openai'
@@ -101,7 +103,7 @@ python -c "import os; import infra.llm as llm; assert os.getenv('LLM_MODE') == '
 ghi sau call thành công; không có cache/cassette fallback cho lỗi LIVE.
 Giữ cả hai biến trong cùng terminal với lệnh evaluation; giữ `OPENAI_MODEL=gpt-6-luna`.
 
-## Kiểm chứng — thực hiện sau khi hoàn tất tái cấu trúc
+## Kiểm chứng offline
 
 ```powershell
 python -m black --check --line-length 100 .
@@ -112,7 +114,8 @@ python -m pytest -q
 ```
 
 Kiểm thử offline thay dịch vụ AI ở ranh giới hoặc dùng dữ liệu cố định để phát hiện lỗi lặp lại.
-Chúng không chứng minh LLM live đúng. Để kiểm tra live bằng DB riêng:
+Chúng không chứng minh LLM live đúng. Chỉ khi có authorization riêng, kiểm tra LIVE
+bằng DB riêng theo đúng case/run và budget được duyệt:
 
 ```powershell
 $env:DATABASE_PATH='data/validation/manual-live.db'

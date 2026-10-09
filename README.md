@@ -3,9 +3,12 @@
 Trợ lý tiếp nhận và xử lý email hành chính của sinh viên. LLM, quy định, quyết định,
 phê duyệt và lưu trữ chạy thật; hộp thư ngoài chưa kết nối, gửi email đang mô phỏng.
 
-**Trạng thái:** đã ghép phần mã tái cấu trúc, chưa nghiệm thu Sprint 1A.
-Theo yêu cầu mới nhất, hoàn tất tái cấu trúc trước rồi mới kiểm thử end-to-end;
-không lấy kết quả kiểm tra trước đợt sửa làm chứng nhận cho mã hiện tại.
+**Trạng thái Sprint 2:** M1 `CLOSED`; M2 `M2_CONDITIONAL_CLOSEOUT`; M3
+`M3_AUTHORIZED_WITH_CARRYOVER`. Trạng thái và giới hạn chi tiết nằm trong
+[STATUS.md](STATUS.md). Việc M3 được phép bắt đầu không đổi verdict M2 thành PASS.
+
+Thành viên mới đọc [TEAM_HANDOFF.md](docs/TEAM_HANDOFF.md) và
+[TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md) trước khi nhận Task Contract trên Trello.
 
 ## Cài đặt
 
@@ -35,7 +38,8 @@ Tạo `.env` từ `.env.example`, rồi cấu hình `OPENAI_API_KEY` riêng trê
 provider khác bị từ chối, không có fallback. Chế độ
 `replay` chỉ dùng khi kho đã có cassette được ghi bằng `LLM_MODE=record`; không dùng
 replay cho demo sạch nếu chưa có cassette.
-Các lệnh kiểm tra được tách sang RUNBOOK để chạy ở giai đoạn nghiệm thu sau tái cấu trúc.
+Các lệnh kiểm tra nằm trong RUNBOOK; chọn phạm vi validation theo Task Contract.
+LIVE/API chỉ được chạy khi Project Coordinator cấp quyền cụ thể.
 
 ## Chạy local
 

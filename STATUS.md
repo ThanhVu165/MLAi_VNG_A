@@ -1,49 +1,54 @@
 # Project Status
 
-Roadmap: [docs/SPRINT_ROADMAP.md](docs/SPRINT_ROADMAP.md)
+Last coordination update: **10/10/2026** (Asia/Saigon).
 
-Current Sprint: **M2 — Core Decision + Escalation Quality (IN PROGRESS)**
+- Sprint 2 task authority: Trello.
+- Technical source of truth: GitHub and repository evidence.
+- Workflow: [docs/TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md).
+- Roadmap: [docs/SPRINT_ROADMAP.md](docs/SPRINT_ROADMAP.md).
+- Internal submission-ready target: **15/10/2026**.
+- Feature freeze target: **13/10/2026**.
 
-Current micro-task: **Step 5 preregistration frozen; LIVE falsification pending.**
+## Current milestone
 
-M2 living report: [reports/sprints/M2_core_decision_escalation_quality.md](reports/sprints/M2_core_decision_escalation_quality.md)
+**M3 — Human Control + Feedback Adaptation: `M3_AUTHORIZED_WITH_CARRYOVER`.**
 
-M1 Overall: **PASS**
+Authorization cho phép thực hiện M3 theo Task Contract được Coordinator duyệt. Nó
+không đổi verdict M2 thành PASS, không xóa historical failures và không tự cấp
+quyền LIVE/API.
 
-M1.6: **DONE**. M2 is **IN PROGRESS**; Step 5 LIVE has not run.
+## Closed milestones
 
-M1 Gate: **TECHNICAL_FAILURE <= 1/15 on full15 LIVE**
+### M1 — CLOSED
 
-M1 Gate Status: **PASS — TECHNICAL_FAILURE = 0/15 on final full15 LIVE** (06/10/2026, Asia/Saigon).
+M1 Gate PASS ngày 06/10/2026: final full15 có **0/15 technical errors** và
+**14/15 semantic labels**; verify4 4/4, escalation5 4/5 trong 44,48 giây.
+Nguồn: [M1 runtime report](reports/sprints/M1_runtime_reliability.md) và
+[immutable evidence](reports/evidence/m1/README.md).
 
-Sprint transition rule: **Only Gate PASS allows moving to the next mini-sprint.**
+### M2 — `M2_CONDITIONAL_CLOSEOUT`
 
-## Progress
+M2 có positive evidence cho P01/P02/P03/P05 và đã được merge vào `dev`. Verdict
+vẫn conditional vì coverage và semantic adjudication còn giới hạn:
 
-- M1.1 DONE
-- M1.2 DONE — provider observability
-- M1.3 DONE — offline verification/review
-- M1.4 DONE — targeted LIVE diagnosis
-- M1.5 DONE — config-driven OpenAI provider + production adapter smoke
-- M1.6 DONE — final Gate + reviews; coordinator authorized closure
+- 9 independent LIVE observations, 6/12 unique frozen DEV cases.
+- 103 criterion records trong narrative roll-up: 68 PASS, 5 FAIL,
+  30 REVIEW_REQUIRED; đây không phải accuracy estimate.
+- Historical semantic FAIL và TECHNICAL_FAILURE vẫn được giữ.
+- Fallback handoff correction có regression offline nhưng chưa được exercise LIVE.
+- Identifier-specific numeric branch không được claim là `VERIFIED_LIVE`.
+- Không claim held-out evaluation, full 12-case coverage hoặc full semantic safety.
 
-## Current Evidence
+Nguồn authoritative:
+[M2 final closeout](reports/sprints/M2_FINAL_CLOSEOUT_AND_M1_M2_CHECKIN_20261009.md).
+LIVE ledger giữ **12/45 consumed, 33 remaining**; quota không phải authorization.
 
-- Python 3.11.9 verified.
-- Gemini credential/auth fixed; R2 diagnostic probe PASS.
-- Historical POST-AUTH full15 = 4 PASS / 11 FAIL; 11 FAIL đều TECHNICAL_ERROR.
-- M1.4 targeted LIVE confirmed Gemini HTTP 503 / UNAVAILABLE / high demand.
-- M1.5 code checkpoint: `c4d2f8d`; bounded 1-second transient backoff and config-driven OpenAI provider path committed.
-- Targeted LIVE after patch: E01 503 → 1s → 503 → TECHNICAL_ERROR;
-  V01 503 → 1s → success → PASS/P05; V02 503 → 1s → 503 → TECHNICAL_ERROR.
-- Targeted Gemini diagnosis confirmed HTTP 429 / RESOURCE_EXHAUSTED / quota exceeded; không gán ngược lỗi này cho mọi historical ClientError.
-- OpenAI R2/R4/R7 compatibility probe: HTTP 200, existing validators PASS; adapter-side schema normalization required.
-- OpenAI provider: no automatic fallback, SDK max_retries=0, provider/model-aware cache/cassette identity và OPENAI_API_KEY redaction.
-- Canonical `.venv-bootstrap`: Python 3.11.9, openai 3.24.0, google-genai 2.25.0; targeted offline tests **77 PASS / 0 FAIL**.
-- Production OpenAI adapter smoke do coordinator chạy: gpt-6-luna, reasoning_effort=none, temperature=0.0; một provider attempt, latency 4007 ms, extraction validator PASS, result PASS.
-- Compatibility probe và một smoke PASS không chứng minh full reliability hoặc OpenAI luôn đáng tin cậy hơn Gemini. Subsequent M1.6 evidence: final verify4 **4/4 PASS**; escalation5 **4/5 semantic PASS**, **44.48s <=90s**; full15 **14/15 semantic PASS**, **0/15 TECHNICAL_ERROR**, **M1 Gate PASS**.
-- Final Code Review: **PASS**, no blocker/high/medium; independent Anti: **PASS WITH DOCUMENTED DEBT**, theo closure decision của coordinator.
-- E04 known M2 issue: expected **ESCALATE / FACT_UNRESOLVED / P03**, actual **ESCALATE / AUTHORITY_REQUIRED / P01** trên final OpenAI path. Investigate in M2; expected label giữ nguyên. Đây là provider/model-sensitive correctness issue; exact non-regression against the old Gemini/dev path has not been proven.
-- Curated final JSON/logs, SHA-256 và source local paths: [M1 evidence manifest](reports/evidence/m1/README.md). Không archive DB; sáu LOW debts và tracked `.pyc` hygiene debt ghi trong living report. Không khoản debt nào làm M1 Gate mất hiệu lực.
+## Carryover vào M3
 
-Detailed sprint report: [reports/sprints/M1_runtime_reliability.md](reports/sprints/M1_runtime_reliability.md)
+- Giữ hard authority/out-of-policy/suspicious-input boundaries; adaptation không
+  được nới các rule này.
+- Xác minh end-to-end pause/resume, human approval, escalation queue, cancel,
+  correction/undo, payload-bound approval và audit trail.
+- Tách dev, study và demo/judge data; không dùng frozen DEV/Gold trái mục đích.
+- Mọi LIVE/API run cần authorization riêng của Project Coordinator.
+- Không quảng bá correction chỉ có offline evidence thành `VERIFIED_LIVE`.

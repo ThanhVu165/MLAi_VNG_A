@@ -21,7 +21,30 @@ Project có **7 internal mini-sprints**, thực hiện theo thứ tự M1–M7.
 Trạng thái hiện tại xem [STATUS.md](../STATUS.md); chi tiết M1 xem
 [living report M1](../reports/sprints/M1_runtime_reliability.md).
 
-## Core Chain, Parallel Prep & Timeline
+## Coordination Update — 10/10/2026
+
+- M1: **CLOSED**.
+- M2: **`M2_CONDITIONAL_CLOSEOUT`**; không đổi thành PASS. Giới hạn và historical
+  failures nằm trong [M2 final closeout](../reports/sprints/M2_FINAL_CLOSEOUT_AND_M1_M2_CHECKIN_20261009.md).
+- M3: **`M3_AUTHORIZED_WITH_CARRYOVER`** theo quyết định của Project Coordinator.
+  Authorization này cho phép thực hiện Task Contract M3 nhưng không xóa carryover
+  M2 hoặc tự cấp quyền LIVE/API.
+- Trello là nguồn phân công/trạng thái task; workflow xem
+  [TEAM_WORKFLOW.md](TEAM_WORKFLOW.md).
+
+| Mini-sprint | Mục tiêu điều phối hiện hành |
+|---|---|
+| M3 | 10/10 |
+| M4 | 11/10 |
+| M5 | 12/10 |
+| M6 | 13/10 |
+| M7 | 14–15/10 |
+
+Feature freeze mục tiêu: **13/10/2026**. Chuẩn bị tuyển người dùng, evaluation,
+deployment và submission được làm song song theo Task Contract, không được dùng để
+đi vòng dependency hoặc mở dữ liệu held-out sớm.
+
+## Core Chain, Parallel Prep & Historical Baseline Timeline
 
 Core dependency chain: **M1 → M2 → M3 → M4 → M5 → M6 → M7**.
 
@@ -35,7 +58,10 @@ Parallel prep có thể bắt đầu theo scope được giao:
 Parallel prep không được giả định sprint trước PASS, tune core bằng future
 evaluation results, hoặc implement future core logic trước dependency.
 
-| Mốc | Thời gian mục tiêu (2026, UTC+07:00) |
+Lịch dưới đây là baseline lập trước coordination update 10/10; giữ nguyên để bảo
+toàn lịch sử quyết định. Lịch hiện hành nằm ở bảng phía trên.
+
+| Mốc | Thời gian mục tiêu ban đầu (2026, UTC+07:00) |
 |---|---|
 | M1.5 | 05–06/10 |
 | Close M1 Gate | 07/10 |
@@ -52,20 +78,22 @@ evaluation results, hoặc implement future core logic trước dependency.
 | Buffer | 16/10 |
 | Onsite/demo-day working day | 17/10 |
 
-Nếu hết 07/10 M1 chưa PASS: ghi **AT RISK** trong STATUS và không tự mở M2 core.
-Timeline không override Gate rules; sprint sau chỉ mở khi dependency Gate PASS.
+Điều kiện “nếu hết 07/10 M1 chưa PASS” là historical contingency, không còn là
+trạng thái hiện tại. Timeline không override gate hoặc authorization của Coordinator.
 
 ## Global Workflow
 
-Mỗi mini-sprint:
+Mỗi mini-sprint dùng Trello và [TEAM_WORKFLOW.md](TEAM_WORKFLOW.md):
 
 1. Đọc trạng thái repo + evidence sprint trước.
 2. Phân tích sprint hiện tại.
 3. Chia khoảng 3–7 micro-task theo dependency.
 4. Chỉ thực hiện micro-task hiện tại.
 5. Sau mỗi micro-task: thu evidence, coordinator review, cập nhật living sprint report.
-6. Cuối sprint: tests, Code Review, Review Agent, Anti review, Sprint Gate Review.
-7. Chỉ Gate PASS mới chuyển sprint tiếp.
+6. Cuối sprint: thu validation và evidence phù hợp; independent review theo rủi ro
+   và thành phần bị ảnh hưởng; Project Coordinator chấp nhận Gate cuối.
+7. Chỉ chuyển sprint khi Gate PASS hoặc khi Coordinator ghi rõ một disposition
+   conditional cùng authorization/carryover như M2 → M3.
 
 Không được tự đánh dấu sprint PASS. Không được tự thay đổi sprint gate.
 Micro-task tương lai có thể được điều chỉnh theo evidence; gate giữ nguyên.
@@ -210,6 +238,10 @@ PASS/FAIL cuối sprint chỉ được xác nhận sau:
 - Review hoàn tất.
 - Coordinator chấp nhận.
 
+Coordinator có thể ghi `CONDITIONAL_CLOSEOUT` và cho phép sprint kế tiếp ở trạng
+thái `AUTHORIZED_WITH_CARRYOVER`. Đây không phải PASS: phải giữ nguyên failed/
+review-required evidence, giới hạn claim và điều kiện carryover.
+
 ## M1 — Runtime & LLM Reliability
 
 ### Objective
@@ -272,9 +304,10 @@ Sáu LOW debts và tracked bytecode hygiene debt được ghi trong living repor
 
 ## M2 — Core Decision + Escalation Quality
 
-Current status: **NEXT — chưa bắt đầu**. Entry Gate M1 đã PASS; investigate E04
-provider/model-sensitive correctness issue. Exact non-regression against the old
-Gemini/dev path has not been proven. Không thay đổi M2 Gate hoặc future scope.
+Current status: **`M2_CONDITIONAL_CLOSEOUT`** theo Coordinator. Positive evidence
+đã có cho P01/P02/P03/P05, nhưng coverage chỉ 6/12 frozen DEV cases và semantic
+adjudication còn `REVIEW_REQUIRED`. Historical FAIL/TECHNICAL_FAILURE được giữ;
+không gọi verdict này là M2 PASS hoặc held-out accuracy.
 
 ### Objective
 
@@ -321,7 +354,10 @@ adaptation hay không; không tạo threshold giả chỉ để có adaptation.
 
 ### Entry
 
-**M2 PASS.**
+**`M3_AUTHORIZED_WITH_CARRYOVER`.** Baseline gate yêu cầu M2 PASS được giữ làm mục
+tiêu chất lượng; Coordinator đã cho phép M3 tiếp tục từ M2 conditional với các
+carryover trong `STATUS.md`. Authorization không tự cho phép LIVE/API và không nới
+hard P01, OUT_OF_POLICY hoặc suspicious-input safety behavior.
 
 ### Exit Gate
 
@@ -418,13 +454,13 @@ Không yêu cầu large stress test hoặc real Postgres/Kafka migration.
 
 Khóa hệ thống và tạo final evidence.
 
-### Target Timeline
+### Revised Target Timeline — 10/10/2026
 
 | Mốc | Thời gian mục tiêu (2026, UTC+07:00) |
 |---|---|
-| Target freeze | Tối 12/10 |
-| Final Sealed Set B on frozen revision | 13/10 |
-| Slides/video/build log/interview rehearsal | 14/10 |
+| Target freeze | Tối 13/10 |
+| Final Sealed Set B on frozen revision | Theo Task Contract M7 sau freeze |
+| Slides/video/build log/interview rehearsal | 14–15/10 |
 | Internal submission-ready target | 15/10 |
 | Buffer | 16/10 |
 | Onsite/demo-day working day | 17/10 |
@@ -465,17 +501,17 @@ depth beyond minimal compliant version.
 
 ## Agent Context Protocol
 
-Mọi Codex/Anti task sau phải:
+Mọi ChatGPT/Codex/reviewer task sau phải:
 
-1. Đọc `docs/SPRINT_ROADMAP.md`.
-2. Đọc `STATUS.md`.
-3. Đọc living report của sprint hiện tại.
+1. Đọc `docs/TEAM_WORKFLOW.md` và Task Contract trên Trello.
+2. Đọc `docs/SPRINT_ROADMAP.md` và `STATUS.md`.
+3. Đọc evidence/living report liên quan task.
 4. Chỉ đọc raw evidence report khi cần kiểm chứng claim.
 
 Mọi agent trước khi làm task phải kiểm tra:
 
 - Current sprint.
-- Current micro-task.
+- Current Trello Task Contract và owner.
 - Current gate.
 - Previous sprint gate status.
 - Current task có được phép theo Sprint Gate Enforcement Rules hay không.
