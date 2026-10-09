@@ -14,11 +14,67 @@
       "started_at": "2026-10-08T22:18:42.424256+00:00",
       "status": "SEMANTIC_RESULT",
       "internal_retries": 0
+    },
+    {
+      "observation_id": "live_m2_dev_live_probe_02_M2DEV-A4",
+      "case_id": "M2DEV-A4",
+      "started_at": "2026-10-09T09:05:18.638103+00:00",
+      "status": "SEMANTIC_RESULT",
+      "internal_retries": 0
+    },
+    {
+      "observation_id": "live_m2_dev_live_probe_03_M2DEV-A4",
+      "case_id": "M2DEV-A4",
+      "started_at": "2026-10-09T10:35:59.807508+00:00",
+      "status": "TECHNICAL_FAILURE",
+      "internal_retries": 0
+    },
+    {
+      "observation_id": "live_m2_dev_live_probe_04_M2DEV-B1",
+      "case_id": "M2DEV-B1",
+      "started_at": "2026-10-09T12:32:05.052558+00:00",
+      "status": "SEMANTIC_RESULT",
+      "internal_retries": 0
+    },
+    {
+      "observation_id": "live_m2_dev_live_probe_05_M2DEV-B4",
+      "case_id": "M2DEV-B4",
+      "started_at": "2026-10-09T12:37:50.352889+00:00",
+      "status": "TECHNICAL_FAILURE",
+      "internal_retries": 0
+    },
+    {
+      "observation_id": "live_m2_dev_live_probe_06_M2DEV-B3",
+      "case_id": "M2DEV-B3",
+      "started_at": "2026-10-09T12:54:33.705640+00:00",
+      "status": "SEMANTIC_RESULT",
+      "internal_retries": 0
+    },
+    {
+      "observation_id": "live_m2_dev_live_probe_07_M2DEV-A2",
+      "case_id": "M2DEV-A2",
+      "started_at": "2026-10-09T13:29:11.448054+00:00",
+      "status": "SEMANTIC_RESULT",
+      "internal_retries": 0
+    },
+    {
+      "observation_id": "live_m2_dev_live_probe_08_M2DEV-A4",
+      "case_id": "M2DEV-A4",
+      "started_at": "2026-10-09T13:39:26.231678+00:00",
+      "status": "SEMANTIC_RESULT",
+      "internal_retries": 0
+    },
+    {
+      "observation_id": "live_m2_dev_live_probe_09_M2DEV-B4",
+      "case_id": "M2DEV-B4",
+      "started_at": "2026-10-09T14:55:21.799315+00:00",
+      "status": "SEMANTIC_RESULT",
+      "internal_retries": 0
     }
   ],
   "current": {
     "total": 45,
-    "consumed": 4,
-    "remaining": 41
+    "consumed": 12,
+    "remaining": 33
   }
 }
