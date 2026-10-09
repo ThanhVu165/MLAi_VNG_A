@@ -8,9 +8,10 @@
 
 Python 3.11 theo `.python-version`; dependencies trong `requirements.txt`.
 Chạy setup và activate theo README trước các lệnh bên dưới.
-Tạo `.env` theo `.env.example`; điền `GOOGLE_API_KEY` riêng trên máy, không đưa vào Git.
-Model mặc định hiện tại là `gemini-3.6-flash` trong `infra/llm.py`.
-Không đặt GEMINI_MODEL mới khi đo baseline; giữ nguyên override hiện có nếu có.
+Tạo `.env` theo `.env.example`; điền `OPENAI_API_KEY` riêng trên máy, không đưa vào Git.
+Runtime chỉ hỗ trợ OpenAI: `LLM_PROVIDER=openai`, `OPENAI_MODEL=gpt-6-luna`,
+`OPENAI_REASONING_EFFORT=none`. Model phải được cấu hình; provider khác bị từ chối.
+Không có provider fallback.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
@@ -73,7 +74,7 @@ Không xóa DB hoặc khởi tạo đè để sửa lỗi. File bản sao lưu k
 Muốn phục hồi: dừng ứng dụng, giữ lại DB hiện tại cùng các file WAL/SHM, sao chép bản sao lưu
 thành một **đường dẫn mới**, đặt `DATABASE_PATH` trỏ đến bản đó rồi kiểm tra trước khi dùng.
 
-Sau khi activate venv, migration/setup chính thức (không gọi Gemini):
+Sau khi activate venv, migration/setup chính thức (không gọi OpenAI):
 
 ```powershell
 python -c "from corpus.seed import ensure_seeded; print(ensure_seeded())"
@@ -84,18 +85,21 @@ chỉ seed khi chưa có nguồn và khôi phục bản gốc seed khi hash kh�
 
 ## Cấu hình LIVE không dùng cache
 
-Chỉ cấu hình, chưa gọi Gemini:
+Chỉ cấu hình, chưa gọi OpenAI:
 
 ```powershell
+$env:LLM_PROVIDER='openai'
+$env:OPENAI_MODEL='gpt-6-luna'
+$env:OPENAI_REASONING_EFFORT='none'
 $env:LLM_MODE='live'
 $env:LLM_CACHE='0'
-python -c "import os; import infra.llm as llm; assert os.getenv('LLM_MODE') == 'live'; assert os.getenv('LLM_CACHE') == '0'; print('model=' + os.getenv('GEMINI_MODEL', llm.DEFAULT_MODEL))"
+python -c "import os; import infra.llm as llm; assert os.getenv('LLM_MODE') == 'live'; assert os.getenv('LLM_CACHE') == '0'; print('model=' + llm._provider_config()[1])"
 ```
 
 `infra/llm.py` chọn Replay trước cache khi mode là `replay`; mode `live` với
-`LLM_CACHE=0` bỏ đọc cache và gọi Gemini khi pipeline cần LLM. Cache vẫn có thể được
+`LLM_CACHE=0` bỏ đọc cache và gọi OpenAI khi pipeline cần LLM. Cache vẫn có thể được
 ghi sau call thành công; không có cache/cassette fallback cho lỗi LIVE.
-Giữ cả hai biến trong cùng terminal với lệnh evaluation; không đổi GEMINI_MODEL.
+Giữ cả hai biến trong cùng terminal với lệnh evaluation; giữ `OPENAI_MODEL=gpt-6-luna`.
 
 ## Kiểm chứng — thực hiện sau khi hoàn tất tái cấu trúc
 
@@ -112,6 +116,9 @@ Chúng không chứng minh LLM live đúng. Để kiểm tra live bằng DB riê
 
 ```powershell
 $env:DATABASE_PATH='data/validation/manual-live.db'
+$env:LLM_PROVIDER='openai'
+$env:OPENAI_MODEL='gpt-6-luna'
+$env:OPENAI_REASONING_EFFORT='none'
 $env:LLM_MODE='live'
 $env:LLM_CACHE='0'
 $env:PYTHONIOENCODING='utf-8'
