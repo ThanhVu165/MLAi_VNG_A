@@ -11,7 +11,7 @@ from typing import cast
 
 import yaml  # type: ignore[import-untyped]
 
-from core.types import EscalationCard, EscalationType
+from core.types import EscalationCard, EscalationType, EvidenceResult, EvidenceStatus, Extraction
 from infra.audit import log_event
 from infra.settings import QUESTION_WORDS_MAX, QUESTION_WORDS_MIN
 
@@ -94,7 +94,93 @@ def _record_failure(
     )
 
 
-def _fallback(card: EscalationCard) -> EscalationCard:
+def _fallback_requests(
+    extraction: Extraction, escalation_type: EscalationType
+) -> tuple[list[str], str]:
+    requests = [f"Yêu cầu {i}: {item.intent}" for i, item in enumerate(extraction.requests, 1)]
+    pending = [
+        i
+        for i, item in enumerate(extraction.requests, 1)
+        if item.requires_personal_record
+        or item.asks_exception
+        or item.asks_appeal
+        or item.asks_authority_decision
+    ]
+    if escalation_type is not EscalationType.AUTHORITY_REQUIRED or not pending:
+        pending = list(range(1, len(requests) + 1))
+    scope = "yêu cầu " + ", ".join(map(str, pending)) if pending else "yêu cầu chưa được xác định"
+    return requests, scope
+
+
+def _fallback_facts(extraction: Extraction, evidence: EvidenceResult) -> list[str]:
+    facts = [
+        f"Thông tin từ email (chưa xác minh): {value}"
+        for value in extraction.critical_facts.values()
+    ]
+    facts.extend(
+        f"Cần bổ sung hoặc xác minh: {value}" for value in extraction.missing_critical_facts
+    )
+    uncertainty = {
+        EvidenceStatus.CONFLICTING_SOURCES: "Các nguồn đang mâu thuẫn; chưa xác định nguồn áp dụng.",
+        EvidenceStatus.NO_AUTHORITATIVE_SOURCE: "Chưa có căn cứ có thẩm quyền trả lời đầy đủ yêu cầu.",
+        EvidenceStatus.FACT_MISSING: "Còn thiếu dữ kiện để áp dụng quy định.",
+        EvidenceStatus.SCOPE_MISMATCH: "Chưa xác minh được phạm vi áp dụng của căn cứ.",
+        EvidenceStatus.UNSUPPORTED_DOMAIN: "Yêu cầu có nội dung ngoài phạm vi được hỗ trợ.",
+    }
+    if evidence.status in uncertainty:
+        facts.append(uncertainty[evidence.status])
+    if "unanswered_request" in evidence.failed_checks:
+        facts.append("Còn nội dung yêu cầu chưa có căn cứ trả lời.")
+    if not evidence.chunks:
+        facts.append("Không có trích dẫn được chọn; cần xác minh căn cứ trước khi quyết định.")
+    if not facts:
+        facts.append("Chưa có dữ kiện được xác minh; cần làm rõ yêu cầu trước khi quyết định.")
+    return facts
+
+
+def _structured_fallback(
+    card: EscalationCard, extraction: Extraction, evidence: EvidenceResult
+) -> EscalationCard:
+    requests, scope = _fallback_requests(extraction, card.escalation_type)
+    actions = {
+        EscalationType.AUTHORITY_REQUIRED: [
+            f"Cấp có thẩm quyền ghi quyết định và căn cứ cho {scope} sau khi xác minh dữ kiện.",
+            f"Chưa quyết định {scope}; xác minh các mục chưa rõ nêu trong thẻ.",
+        ],
+        EscalationType.OUT_OF_POLICY: [
+            f"Chuyển {scope} đến đơn vị có thẩm quyền để làm rõ căn cứ áp dụng.",
+            f"Chưa có căn cứ trả lời {scope}; xác minh các điểm chưa rõ nêu trong thẻ.",
+        ],
+        EscalationType.FACT_UNRESOLVED: [
+            f"Bổ sung hoặc xác minh dữ kiện cho {scope} theo các mục nêu trong thẻ.",
+            f"Chưa có dữ kiện bổ sung cho {scope}; giữ chờ xác minh.",
+        ],
+    }
+    if not requests:
+        options = [
+            "Yêu cầu làm rõ nội dung cần người xử lý quyết định.",
+            "Chưa xác định được nội dung yêu cầu; giữ chờ xác minh.",
+        ]
+    else:
+        options = actions[card.escalation_type]
+    return EscalationCard(
+        summary=f"Chờ người xử lý xác nhận cách xử lý {scope}; chưa có quyết định tự động.",
+        facts=requests + _fallback_facts(extraction, evidence),
+        basis=[(chunk.breadcrumb, chunk.text) for chunk in evidence.chunks if chunk.text.strip()],
+        question=f"Anh/chị chọn cách xử lý nào cho {scope}, dựa trên dữ kiện và căn cứ nêu trong thẻ?",
+        options=options,
+        escalation_type=card.escalation_type,
+        partial_draft=card.partial_draft,
+    )
+
+
+def _fallback(
+    card: EscalationCard,
+    extraction: Extraction | None = None,
+    evidence: EvidenceResult | None = None,
+) -> EscalationCard:
+    if extraction is not None and evidence is not None:
+        return _structured_fallback(card, extraction, evidence)
     payload = yaml.safe_load(FALLBACK_PATH.read_text(encoding="utf-8"))
     if not isinstance(payload, Mapping) or not isinstance(payload.get("templates"), Mapping):
         raise ValueError("fallback_questions.yaml không hợp lệ.")
@@ -144,6 +230,8 @@ def guard_question(
     corpus_version: str,
     card: EscalationCard,
     regenerate: Callable[[], EscalationCard] | None,
+    extraction: Extraction | None = None,
+    evidence: EvidenceResult | None = None,
 ) -> EscalationCard:
     """Contain duration sai ngay; lỗi chất lượng khác regenerate tối đa một lần."""
     failures = question_failures(card)
@@ -157,16 +245,18 @@ def guard_question(
         failures=failures,
     )
     if "unsupported_option_duration" in failures:
-        fallback = _fallback(card)
+        fallback = _fallback(card, extraction, evidence)
+        if extraction is not None and evidence is not None:
+            return fallback
         return replace(card, question=fallback.question, options=fallback.options)
     if regenerate is None:
         # Email đa yêu cầu đã dùng lượt đọc, chọn nguồn, soạn phần đáp án và đặt câu hỏi.
-        return _fallback(card)
+        return _fallback(card, extraction, evidence)
     try:
         regenerated = regenerate()
     except Exception as error:
         logger.exception("Không thể regenerate câu hỏi: %s", error, extra={"case_id": case_id})
-        return _fallback(card)
+        return _fallback(card, extraction, evidence)
     retry_failures = question_failures(regenerated)
     if not retry_failures:
         return regenerated
@@ -177,7 +267,9 @@ def guard_question(
         card=regenerated,
         failures=retry_failures,
     )
-    fallback = _fallback(regenerated)
+    fallback = _fallback(regenerated, extraction, evidence)
+    if extraction is not None and evidence is not None:
+        return fallback
     if "unsupported_option_duration" in retry_failures:
         return replace(regenerated, question=fallback.question, options=fallback.options)
     return fallback

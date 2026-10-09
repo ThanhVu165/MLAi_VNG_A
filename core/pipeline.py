@@ -650,6 +650,8 @@ def _process_case(
                     actor=actor,
                     corpus_version=intake.corpus_version,
                     card=generated_card,
+                    extraction=extraction,
+                    evidence=evidence,
                     regenerate=(
                         None
                         if generated_card.partial_draft is not None

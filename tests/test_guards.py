@@ -1336,6 +1336,213 @@ def test_question_guard_regenerates_once_then_uses_yaml_fallback(monkeypatch, tm
     assert len(fallback.options) == 2
 
 
+def test_a1_fallback_names_personal_request_and_keeps_missing_facts(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    extraction = _evidence_extraction(
+        facts={"submission": "Biểu mẫu đã gửi nhưng chưa được kiểm tra."},
+        missing=["Ngày nộp thực tế", "Hạn tiếp nhận của đợt xử lý"],
+    )
+    extraction.requests = [
+        RequestItem(Domain.GRADE_APPEAL, "Hỏi lệ phí hồ sơ", True, False, False, False, False),
+        RequestItem(Domain.GRADE_APPEAL, "Hỏi quy trình nộp", True, False, False, False, False),
+        RequestItem(
+            Domain.GRADE_APPEAL,
+            "Xác nhận hồ sơ đã nộp có hợp lệ không",
+            False,
+            True,
+            False,
+            False,
+            False,
+        ),
+    ]
+    chunk = replace(
+        _evidence_chunk(),
+        text="Chuyên viên tiếp nhận hồ sơ; cấp có thẩm quyền quyết định ngoại lệ.",
+    )
+    evidence = EvidenceResult(EvidenceStatus.FACT_MISSING, [chunk], ["facts"])
+    card = _card(question="Không hợp lệ", escalation_type=EscalationType.AUTHORITY_REQUIRED)
+
+    result = guard_question(
+        case_id="offline-a1-fallback",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=card,
+        regenerate=None,
+        extraction=extraction,
+        evidence=evidence,
+    )
+
+    assert all("yêu cầu 3" in option for option in result.options)
+    assert all("phương án đã nêu" not in option for option in result.options)
+    assert "yêu cầu 3" in result.question
+    assert any(extraction.requests[2].intent in fact for fact in result.facts)
+    assert all(
+        any(missing in fact for fact in result.facts)
+        for missing in extraction.missing_critical_facts
+    )
+    assert result.basis == [(chunk.breadcrumb, chunk.text)]
+    assert question_failures(result) == []
+
+
+def test_a2_fallback_preserves_unreceived_proof_and_both_conflicting_sources(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    caveat = "Chứng từ được nhắc trong email nhưng chưa được hệ thống tiếp nhận."
+    extraction = _evidence_extraction(facts={"arbitrary_document_state": caveat})
+    extraction.requests = [
+        RequestItem(
+            Domain.COURSE_WITHDRAWAL,
+            "Xin quyết định ngoại lệ cho hồ sơ",
+            False,
+            False,
+            True,
+            False,
+            True,
+        ),
+        RequestItem(
+            Domain.COURSE_WITHDRAWAL, "Hỏi quyền lợi áp dụng", True, False, False, False, False
+        ),
+    ]
+    chunks = [
+        replace(_evidence_chunk(), breadcrumb="Nguồn thứ nhất", text="Tỷ lệ hoàn là 60 phần trăm."),
+        replace(_evidence_chunk(), breadcrumb="Nguồn thứ hai", text="Tỷ lệ hoàn là 70 phần trăm."),
+    ]
+    evidence = EvidenceResult(EvidenceStatus.CONFLICTING_SOURCES, chunks, ["conflict"])
+
+    result = guard_question(
+        case_id="offline-a2-fallback",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=_card(question="Không hợp lệ", escalation_type=EscalationType.AUTHORITY_REQUIRED),
+        regenerate=None,
+        extraction=extraction,
+        evidence=evidence,
+    )
+
+    assert any(caveat in fact and "chưa xác minh" in fact for fact in result.facts)
+    assert any("nguồn đang mâu thuẫn" in fact for fact in result.facts)
+    assert result.basis == [(chunk.breadcrumb, chunk.text) for chunk in chunks]
+    assert all("yêu cầu 1" in option and "%" not in option for option in result.options)
+    assert len(result.options) == 2
+    assert result.escalation_type is EscalationType.AUTHORITY_REQUIRED
+
+
+@pytest.mark.parametrize("has_requests", [True, False])
+def test_fallback_without_evidence_or_facts_does_not_invent_verification(
+    monkeypatch, tmp_path, has_requests
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    extraction = _evidence_extraction(missing=["Dữ kiện áp dụng chưa được xác nhận"])
+    if not has_requests:
+        extraction.requests = []
+    evidence = EvidenceResult(EvidenceStatus.FACT_MISSING, [], ["facts"])
+    result = guard_question(
+        case_id="offline-empty-fallback",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=_card(question="Không hợp lệ"),
+        regenerate=None,
+        extraction=extraction,
+        evidence=evidence,
+    )
+
+    assert result.basis == []
+    assert any("Không có trích dẫn" in fact for fact in result.facts)
+    assert any("Dữ kiện áp dụng chưa được xác nhận" in fact for fact in result.facts)
+    assert all("chấp thuận" not in option.casefold() for option in result.options)
+    assert len(result.options) == 2
+    if not has_requests:
+        assert "làm rõ nội dung" in result.options[0]
+
+
+@pytest.mark.parametrize(
+    "path", ["no_regeneration", "exception", "invalid_regeneration", "duration"]
+)
+def test_all_existing_fallback_paths_keep_structured_context(monkeypatch, tmp_path, path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    partial = _draft("Phần thông tin chưa gửi [chunk-1].")
+    card = _card(question="Không hợp lệ", partial_draft=partial)
+    if path == "duration":
+        card = _card(
+            options=["Trả kết quả trong 15 ngày", "Trả kết quả trong 30 ngày"],
+            partial_draft=partial,
+        )
+    extraction = _evidence_extraction(facts={"state": "Hồ sơ chưa được xác minh."})
+    evidence = EvidenceResult(EvidenceStatus.FACT_MISSING, [_evidence_chunk()], ["facts"])
+    original = deepcopy(card)
+    calls = []
+
+    def regenerate() -> EscalationCard:
+        calls.append(True)
+        if path == "exception":
+            raise TimeoutError("Synthetic exhausted attempt budget")
+        return card
+
+    result = guard_question(
+        case_id=f"offline-fallback-{path}",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=card,
+        regenerate=None if path == "no_regeneration" else regenerate,
+        extraction=extraction,
+        evidence=evidence,
+    )
+
+    assert len(calls) == (0 if path in ("no_regeneration", "duration") else 1)
+    assert any("Hồ sơ chưa được xác minh." in fact for fact in result.facts)
+    assert result.partial_draft is partial
+    assert result.escalation_type is card.escalation_type
+    assert card == original
+    assert question_failures(result) == []
+
+
+@pytest.mark.parametrize(
+    ("rule", "status", "subtype"),
+    [
+        ("P01", EvidenceStatus.CONFLICTING_SOURCES, EscalationType.AUTHORITY_REQUIRED),
+        ("P02", EvidenceStatus.NO_AUTHORITATIVE_SOURCE, EscalationType.OUT_OF_POLICY),
+        ("P03", EvidenceStatus.FACT_MISSING, EscalationType.FACT_UNRESOLVED),
+        ("P05", EvidenceStatus.OK, None),
+    ],
+)
+def test_fallback_content_does_not_change_pipeline_policy_or_status(
+    monkeypatch, tmp_path, rule, status, subtype
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    _install_routine_pipeline(monkeypatch, Domain.CONDUCT_SCORE)
+    extraction = _evidence_extraction(facts={"proof": "Minh chứng chưa được tiếp nhận."})
+    if rule == "P01":
+        extraction.requests[0].is_informational = False
+        extraction.requests[0].asks_authority_decision = True
+    evidence = EvidenceResult(status, [_evidence_chunk()], [] if rule == "P05" else ["facts"])
+    monkeypatch.setattr(pipeline, "extract_facts", lambda body, case_id: extraction)
+    monkeypatch.setattr(pipeline, "retrieve_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "validate_evidence", lambda **kwargs: evidence)
+    calls = []
+
+    def bad_card(*args) -> EscalationCard:
+        calls.append(True)
+        if len(calls) > 1:
+            raise TimeoutError("Synthetic exhausted attempt budget")
+        return _card(question="Không hợp lệ", escalation_type=subtype)
+
+    monkeypatch.setattr(pipeline, "_escalation_card", bad_card)
+    result = pipeline.process_case(_input())
+
+    assert result.decision.rule_id == rule
+    assert result.decision.escalation_type is subtype
+    if rule == "P05":
+        assert result.decision.decision is Decision.AUTO_REPLY
+        assert result.status is CaseStatus.PENDING_SEND
+        assert result.card is None and calls == []
+    else:
+        assert result.decision.decision is Decision.ESCALATE
+        assert result.status is CaseStatus.AWAITING_HUMAN
+        assert len(calls) == 2 and result.card is not None
+        assert any("Minh chứng chưa được tiếp nhận." in fact for fact in result.card.facts)
+
+
 def test_multi_intent_card_keeps_routine_draft_and_asks_only_locked_part(monkeypatch) -> None:
     extraction = Extraction(
         "vi",
