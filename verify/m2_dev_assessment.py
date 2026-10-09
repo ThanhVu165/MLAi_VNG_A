@@ -88,6 +88,7 @@ class CaptureDiagnostics:
     error_class: str | None = None
     stop_reason: str | None = None
     cost_metadata: dict[str, str] | None = None
+    r2_validation: list[dict[str, object]] | None = None
 
 
 @dataclass(frozen=True)
@@ -339,7 +340,66 @@ def capture_result(
     )
 
 
+R2_VALIDATION_VALUES = {
+    "event": {"r2_validation"},
+    "phase": {"R2_extract"},
+    "provider_result": {"SUCCESS", "FAILURE"},
+    "domain_validation": {"PASS", "FAIL", "NOT_RUN"},
+    "validation_stage": {
+        "provider_result",
+        "response",
+        "requests",
+        "language",
+        "critical_facts",
+        "missing_critical_facts",
+        "injection_suspected",
+        "serialization",
+        "complete",
+    },
+    "reason_code": {
+        None,
+        "FACT_NAME_EMPTY",
+        "FACT_VALUE_EMPTY",
+        "FACT_DUPLICATE_CONFLICT",
+        "R2_PAYLOAD_INVALID",
+    },
+    "retry_reason": {
+        "NONE",
+        "PROVIDER_FAILURE",
+        "INTERNAL_VALIDATION_RETRY",
+        "VALIDATION_RETRY_EXHAUSTED",
+    },
+}
+R2_VALIDATION_FIELDS = set(R2_VALIDATION_VALUES) | {
+    "correlation_id",
+    "logical_call_index",
+}
+
+
+def _valid_r2_validation(event: object) -> bool:
+    """Closed metadata vocabulary: arbitrary strings cannot carry raw content."""
+    if not isinstance(event, dict) or set(event) != R2_VALIDATION_FIELDS:
+        return False
+    correlation = event["correlation_id"]
+    return (
+        isinstance(correlation, str)
+        and re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", correlation) is not None
+        and type(event["logical_call_index"]) is int
+        and event["logical_call_index"] > 0
+        and all(
+            (value is None or type(value) is str) and value in allowed
+            for key, allowed in R2_VALIDATION_VALUES.items()
+            for value in (event[key],)
+        )
+    )
+
+
 def _validate_diagnostics(diagnostic_data: dict[str, object]) -> None:
+    validation = diagnostic_data.get("r2_validation")
+    if validation is not None and (
+        not isinstance(validation, list) or not all(_valid_r2_validation(e) for e in validation)
+    ):
+        raise ValueError("R2 validation chỉ nhận metadata allowlist.")
     attempts = diagnostic_data["provider_attempts"]
     if attempts is not None:
         allowed = {

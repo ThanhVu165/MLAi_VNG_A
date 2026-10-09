@@ -95,6 +95,7 @@ class _AttemptObserver(logging.Handler):
         self.case_id = case_id
         self.correlation_id = correlation_id
         self.attempts: list[dict[str, object]] = []
+        self.r2_validation: list[dict[str, object]] = []
 
     def emit(self, record: logging.LogRecord) -> None:
         event = getattr(record, "provider_attempt", None)
@@ -105,6 +106,15 @@ class _AttemptObserver(logging.Handler):
         )
         if matches:
             self.attempts.append({k: v for k, v in event.items() if k in ATTEMPT_FIELDS})
+        validation = getattr(record, "r2_validation", None)
+        if (
+            isinstance(validation, dict)
+            and self.correlation_id is not None
+            and validation.get("correlation_id") == self.correlation_id
+        ):
+            safe = {k: v for k, v in validation.items() if k in dev.R2_VALIDATION_FIELDS}
+            if dev._valid_r2_validation(safe):
+                self.r2_validation.append(safe)
 
     def diagnostics(self) -> dev.CaptureDiagnostics:
         cost = _estimated_cost(self.attempts)
@@ -127,6 +137,7 @@ class _AttemptObserver(logging.Handler):
             call["latency_ms"] += event.get("elapsed_ms", 0) + event.get("retry_backoff_ms", 0)
         return dev.CaptureDiagnostics(
             provider_attempts=self.attempts,
+            r2_validation=self.r2_validation,
             logical_calls=list(calls.values()),
             cost=cost,
             cost_metadata={
@@ -362,6 +373,7 @@ def _invoke_observation(
         "technical_status": "TECHNICAL_FAILURE" if technical else "OK",
         "verdict": assessment.verdict,
         "artifact_directory": str(directory / "cases" / cid),
+        "r2_validation": (output.diagnostics.r2_validation if output.diagnostics else None),
     }, cost
 
 
