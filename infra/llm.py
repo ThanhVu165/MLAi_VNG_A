@@ -18,7 +18,7 @@ from uuid import uuid4
 
 from infra.db import execute, fetch_one, now_iso
 from infra.provider_observability import (
-    exception_diagnostic,
+    current_correlation,
     sanitize_case_id,
     sanitize_diagnostic,
 )
@@ -32,7 +32,6 @@ from infra.settings import (
 LOGGER = logging.getLogger(__name__)
 CASSETTE_DIRECTORY = Path("tests/cassettes")
 CACHE_KEY_PREFIX = "llm_cache:"
-DEFAULT_MODEL = "gemini-3.6-flash"
 MILLISECONDS_PER_SECOND = 1_000
 LLM_RETRY_BACKOFF_SECONDS = 1.0
 JsonValue = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
@@ -55,9 +54,7 @@ def case_call_budget() -> Iterator[None]:
     """Một ngân sách chung cho toàn bộ lượt xử lý, kể cả các lần thử lại."""
     provider, model = _provider_config()
     token = _BUDGET.set(
-        _CallBudget(
-            LLM_MAX_ATTEMPTS, perf_counter() + CASE_TIMEOUT_SECONDS, provider, model
-        )
+        _CallBudget(LLM_MAX_ATTEMPTS, perf_counter() + CASE_TIMEOUT_SECONDS, provider, model)
     )
     try:
         yield
@@ -86,16 +83,13 @@ class LLMResult:
     latency_ms: int
     prompt_hash: str
     model: str
+    usage: dict[str, object] | None = None
 
 
 def _provider_config() -> tuple[str, str]:
-    provider = os.getenv("LLM_PROVIDER", "gemini").strip().lower()
-    model = (
-        os.getenv("OPENAI_MODEL", "").strip()
-        if provider == "openai"
-        else os.getenv("GEMINI_MODEL", DEFAULT_MODEL)
-    )
-    return provider, model
+    if os.getenv("LLM_PROVIDER", "openai").strip().lower() != "openai":
+        raise ValueError("LLM_PROVIDER chỉ hỗ trợ openai.")
+    return "openai", os.getenv("OPENAI_MODEL", "").strip()
 
 
 def _prompt_hash(identity: list[object]) -> str:
@@ -117,15 +111,20 @@ def call_json(
     """Gọi LLM theo chế độ cấu hình và luôn trả về ``LLMResult``."""
     started = perf_counter()
     budget = _BUDGET.get()
-    provider, model = (budget.provider, budget.model) if budget else _provider_config()
+    try:
+        provider, model = (budget.provider, budget.model) if budget else _provider_config()
+    except ValueError:
+        prompt_hash = _prompt_hash(["openai", "", schema, prompt, temperature])
+        latency_ms = round((perf_counter() - started) * MILLISECONDS_PER_SECOND)
+        _record_latency(case_id, step, False, latency_ms)
+        return replace(
+            _failure("LLM_PROVIDER chỉ hỗ trợ openai.", prompt_hash, ""),
+            latency_ms=latency_ms,
+        )
     prompt_hash = _prompt_hash([provider, model, schema, prompt, temperature])
     result: LLMResult
     try:
-        if provider not in {"gemini", "openai"}:
-            result = _failure(
-                "LLM_PROVIDER phải là gemini hoặc openai.", prompt_hash, model
-            )
-        elif provider == "openai" and not model:
+        if not model:
             result = _failure("Chưa cấu hình OPENAI_MODEL.", prompt_hash, model)
         elif temperature != 0.0:
             result = _failure("temperature phải bằng 0.", prompt_hash, model)
@@ -142,11 +141,6 @@ def call_json(
                 case_id=case_id,
                 step=step,
                 provider=provider,
-                legacy_hash=(
-                    _prompt_hash([model, schema, prompt, temperature])
-                    if provider == "gemini"
-                    else None
-                ),
             )
     except Exception as error:
         LOGGER.warning("Lỗi không mong đợi khi gọi LLM: %s", type(error).__name__)
@@ -168,35 +162,15 @@ def _run_mode(
     *,
     case_id: str | None = None,
     step: str | None = None,
-    provider: str = "gemini",
-    legacy_hash: str | None = None,
+    provider: str = "openai",
 ) -> LLMResult:
     mode = os.getenv("LLM_MODE", "live").lower()
     if mode == "replay":
-        if (
-            provider == "gemini"
-            and legacy_hash
-            and not (CASSETTE_DIRECTORY / f"{prompt_hash}.json").exists()
-        ):
-            return replace(_replay(legacy_hash, model), prompt_hash=prompt_hash)
         return _replay(prompt_hash, model)
     if mode not in {"live", "record"}:
-        return _failure(
-            "LLM_MODE phải là live, replay hoặc record.", prompt_hash, model
-        )
+        return _failure("LLM_MODE phải là live, replay hoặc record.", prompt_hash, model)
 
-    cached = (
-        _load_cache(prompt_hash, model) if os.getenv("LLM_CACHE", "1") != "0" else None
-    )
-    if (
-        cached is None
-        and provider == "gemini"
-        and legacy_hash
-        and os.getenv("LLM_CACHE", "1") != "0"
-    ):
-        legacy_cached = _load_cache(legacy_hash, model)
-        if legacy_cached is not None:
-            cached = replace(legacy_cached, prompt_hash=prompt_hash)
+    cached = _load_cache(prompt_hash, model) if os.getenv("LLM_CACHE", "1") != "0" else None
     if cached is not None:
         return cached
 
@@ -228,13 +202,13 @@ def _call_live(
     *,
     case_id: str | None = None,
     step: str | None = None,
-    provider: str = "gemini",
+    provider: str = "openai",
 ) -> LLMResult:
-    if provider not in {"gemini", "openai"}:
-        return _failure("LLM_PROVIDER phải là gemini hoặc openai.", prompt_hash, model)
-    if provider == "openai" and not model:
+    if provider != "openai":
+        return _failure("LLM_PROVIDER chỉ hỗ trợ openai.", prompt_hash, model)
+    if not model:
         return _failure("Chưa cấu hình OPENAI_MODEL.", prompt_hash, model)
-    api_key = os.getenv("OPENAI_API_KEY" if provider == "openai" else "GOOGLE_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return _failure(
             "Chưa cấu hình kết nối dịch vụ AI. Hãy nhờ người quản trị bổ sung khóa truy cập rồi thử lại.",
@@ -256,28 +230,11 @@ def _call_live(
         try:
             remaining_timeout = _attempt_timeout(timeout_s)
             request_started = True
-            request = _request_openai if provider == "openai" else _request_gemini
-            result = request(
-                prompt, schema, prompt_hash, model, api_key, remaining_timeout
-            )
+            result = _request_openai(prompt, schema, prompt_hash, model, api_key, remaining_timeout)
         except Exception as error:
-            LOGGER.warning(
-                "Lần gọi LLM %s thất bại: %s", attempt + 1, type(error).__name__
-            )
-            transient = isinstance(error, (TimeoutError, ConnectionError)) or type(
-                error
-            ).__name__ in {
-                "DeadlineExceeded",
-                "ServiceUnavailable",
-                "ResourceExhausted",
-                "InternalServerError",
-                "ServerError",
-                "ReadTimeout",
-                "ConnectTimeout",
-                "ConnectionError",
-            }
-            if provider == "openai" and request_started:
-                transient = _openai_retryable(error)
+            LOGGER.warning("Lần gọi LLM %s thất bại: %s", attempt + 1, type(error).__name__)
+            pre_request_budget_block = not request_started and isinstance(error, TimeoutError)
+            transient = _openai_retryable(error) if request_started else pre_request_budget_block
             will_retry = request_started and transient and attempt < retry_count
             retry_backoff_s = 0.0
             if will_retry:
@@ -302,6 +259,7 @@ def _call_live(
                 request_started=request_started,
                 success=False,
                 error=error,
+                usage=getattr(error, "_validated_response_usage", None),
                 retryable=request_started and transient,
                 will_retry=will_retry,
                 retry_backoff_ms=round(retry_backoff_s * MILLISECONDS_PER_SECOND),
@@ -319,32 +277,26 @@ def _call_live(
                 error_name = type(error).__name__
                 if error_name in {
                     "TimeoutError",
-                    "DeadlineExceeded",
-                    "ReadTimeout",
-                    "ConnectTimeout",
                     "APITimeoutError",
                 }:
                     message = "Dịch vụ AI không phản hồi trong thời gian cho phép."
                 elif error_name in {
-                    "ServiceUnavailable",
                     "InternalServerError",
-                    "ServerError",
                 }:
                     message = "Dịch vụ AI đang quá tải hoặc tạm thời không sẵn sàng."
-                elif error_name in {"ResourceExhausted", "RateLimitError"}:
+                elif error_name == "RateLimitError":
                     message = "Dịch vụ AI báo đã chạm hạn mức của tài khoản."
                 elif error_name in {
-                    "PermissionDenied",
-                    "Unauthenticated",
-                    "Forbidden",
                     "AuthenticationError",
                     "PermissionDeniedError",
                 }:
                     message = "Dịch vụ AI không chấp nhận quyền truy cập hiện tại."
-                elif error_name == "NotFound":
+                elif error_name == "NotFoundError":
                     message = "Dịch vụ AI không tìm thấy mô hình đã cấu hình."
                 else:
-                    message = "Dịch vụ AI chưa xử lý được yêu cầu do kết nối hoặc cấu hình chưa phù hợp."
+                    message = (
+                        "Dịch vụ AI chưa xử lý được yêu cầu do kết nối hoặc cấu hình chưa phù hợp."
+                    )
                 return _failure(
                     f"{message} Email được giữ lại, chưa gửi phản hồi. Hãy kiểm tra kết nối/cấu hình rồi thử lại.",
                     prompt_hash,
@@ -372,11 +324,10 @@ def _call_live(
                 will_retry=False,
                 retry_backoff_ms=0,
                 stop_reason=None,
+                usage=result.usage,
             )
             return result
-    return _failure(
-        "Dịch vụ AI chưa sẵn sàng; email được giữ lại để thử sau.", prompt_hash, model
-    )
+    return _failure("Dịch vụ AI chưa sẵn sàng; email được giữ lại để thử sau.", prompt_hash, model)
 
 
 def _record_provider_attempt(
@@ -399,15 +350,16 @@ def _record_provider_attempt(
     will_retry: bool,
     retry_backoff_ms: int,
     stop_reason: str | None,
+    usage: dict[str, object] | None = None,
 ) -> None:
     """Reuse the existing logger; diagnostics must never mask the original outcome."""
     try:
         budget = _BUDGET.get()
         event = {
+            "correlation_id": current_correlation(case_id),
+            "usage": usage,
             "event": (
-                "llm_provider_attempt"
-                if request_started
-                else "llm_provider_attempt_skipped"
+                "llm_provider_attempt" if request_started else "llm_provider_attempt_skipped"
             ),
             "case_id": sanitize_case_id(case_id, prompt=prompt),
             # No trace_id is propagated to this wrapper; do not invent one or query/write DB.
@@ -418,9 +370,7 @@ def _record_provider_attempt(
             "elapsed_ms": round((perf_counter() - started) * MILLISECONDS_PER_SECOND),
             "effective_timeout_s": effective_timeout_s,
             "attempts_remaining_before": attempts_before,
-            "attempts_remaining_after": (
-                budget.remaining if budget is not None else None
-            ),
+            "attempts_remaining_after": (budget.remaining if budget is not None else None),
             "remaining_case_time_s": remaining_case_time_s,
             "model": sanitize_diagnostic(model, prompt=prompt),
             "provider": provider,
@@ -433,19 +383,16 @@ def _record_provider_attempt(
             "stop_reason": stop_reason,
         }
         if error is not None:
-            if provider == "openai":
-                # SDK messages may contain arbitrary response bodies. Metadata only.
-                event.update(
-                    {
-                        "exception_class": type(error).__name__,
-                        "http_status": getattr(error, "status_code", None),
-                        "provider_code": sanitize_diagnostic(
-                            getattr(error, "code", None), prompt=prompt
-                        ),
-                    }
-                )
-            else:
-                event.update(exception_diagnostic(error, prompt=prompt))
+            # SDK messages may contain arbitrary response bodies. Metadata only.
+            event.update(
+                {
+                    "exception_class": type(error).__name__,
+                    "http_status": getattr(error, "status_code", None),
+                    "provider_code": sanitize_diagnostic(
+                        getattr(error, "code", None), prompt=prompt
+                    ),
+                }
+            )
         # WARNING ensures successful attempts are retained alongside failures by default.
         LOGGER.warning(
             "LLM provider evidence %s",
@@ -521,37 +468,65 @@ def _request_openai(
                 },
             },
         )
-    choice = response.choices[0]
-    if choice.message.refusal or choice.finish_reason != "stop":
-        raise ValueError("Refused or incomplete structured output")
-    return _success(_parse_object(choice.message.content or ""), prompt_hash, model)
+    usage = _response_usage(response)
+    try:
+        choice = response.choices[0]
+        if choice.message.refusal or choice.finish_reason != "stop":
+            raise ValueError("Refused or incomplete structured output")
+        return replace(
+            _success(_parse_object(choice.message.content or ""), prompt_hash, model),
+            usage=usage,
+        )
+    except Exception as error:
+        # Giữ nguyên loại lỗi; chỉ mang numeric usage đã kiểm tra sang attempt telemetry.
+        error._validated_response_usage = usage
+        raise
 
 
-def _request_gemini(
-    prompt: str,
-    schema: dict[str, object],
-    prompt_hash: str,
-    model: str,
-    api_key: str,
-    timeout_s: int,
-) -> LLMResult:
-    from google import genai
-    from google.genai import types
+def _response_usage(response: object) -> dict[str, object] | None:
+    try:
+        return _extract_usage(response)
+    except Exception:
+        # Telemetry không được biến successful business output thành failure.
+        return None
 
-    client = genai.Client(
-        api_key=api_key,
-        http_options=types.HttpOptions(timeout=min(timeout_s, LLM_TIMEOUT_S) * 1_000),
-    )
-    response = client.models.generate_content(
-        model=model,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.0,
-            response_mime_type="application/json",
-            response_json_schema=schema,
+
+def _extract_usage(response: object) -> dict[str, object] | None:
+    """Chỉ numeric usage + nhãn an toàn; không serialize SDK response."""
+    usage = getattr(response, "usage", None)
+    input_tokens = getattr(usage, "prompt_tokens", None)
+    output_tokens = getattr(usage, "completion_tokens", None)
+    total = getattr(usage, "total_tokens", None)
+    if any(type(n) is not int or n < 0 for n in (input_tokens, output_tokens, total)):
+        return None
+    if total != input_tokens + output_tokens:
+        return None
+    details = getattr(usage, "prompt_tokens_details", None)
+    cached = getattr(details, "cached_tokens", None)
+    written = getattr(details, "cache_write_tokens", None)
+    if any(
+        n is not None and (type(n) is not int or not 0 <= n <= input_tokens)
+        for n in (cached, written)
+    ):
+        return None
+    if cached is not None and written is not None and cached + written > input_tokens:
+        return None
+    tier = getattr(response, "service_tier", None)
+    response_model = getattr(response, "model", None)
+    return {
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "cached_input_tokens": cached,
+        "cache_write_tokens": written,
+        "response_model": (
+            sanitize_diagnostic(response_model) if type(response_model) is str else None
         ),
-    )
-    return _success(_parse_object(response.text), prompt_hash, model)
+        "service_tier": (
+            tier
+            if type(tier) is str and tier in ("default", "flex", "priority", "scale", "auto")
+            else None
+        ),
+    }
 
 
 def _replay(prompt_hash: str, model: str) -> LLMResult:
@@ -561,21 +536,15 @@ def _replay(prompt_hash: str, model: str) -> LLMResult:
         if not isinstance(payload, dict):
             raise ValueError("Cassette phải là JSON object.")
         data = payload.get("data", payload)
-        return _success(
-            _parse_object(data), prompt_hash, str(payload.get("model", model))
-        )
+        return _success(_parse_object(data), prompt_hash, str(payload.get("model", model)))
     except (OSError, ValueError, json.JSONDecodeError) as error:
-        LOGGER.warning(
-            "Không đọc được cassette %s: %s", prompt_hash, type(error).__name__
-        )
+        LOGGER.warning("Không đọc được cassette %s: %s", prompt_hash, type(error).__name__)
         return _failure("Không có cassette hợp lệ cho prompt này.", prompt_hash, model)
 
 
 def _load_cache(prompt_hash: str, model: str) -> LLMResult | None:
     try:
-        row = fetch_one(
-            "SELECT value FROM settings WHERE key = ?", (_cache_key(prompt_hash),)
-        )
+        row = fetch_one("SELECT value FROM settings WHERE key = ?", (_cache_key(prompt_hash),))
         if row is None:
             return None
         payload = json.loads(row["value"])
@@ -592,9 +561,7 @@ def _load_cache(prompt_hash: str, model: str) -> LLMResult | None:
 
 
 def _store_cache(result: LLMResult) -> None:
-    payload = json.dumps(
-        {"data": result.data, "model": result.model}, ensure_ascii=False
-    )
+    payload = json.dumps({"data": result.data, "model": result.model}, ensure_ascii=False)
     try:
         execute(
             "INSERT INTO settings (key, value, updated_at, actor) VALUES (?, ?, ?, ?) "

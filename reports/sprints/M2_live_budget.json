@@ -7,10 +7,18 @@
     "confirmed_at": "2026-10-08T21:43:33+00:00",
     "reconciliation_reference": "Current task a6771fb1-cd69-4164-97e3-c00fb41eaf41: Coordinator confirms 3/45, excludes 40 pre-Goal observations and confirms no other LIVE observations; reports/sprints/M2_LIVE_BUDGET_RECONCILIATION.md; Anti independent evidence review completion attested by Coordinator in the same task. Timestamp records this confirmation in the ledger now, not a historical approval time."
   },
-  "attempts": [],
+  "attempts": [
+    {
+      "observation_id": "live_m2_dev_live_probe_01_M2DEV-A1",
+      "case_id": "M2DEV-A1",
+      "started_at": "2026-10-08T22:18:42.424256+00:00",
+      "status": "SEMANTIC_RESULT",
+      "internal_retries": 0
+    }
+  ],
   "current": {
     "total": 45,
-    "consumed": 3,
-    "remaining": 42
+    "consumed": 4,
+    "remaining": 41
   }
 }

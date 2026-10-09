@@ -13,6 +13,6 @@ if (-not (Test-Path -LiteralPath $projectPython)) { throw 'Existing .venv-bootst
 if ($LASTEXITCODE -ne 0) { throw 'Existing virtual environment has the wrong Python version. Preserve it and use a fresh checkout.' }
 & $projectPython -m pip install -r requirements.txt
 if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }
-& $projectPython -c "import google.genai; print('google.genai OK')"
-if ($LASTEXITCODE -ne 0) { throw 'Gemini SDK import failed.' }
+& $projectPython -c "import openai; print('openai OK')"
+if ($LASTEXITCODE -ne 0) { throw 'OpenAI SDK import failed.' }
 Write-Output 'Setup complete. Activate: .\.venv-bootstrap\Scripts\Activate.ps1'

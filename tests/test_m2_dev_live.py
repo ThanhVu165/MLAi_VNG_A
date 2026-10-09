@@ -253,6 +253,8 @@ def test_real_adapter_boundary_fresh_seed_payload_and_runtime_restore(tmp_path, 
     database = tmp_path / "fresh.db"
 
     def fake_process(inp, *, actor, case_id):
+        from infra.provider_observability import current_correlation
+
         assert dev.input_hash(inp) == dev.input_hash(spec["input"])
         assert actor == "SYSTEM" and case_id == "live_test"
         assert db.DEFAULT_DATABASE_PATH == database
@@ -264,6 +266,7 @@ def test_real_adapter_boundary_fresh_seed_payload_and_runtime_restore(tmp_path, 
                 "provider_attempt": {
                     "event": "llm_provider_attempt",
                     "case_id": case_id,
+                    "correlation_id": current_correlation(case_id),
                     "attempt_index": 1,
                     "success": True,
                     "raw_json": "not retained",

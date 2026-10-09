@@ -87,6 +87,7 @@ class CaptureDiagnostics:
     guard_failures: list[str] | None = None
     error_class: str | None = None
     stop_reason: str | None = None
+    cost_metadata: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -342,6 +343,8 @@ def _validate_diagnostics(diagnostic_data: dict[str, object]) -> None:
     attempts = diagnostic_data["provider_attempts"]
     if attempts is not None:
         allowed = {
+            "correlation_id",
+            "usage",
             "event",
             "case_id",
             "call_id",
@@ -367,6 +370,23 @@ def _validate_diagnostics(diagnostic_data: dict[str, object]) -> None:
             not isinstance(e, dict) or set(e) - allowed for e in attempts
         ):
             raise ValueError("Telemetry chỉ nhận metadata; không nhận body/prompt.")
+        for event in attempts:
+            _validate_usage(event.get("usage"))
+    cost_meta = diagnostic_data.get("cost_metadata")
+    if cost_meta is not None and (
+        not isinstance(cost_meta, dict)
+        or set(cost_meta)
+        - {
+            "kind",
+            "pricing_source",
+            "pricing_verified_on",
+            "pricing_valid_through",
+            "method",
+            "billing_scope",
+        }
+        or any(not isinstance(v, str) for v in cost_meta.values())
+    ):
+        raise ValueError("Cost metadata chỉ nhận nhãn pricing allowlist.")
     calls = diagnostic_data["logical_calls"]
     if calls is not None and (
         not isinstance(calls, list)
@@ -376,6 +396,24 @@ def _validate_diagnostics(diagnostic_data: dict[str, object]) -> None:
         )
     ):
         raise ValueError("Logical calls chỉ nhận metadata.")
+
+
+def _validate_usage(usage: object) -> None:
+    if usage is None:
+        return
+    numeric = {"input_tokens", "output_tokens", "cached_input_tokens", "cache_write_tokens"}
+    if (
+        not isinstance(usage, dict)
+        or set(usage) != numeric | {"response_model", "service_tier"}
+        or any(
+            usage[k] is not None and (type(usage[k]) is not int or usage[k] < 0) for k in numeric
+        )
+        or any(
+            usage[k] is not None and not isinstance(usage[k], str)
+            for k in ("response_model", "service_tier")
+        )
+    ):
+        raise ValueError("Usage chỉ nhận validated counts và nhãn metadata.")
 
 
 def _objects(value: object) -> dict[str, object]:

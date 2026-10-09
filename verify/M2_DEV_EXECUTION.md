@@ -235,3 +235,42 @@ Validation Task 1: 116 PASS / 0 FAIL / 0 SKIP (24 LIVE-boundary offline tests,
 43 orchestrator, 48 assessment, 1 frozen harness manifest). Guards chặn socket,
 provider và production process_case; adapter integration chỉ dùng test monkeypatch.
 Không dùng kết quả fake để khẳng định LIVE model adherence. LIVE/API calls = 0.
+
+## 11. Task 2 — correction telemetry/cost (chỉ validation offline)
+
+Phần mô tả thiếu usage/cost trong Task 1 ở trên là baseline trước correction này.
+Không cập nhật lại artifacts hoặc verdict Probe 01.
+
+- Emitter/observer dùng UUID correlation ngẫu nhiên qua ContextVar theo đúng case;
+  raw case ID vẫn đi qua sanitizer cũ. UUID không được tính từ credential hoặc case ID.
+  Context được reset trong finally; event case khác/correlation khác không được nhận.
+- `_request_openai` chỉ trích input/output counts, optional cached/cache-write counts,
+  model và service tier từ response; không serialize response, headers hoặc payload.
+  Missing/malformed usage giữ null. Usage accessor lỗi không thay đổi business result.
+- Provider attempts chỉ đếm `llm_provider_attempt`; `llm_provider_attempt_skipped`
+  không phải API call hoặc transport retry. Logical calls nhóm theo `call_id`, kể cả
+  skipped; latency logical là tổng attempt elapsed + backoff đã ghi, không phải toàn
+  wrapper latency. Retries là started attempts có `attempt_index>1`.
+- Giá xác minh ngày 2026-10-09 từ
+  https://developers.openai.com/api/docs/models/gpt-6-luna và
+  https://developers.openai.com/api/docs/pricing. Chỉ exact model gpt-6-luna,
+  response service_tier=default, global text endpoint hiện tại. Không suy giá cho
+  snapshot/tier/model khác hoặc regional premium; trường không rõ giữ unavailable.
+- Standard USD/1M: input0.10, cached0.01, cache-write0.125, output0.50. Estimate
+  thận trọng dùng **toàn input × cache-write rate**, không trừ cache discount;
+  long context >272000 input tokens nhân input2 và output1.5 cho cả request.
+  Với input I, output O: `(I*0.125 + O*0.50)/1e6` ở short context.
+- Pricing metadata ghi source, verified_on, phạm vi áp dụng. Guard local chỉ cho
+  phép bảng giá từ 2026-10-09 đến hết 2026-10-16; đây là hạn revalidation tự đặt,
+  không phải OpenAI cam kết giữ giá đến ngày đó. Hết hạn giữ UNAVAILABLE.
+- Tổng estimate cộng **mọi started attempt**, không bỏ retry thất bại. Nếu bất kỳ
+  started attempt thiếu usage (timeout/refusal/parse failure có thể không giữ usage),
+  hoặc không có events đáng tin cậy, cost=null và dừng trước observation tiếp theo.
+- `diagnostics.cost` và aggregate `observed_cost_usd` là **ESTIMATED_USD**, không
+  billed cost; metadata và `cost_kind` ghi rõ. Estimate >= approved cap dừng lượt tiếp
+  theo; không bảo đảm hard cap cho invocation đang chạy, không áp token/attempt limit mới.
+- Nếu future observation vẫn thiếu telemetry, chỉ chạy tuần tự từng observation
+  theo Coordinator approval; không tiếp tục batch, không tự gọi billing API.
+
+Correction tests mock SDK, chặn socket/provider/pipeline thật; không LIVE/API.
+Frozen fixture/gold/rubric và ledger4/45 remaining41 không đổi.

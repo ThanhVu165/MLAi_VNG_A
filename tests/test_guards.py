@@ -1,4 +1,5 @@
 from dataclasses import asdict, replace
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
@@ -51,7 +52,7 @@ from core.types import (
     PolicyDecision,
     RequestItem,
 )
-from infra import db
+from infra import db, llm
 from infra.audit import events_for_case
 from infra.llm import LLMResult
 from infra.settings import PENDING_SEND_SECONDS
@@ -479,10 +480,10 @@ def test_evidence_validator_records_all_failures_and_audits(monkeypatch, tmp_pat
     assert result.status is EvidenceStatus.NO_AUTHORITATIVE_SOURCE
     assert result.failed_checks == ["similarity", "conflict", "facts"]
     assert [event.action for event in events] == ["EVIDENCE_VALIDATED"]
-    assert (
-        events[0].reason is not None
-        and "similarity" in events[0].reason
-        and "facts" in events[0].reason
+    assert events[0].reason == (
+        "Đã đối chiếu quy định: chưa tìm được điều khoản trả lời câu hỏi; "
+        "các căn cứ liên quan mâu thuẫn nhau; "
+        "thiếu dữ kiện cần thiết để áp dụng quy định."
     )
 
 
@@ -641,8 +642,17 @@ def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:
     }
 
 
-def test_extraction_schema_uses_gemini_supported_fields() -> None:
-    """SDK 0.8.3 chỉ nhận OpenAPI Schema subset cho response_schema."""
+def test_extraction_schema_normalizes_for_openai_without_mutation() -> None:
+    """Adapter đóng object schemas mà không sửa schema nguồn."""
+    original = deepcopy(EXTRACTION_SCHEMA)
+    normalized = llm._openai_schema(EXTRACTION_SCHEMA)
+    assert normalized["additionalProperties"] is False
+    assert normalized["properties"]["requests"]["items"]["additionalProperties"] is False
+    facts = normalized["properties"]["critical_facts"]
+    assert facts["type"] == "array"
+    assert facts["items"]["type"] == "object"
+    assert facts["items"]["additionalProperties"] is False
+    assert EXTRACTION_SCHEMA == original
     assert "additionalProperties" not in EXTRACTION_SCHEMA
     requests = EXTRACTION_SCHEMA["properties"]
     assert isinstance(requests, dict)
@@ -650,6 +660,7 @@ def test_extraction_schema_uses_gemini_supported_fields() -> None:
     assert isinstance(request_items, dict)
     assert "additionalProperties" not in request_items["items"]
     assert "additionalProperties" not in requests["critical_facts"]
+    assert "additionalProperties" not in requests["critical_facts"]["items"]
 
 
 def test_extract_retries_invalid_payload_once_then_records_error(monkeypatch, tmp_path) -> None:
@@ -757,6 +768,66 @@ def test_generate_reply_rejects_uncited_paragraph(monkeypatch) -> None:
             extraction=_evidence_extraction(),
             evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
         )
+
+
+@pytest.mark.parametrize("timeout_stage", ["question", "repair"])
+@pytest.mark.parametrize("attempt_limit", [4, 5])
+def test_r7_retry_and_basis_repair_share_bounded_budget(
+    monkeypatch, tmp_path, timeout_stage, attempt_limit
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_MODEL", "offline-model")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder")
+    monkeypatch.setenv("LLM_MODE", "live")
+    monkeypatch.setenv("LLM_CACHE", "0")
+    monkeypatch.setattr(llm, "LLM_MAX_ATTEMPTS", attempt_limit)
+    monkeypatch.setattr(llm, "perf_counter", lambda: 100.0)
+    monkeypatch.setattr(llm, "sleep", lambda _: None)
+    monkeypatch.setattr(llm, "_store_cache", lambda _: None)
+    seen = []
+    timeout_at = 3 if timeout_stage == "question" else 4
+
+    def request(prompt, schema, prompt_hash, model, api_key, timeout_s):
+        del schema, api_key
+        seen.append((prompt, timeout_s))
+        if len(seen) == timeout_at:
+            raise TimeoutError("offline transport timeout")
+        quote = "Căn cứ." if prompt.startswith("Tạo thẻ") and "Sửa basis:" in prompt else "Sai."
+        return llm._success(
+            {
+                "summary": "Cần quyết định.",
+                "facts": ["Có yêu cầu."],
+                "question": "Chuyên viên có chấp thuận yêu cầu này không?",
+                "options": ["Có", "Không"],
+                "basis": [{"chunk_id": "chunk-1", "quote": quote}],
+            },
+            prompt_hash,
+            model,
+        )
+
+    monkeypatch.setattr(llm, "_request_openai", request)
+    with llm.case_call_budget():
+        for step in ["R2_extract", "R4_select"]:
+            assert llm.call_json("offline", schema={}, step=step, case_id="budget-control").ok
+        kwargs = dict(
+            case_id="budget-control",
+            actor="SYSTEM",
+            corpus_version="cv_test",
+            escalation_type=EscalationType.AUTHORITY_REQUIRED,
+            extraction=_evidence_extraction(),
+            evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
+            inp=_input(),
+        )
+        if attempt_limit == 4:
+            with pytest.raises(ValueError):
+                generate_escalation_card(**kwargs)
+        else:
+            card = generate_escalation_card(**kwargs)
+            assert card.basis == [("Điều 1", "Căn cứ.")]
+        assert llm._BUDGET.get().remaining == 0
+    assert len(seen) == attempt_limit
+    assert all(timeout <= 30 for _, timeout in seen)
 
 
 @pytest.mark.parametrize("model_id", ["abc", "[abc]"])
@@ -1089,8 +1160,7 @@ def test_question_guard_contains_unsupported_option_duration(monkeypatch, tmp_pa
     assert contained.escalation_type is card.escalation_type
     events = events_for_case("case-b1-duration")
     assert any(
-        event.action == "QUESTION_GUARD_FAILED"
-        and "unsupported_option_duration" in event.reason
+        event.action == "QUESTION_GUARD_FAILED" and "unsupported_option_duration" in event.reason
         for event in events
     )
     for unit in ("giây", "phút", "giờ", "ngày", "tuần", "tháng", "năm"):
@@ -1206,7 +1276,9 @@ def test_multi_intent_card_keeps_routine_draft_and_asks_only_locked_part(monkeyp
     assert card.partial_draft is seen["partial_draft"]
     assert card.partial_draft is not None and card.partial_draft.grounded
     assert card.partial_draft.citations == partial.citations
-    assert "Đã chuẩn bị phần trả lời thông tin; phần còn lại chờ chuyên viên quyết định." in card.facts
+    assert (
+        "Đã chuẩn bị phần trả lời thông tin; phần còn lại chờ chuyên viên quyết định." in card.facts
+    )
 
 
 def _stored_case(case_id: str, *, status: CaseStatus = CaseStatus.RECEIVED) -> None:
@@ -1276,8 +1348,12 @@ def test_pending_send_dispatches_after_deadline_and_cannot_be_rescheduled(
     )
     row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", ("case-send-due",))
     assert row is not None and row["status"] == CaseStatus.SENT
-    with pytest.raises(ValueError, match="SENT"):
+    before = dict(db.fetch_one("SELECT * FROM cases WHERE case_id = ?", ("case-send-due",)))
+    events_before = events_for_case("case-send-due")
+    with pytest.raises(ValueError, match="Email không còn ở trạng thái có thể lên lịch gửi"):
         schedule_auto_reply("case-send-due", decision=_auto_decision(), actor="SYSTEM")
+    assert dict(db.fetch_one("SELECT * FROM cases WHERE case_id = ?", ("case-send-due",))) == before
+    assert events_for_case("case-send-due") == events_before
 
 
 def test_pending_send_can_escalate_and_sent_case_creates_linked_correction(
@@ -1286,7 +1362,10 @@ def test_pending_send_can_escalate_and_sent_case_creates_linked_correction(
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
     _case_with_decision("case-send-escalate")
-    db.execute("UPDATE cases SET status = ? WHERE case_id = ?", (CaseStatus.PROCESSING, "case-send-escalate"))
+    db.execute(
+        "UPDATE cases SET status = ? WHERE case_id = ?",
+        (CaseStatus.PROCESSING, "case-send-escalate"),
+    )
     schedule_auto_reply("case-send-escalate", decision=_auto_decision(), actor="SYSTEM")
     escalate_from_pending("case-send-escalate", actor="HUMAN:reviewer", reason="Cần quyết định.")
     row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", ("case-send-escalate",))

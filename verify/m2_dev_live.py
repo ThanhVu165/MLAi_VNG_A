@@ -6,7 +6,7 @@ import argparse
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import logging
 import math
 import os
@@ -16,6 +16,7 @@ from threading import Lock
 from typing import Iterator
 
 from core.types import CaseInput, Decision
+from infra.provider_observability import provider_correlation
 from verify import m2_dev_assessment as dev
 from verify import m2_dev_execution as execution
 from verify.m2_live_budget import (
@@ -32,7 +33,17 @@ LIVE_CONFIG = {
     "LLM_CACHE": "0",
 }
 _RUNTIME_LOCK = Lock()
+PRICING_SOURCE = "https://developers.openai.com/api/docs/models/gpt-6-luna"
+PRICING_VERIFIED_ON = date(2026, 10, 9)
+PRICING_VALID_THROUGH = date(2026, 10, 16)
+SHORT_CONTEXT_LIMIT = 272_000
+# USD / 1M, standard global text. Conservative input cache-write rate, no cache discount.
+CONSERVATIVE_INPUT_RATE = 0.125
+OUTPUT_RATE = 0.50
+TOKENS_PER_MILLION = 1_000_000
 ATTEMPT_FIELDS = {
+    "correlation_id",
+    "usage",
     "event",
     "case_id",
     "call_id",
@@ -73,20 +84,88 @@ class LiveRunResult:
     stop_reason: str
     observed_cost_usd: float | None
     cases: list[dict[str, object]]
+    cost_kind: str = "UNAVAILABLE"
 
 
 class _AttemptObserver(logging.Handler):
     """Chỉ extra metadata hiện có; không format message/prompt/exception."""
 
-    def __init__(self, case_id: str) -> None:
+    def __init__(self, case_id: str, correlation_id: str | None = None) -> None:
         super().__init__()
         self.case_id = case_id
+        self.correlation_id = correlation_id
         self.attempts: list[dict[str, object]] = []
 
     def emit(self, record: logging.LogRecord) -> None:
         event = getattr(record, "provider_attempt", None)
-        if isinstance(event, dict) and event.get("case_id") == self.case_id:
+        matches = isinstance(event, dict) and (
+            event.get("correlation_id") == self.correlation_id
+            if self.correlation_id is not None
+            else event.get("case_id") == self.case_id
+        )
+        if matches:
             self.attempts.append({k: v for k, v in event.items() if k in ATTEMPT_FIELDS})
+
+    def diagnostics(self) -> dev.CaptureDiagnostics:
+        cost = _estimated_cost(self.attempts)
+        calls = {}
+        for event in self.attempts:
+            key = event["call_id"] if "call_id" in event else None
+            if key is None:
+                continue
+            call = calls.setdefault(
+                key,
+                {
+                    "step": event.get("step"),
+                    "ok": False,
+                    "latency_ms": 0,
+                    "model": event.get("model"),
+                    "error_class": None,
+                },
+            )
+            call.update(ok=event.get("success", False), error_class=event.get("exception_class"))
+            call["latency_ms"] += event.get("elapsed_ms", 0) + event.get("retry_backoff_ms", 0)
+        return dev.CaptureDiagnostics(
+            provider_attempts=self.attempts,
+            logical_calls=list(calls.values()),
+            cost=cost,
+            cost_metadata={
+                "kind": "ESTIMATED_USD" if cost is not None else "UNAVAILABLE",
+                "pricing_source": PRICING_SOURCE,
+                "pricing_verified_on": PRICING_VERIFIED_ON.isoformat(),
+                "pricing_valid_through": PRICING_VALID_THROUGH.isoformat(),
+                "method": "Conservative input cache-write rate, no cache discount; sum every started attempt",
+                "billing_scope": "standard global text only; billed cost unavailable",
+            },
+        )
+
+
+def _estimated_cost(attempts: list[dict[str, object]]) -> float | None:
+    if not PRICING_VERIFIED_ON <= date.today() <= PRICING_VALID_THROUGH:
+        return None
+    started = [e for e in attempts if e.get("event") == "llm_provider_attempt"]
+    if not started:
+        return None
+    total = 0.0
+    for event in started:
+        usage = event.get("usage")
+        if (
+            event.get("provider") != "openai"
+            or event.get("model") != "gpt-6-luna"
+            or not isinstance(usage, dict)
+            or usage.get("response_model") != "gpt-6-luna"
+            or usage.get("service_tier") != "default"
+        ):
+            return None
+        inp, out = usage.get("input_tokens"), usage.get("output_tokens")
+        if any(type(n) is not int or n < 0 for n in (inp, out)) or inp > 1_050_000 or out > 128_000:
+            return None
+        long_context = inp > SHORT_CONTEXT_LIMIT
+        total += (
+            inp * CONSERVATIVE_INPUT_RATE * (2 if long_context else 1)
+            + out * OUTPUT_RATE * (1.5 if long_context else 1)
+        ) / TOKENS_PER_MILLION
+    return total
 
 
 @contextmanager
@@ -120,9 +199,9 @@ class LivePipelineAdapter:
 
         if database.exists():
             raise ValueError("LIVE_DATABASE_NOT_FRESH")
-        observer = _AttemptObserver(case_id)
-        self.diagnostics = dev.CaptureDiagnostics(provider_attempts=observer.attempts, cost=None)
-        with _live_runtime(database):
+        with _live_runtime(database), provider_correlation(case_id) as correlation_id:
+            observer = _AttemptObserver(case_id, correlation_id)
+            self.diagnostics = observer.diagnostics()
             db.initialize_database(database)
             # corpus.__init__ seeds on first import: only import after DB isolation.
             from core import pipeline
@@ -138,7 +217,8 @@ class LivePipelineAdapter:
                 result = pipeline.process_case(payload, actor="SYSTEM", case_id=case_id)
             finally:
                 llm.LOGGER.removeHandler(observer)
-        # Existing production telemetry không expose billed USD: UNAVAILABLE, không zero.
+                self.diagnostics = observer.diagnostics()
+        # USD là estimate theo usage; không phải billed cost.
         return execution.AdapterOutput(result, dict(LIVE_CONFIG), self.diagnostics)
 
 
@@ -326,7 +406,15 @@ def run_live_cases(
                 stop = "APPROVED_COST_LIMIT_REACHED"
         if row["technical_status"] != "OK":
             stop = "TECHNICAL_FAILURE"
-        result = LiveRunResult(a.run_id, "LIVE", len(cases), stop, total_cost, cases)
+        result = LiveRunResult(
+            a.run_id,
+            "LIVE",
+            len(cases),
+            stop,
+            total_cost,
+            cases,
+            "ESTIMATED_USD" if total_cost is not None else "UNAVAILABLE",
+        )
         execution._safe_write_json(directory / f"progress_{len(cases)}.json", asdict(result))
         if stop != "COMPLETED":
             break
