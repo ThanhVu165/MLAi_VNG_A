@@ -26,6 +26,9 @@ QUESTION_PROMPT_V1 = """Tạo thẻ escalation bằng tiếng Việt cho chuyên
 Chỉ dùng facts và căn cứ bên dưới; không suy đoán hay tự tạo dữ kiện.
 Thẻ có đúng bốn khối: summary một câu, facts dạng bullet, basis có căn cứ, question.
 question là đúng một câu hỏi đóng và options có 2–4 phương án trả lời sẵn.
+Trong options, chỉ điền thời lượng cụ thể dạng số + đơn vị khi quote trong basis nêu đúng
+thời lượng đó. Nếu thiếu căn cứ, dùng lựa chọn không khẳng định thời lượng hoặc placeholder
+như "... ngày"; không tự tạo số từ email hay facts.
 Trong basis chỉ dùng chunk_id có trong căn cứ.
 Nêu rõ yêu cầu của sinh viên trong summary, không dùng câu chung chung.
 Hỏi đúng dữ kiện cần bổ sung, đúng nguồn cần làm rõ hoặc quyền cần người quyết định.
@@ -103,6 +106,10 @@ def _basis(value: object, evidence: EvidenceResult) -> list[tuple[str, str]]:
         chunk_id = _string(item.get("chunk_id"), "basis.chunk_id")
         quote = _string(item.get("quote"), "basis.quote")
         chunk = chunks.get(chunk_id)
+        if chunk is None and chunk_id.startswith("[") and chunk_id.endswith("]"):
+            inner_id = chunk_id[1:-1]
+            if inner_id and "[" not in inner_id and "]" not in inner_id:
+                chunk = chunks.get(inner_id)
         if chunk is None or quote not in chunk.text:
             raise BasisValidationError("basis phải trỏ tới trích dẫn thuộc evidence.")
         basis.append((chunk.breadcrumb, quote))

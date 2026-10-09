@@ -5,12 +5,17 @@ from __future__ import annotations
 import json
 import os
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
+from collections.abc import Iterator
+from uuid import uuid4
 
 MAX_TEXT = 512
 MAX_ITEMS = 8
 MAX_DEPTH = 4
 MAX_DIAGNOSTIC_CHARS = 4096
 REDACTED = "[REDACTED]"
+_SECRET_ENV_NAMES = ("OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY")
 _SAFE_FIELDS = frozenset(
     {"error", "code", "status", "reason", "message", "details", "domain", "@type"}
 )
@@ -31,6 +36,23 @@ _CCCD = re.compile(r"(?<!\d)\d{12}(?!\d)")
 _PHONE = re.compile(r"(?<!\d)(?:\+84|84|0)[35789]\d{8}(?!\d)")
 _OPAQUE_TOKEN = re.compile(r"\b[A-Za-z0-9_-]{32,}(?:\.[A-Za-z0-9_-]+){0,2}\b")
 _UUID = re.compile(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")
+_CORRELATION: ContextVar[tuple[str, str] | None] = ContextVar("provider_correlation", default=None)
+
+
+@contextmanager
+def provider_correlation(case_id: str) -> Iterator[str]:
+    """UUID ngẫu nhiên độc lập với case ID/credentials; không bypass sanitizer."""
+    correlation_id = str(uuid4())
+    token = _CORRELATION.set((case_id, correlation_id))
+    try:
+        yield correlation_id
+    finally:
+        _CORRELATION.reset(token)
+
+
+def current_correlation(case_id: str | None) -> str | None:
+    scope = _CORRELATION.get()
+    return scope[1] if scope is not None and scope[0] == case_id else None
 
 
 def sanitize_case_id(value: str | None, *, prompt: str) -> object:
@@ -39,12 +61,7 @@ def sanitize_case_id(value: str | None, *, prompt: str) -> object:
         type(value) is str
         and _UUID.fullmatch(value)
         and value not in prompt
-        and value
-        not in (
-            os.getenv("GOOGLE_API_KEY"),
-            os.getenv("GEMINI_API_KEY"),
-            os.getenv("OPENAI_API_KEY"),
-        )
+        and all(value != os.getenv(name) for name in _SECRET_ENV_NAMES)
     ):
         return value
     return sanitize_diagnostic(value, prompt=prompt)
@@ -59,7 +76,7 @@ def _text(value: str, prompt: str | None) -> str:
             json.dumps(prompt, ensure_ascii=True)[1:-1],
         ):
             value = value.replace(representation, REDACTED)
-    for name in ("GOOGLE_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY"):
+    for name in _SECRET_ENV_NAMES:
         secret = os.getenv(name)
         if secret:
             value = value.replace(secret, REDACTED)

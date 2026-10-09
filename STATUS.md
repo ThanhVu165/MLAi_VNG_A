@@ -2,11 +2,15 @@
 
 Roadmap: [docs/SPRINT_ROADMAP.md](docs/SPRINT_ROADMAP.md)
 
-Current Sprint: **M1 — Runtime & LLM Reliability (CLOSED)**
+Current Sprint: **M2 — Core Decision + Escalation Quality (IN PROGRESS)**
+
+Current micro-task: **Step 5 preregistration frozen; LIVE falsification pending.**
+
+M2 living report: [reports/sprints/M2_core_decision_escalation_quality.md](reports/sprints/M2_core_decision_escalation_quality.md)
 
 M1 Overall: **PASS**
 
-M1.6: **DONE**. Next sprint: **M2 — Core Decision + Escalation Quality (NEXT; chưa bắt đầu)**.
+M1.6: **DONE**. M2 is **IN PROGRESS**; Step 5 LIVE has not run.
 
 M1 Gate: **TECHNICAL_FAILURE <= 1/15 on full15 LIVE**
 

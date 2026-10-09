@@ -596,6 +596,8 @@ def _process_case(
                     corpus_version=intake.corpus_version,
                     draft=generated_draft,
                     evidence=evidence,
+                    course_code=extraction.critical_facts.get("course_code", ""),
+                    input_text=inp.body,
                 ),
                 latencies,
             )
@@ -648,6 +650,8 @@ def _process_case(
                     actor=actor,
                     corpus_version=intake.corpus_version,
                     card=generated_card,
+                    extraction=extraction,
+                    evidence=evidence,
                     regenerate=(
                         None
                         if generated_card.partial_draft is not None

@@ -4,6 +4,7 @@ import inspect
 import json
 import os
 import socket
+from collections import Counter
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +30,45 @@ from core.types import (
 )
 from infra import db
 from infra.settings import load_local_env
+
+
+def test_m2_combined_dev_registration_and_frozen_manifest(monkeypatch) -> None:
+    from verify import harness
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Network/provider/pipeline execution forbidden in fixture loading test")
+
+    monkeypatch.setattr(socket.socket, "connect", forbidden)
+    monkeypatch.setattr(socket, "create_connection", forbidden)
+    monkeypatch.setattr(harness, "process_case", forbidden)
+    monkeypatch.setattr(harness, "run_cases", forbidden)
+    path = harness.CASE_SETS["m2_combined_dev"]
+    assert path == Path("verify/cases_m2_combined_dev.json")
+    assert {"verify4", "escalation5", "full15", "fresh5"} <= harness.CASE_SETS.keys()
+    cases = harness.load_cases(path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert len(cases) == 12
+    assert {case.case_id for case in cases} == {
+        f"M2DEV-{group}{index}" for group in "ABC" for index in range(1, 5)
+    }
+    assert Counter(case.expected_rule_id for case in cases) == {
+        "P01": 3,
+        "P02": 3,
+        "P03": 2,
+        "P05": 4,
+    }
+    assert Counter(case.expected_decision for case in cases) == {"AUTO_REPLY": 4, "ESCALATE": 8}
+    types = {
+        "P01": "AUTHORITY_REQUIRED",
+        "P02": "OUT_OF_POLICY",
+        "P03": "FACT_UNRESOLVED",
+        "P05": None,
+    }
+    for case, item in zip(cases, payload, strict=True):
+        assert case.expected_type == types[case.expected_rule_id]
+        assert case.input.received_at.utcoffset() is not None
+        assert case.input.body == item["input"]["body"]
+        assert item["meta"]["status"] == "GOLD_VERIFIED_READY_FOR_FREEZE"
 
 
 def _input(channel: str) -> CaseInput:
@@ -134,13 +174,13 @@ def test_pipeline_step_failure_returns_error_without_business_escalation(
 
 def test_local_env_does_not_override_existing_environment(monkeypatch, tmp_path) -> None:
     env_file = tmp_path / ".env"
-    env_file.write_text("GOOGLE_API_KEY=from-file\nLLM_MODE=replay\n", encoding="utf-8")
-    monkeypatch.setenv("GOOGLE_API_KEY", "from-shell")
+    env_file.write_text("OPENAI_API_KEY=from-file\nLLM_MODE=replay\n", encoding="utf-8")
+    monkeypatch.setenv("OPENAI_API_KEY", "from-shell")
     monkeypatch.delenv("LLM_MODE", raising=False)
 
     load_local_env(Path(env_file))
 
-    assert os.environ["GOOGLE_API_KEY"] == "from-shell"
+    assert os.environ["OPENAI_API_KEY"] == "from-shell"
     assert os.environ["LLM_MODE"] == "replay"
 
 
@@ -149,8 +189,7 @@ def test_local_env_does_not_override_existing_environment(monkeypatch, tmp_path)
     [
         ("openai", "gpt-6-luna", "openai", "gpt-6-luna"),
         (" OPENAI ", " gpt-6-luna ", "openai", "gpt-6-luna"),
-        ("gemini", "gemini-configured", "gemini", "gemini-configured"),
-        (None, None, "gemini", "gemini-3.6-flash"),
+        (None, "gpt-6-luna", "openai", "gpt-6-luna"),
     ],
 )
 def test_verify_metadata_uses_production_provider_config(
@@ -164,12 +203,12 @@ def test_verify_metadata_uses_production_provider_config(
     monkeypatch.setattr(socket.socket, "connect", forbidden)
     monkeypatch.setattr(socket, "create_connection", forbidden)
     monkeypatch.setattr(harness, "process_case", forbidden)
-    for name in ("LLM_PROVIDER", "OPENAI_MODEL", "GEMINI_MODEL"):
+    for name in ("LLM_PROVIDER", "OPENAI_MODEL"):
         monkeypatch.delenv(name, raising=False)
     if provider is not None:
         monkeypatch.setenv("LLM_PROVIDER", provider)
-        model_var = "OPENAI_MODEL" if provider.strip().lower() == "openai" else "GEMINI_MODEL"
-        monkeypatch.setenv(model_var, configured_model)
+    if configured_model is not None:
+        monkeypatch.setenv("OPENAI_MODEL", configured_model)
     monkeypatch.setenv("LLM_MODE", "live")
     monkeypatch.setenv("LLM_CACHE", "0")
     result = harness.VerifyResult(

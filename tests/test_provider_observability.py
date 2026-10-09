@@ -7,7 +7,8 @@ import socket
 from types import SimpleNamespace
 
 import pytest
-from google.genai.errors import ClientError, ServerError
+import openai
+from openai._exceptions import httpx2 as httpx
 
 from infra import llm
 from infra.provider_observability import (
@@ -29,8 +30,10 @@ def offline(monkeypatch):
     monkeypatch.setattr(llm, "fetch_one", forbidden)
     monkeypatch.setattr(llm, "_record_latency", lambda *args: None)
     monkeypatch.setattr(llm, "sleep", lambda _: None)
-    monkeypatch.setenv("GOOGLE_API_KEY", "runtime-google-key")
-    monkeypatch.setenv("GEMINI_API_KEY", "runtime-gemini-key")
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_MODEL", "test-model")
+    monkeypatch.setenv("OPENAI_API_KEY", "runtime-openai-key")
+    monkeypatch.setattr(llm, "_request_openai", forbidden)
     monkeypatch.setenv("LLM_MODE", "live")
     monkeypatch.setenv("LLM_CACHE", "0")
 
@@ -38,8 +41,7 @@ def offline(monkeypatch):
 @pytest.mark.parametrize(
     "secret",
     [
-        "runtime-google-key",
-        "runtime-gemini-key",
+        "runtime-openai-key",
         "AIza" + "a" * 35,
         "Bearer short-bearer",
         "student@example.test",
@@ -78,7 +80,7 @@ def test_safe_metadata_survives_but_payloads_headers_and_unknown_fields_do_not()
             "details": [
                 {
                     "reason": "RATE_LIMIT_EXCEEDED",
-                    "domain": "googleapis.com",
+                    "domain": "api.openai.com",
                     "metadata": {"prompt": "hidden", "token": "hidden"},
                 }
             ],
@@ -113,7 +115,7 @@ def test_exception_diagnostic_redacts_all_repo_pii_patterns():
                 "code": 400,
                 "status": status,
                 "message": joined,
-                "details": [{"reason": reason, "domain": "googleapis.com"}],
+                "details": [{"reason": reason, "domain": "api.openai.com"}],
             }
         }
 
@@ -138,7 +140,7 @@ def test_prompt_json_body_and_output_redaction_and_bounds():
         safe = sanitize_diagnostic(value, prompt=prompt)
         assert "raw-private-data" not in safe
         assert "unstructured sentence" not in safe
-    safe = sanitize_diagnostic("x" * 500 + "runtime-google-key")
+    safe = sanitize_diagnostic("x" * 500 + "runtime-openai-key")
     assert "runtime" not in safe and len(safe) <= MAX_TEXT
     assert len(sanitize_diagnostic(["safe"] * 100)) == 8
     cycle = {"details": None}
@@ -208,55 +210,46 @@ def events(caplog):
     ]
 
 
-@pytest.mark.parametrize(
-    "code,status,reason",
-    [
-        (400, "INVALID_ARGUMENT", "INVALID_SCHEMA"),
-        (429, "RESOURCE_EXHAUSTED", "RATE_LIMIT_EXCEEDED"),
-    ],
-)
-def test_real_sdk_client_error_retains_diagnostics_without_retry(
-    monkeypatch,
-    caplog,
-    code,
-    status,
-    reason,
-):
-    error = ClientError(
-        code,
-        {
-            "error": {
-                "code": code,
-                "status": status,
-                "message": "Invalid schema student@example.test",
-                "details": [
-                    {"reason": reason, "domain": "googleapis.com", "metadata": {"body": "private"}}
-                ],
-            }
-        },
+def sdk_error(status, code=None, message="raw provider body"):
+    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    error_type = {
+        400: openai.BadRequestError,
+        429: openai.RateLimitError,
+        500: openai.InternalServerError,
+        503: openai.InternalServerError,
+    }[status]
+    return error_type(
+        message,
+        response=httpx.Response(status, request=request),
+        body={"code": code, "private": "student@example.test"},
     )
-    seen = []
 
+
+@pytest.mark.parametrize("status,code", [(400, "invalid_schema"), (429, "insufficient_quota")])
+def test_real_sdk_client_error_retains_diagnostics_without_retry(monkeypatch, caplog, status, code):
+    error = sdk_error(status, code)
+    seen = []
     monkeypatch.setattr(llm, "sleep", lambda _: pytest.fail("must not sleep"))
 
     def invalid(*args):
         seen.append(args)
         raise error
 
-    monkeypatch.setattr(llm, "_request_gemini", invalid)
+    monkeypatch.setattr(llm, "_request_openai", invalid)
     with llm.case_call_budget():
         result = llm.call_json("private", schema={}, step="R2_extract", case_id="case-1")
-        assert llm._BUDGET.get().remaining == 3
+        assert llm._BUDGET.get().remaining == llm.LLM_MAX_ATTEMPTS - 1
     assert not result.ok and len(seen) == 1
     event = events(caplog)[0]
     assert event["case_id"] == "case-1" and event["step"] == "R2_extract"
-    assert event["http_status"] == event["provider_code"] == code
-    assert event["provider_status"] == status and event["provider_reason"] == reason
-    assert event["exception_class"] == "ClientError"
+    assert event["http_status"] == status and event["provider_code"] == code
+    assert event["provider"] == "openai"
+    assert event["exception_class"] == type(error).__name__
     assert event["retryable"] is False and event["will_retry"] is False
     assert event["stop_reason"] == "non_retryable"
-    assert "student@example.test" not in caplog.text
-    assert error.code == code  # Diagnostics do not mutate the original exception.
+    assert "student@example.test" not in caplog.text + result.error
+    assert "raw provider body" not in caplog.text + result.error
+    assert error.code == code
 
 
 def test_server_retry_then_success_correlates_and_preserves_request_and_result(monkeypatch, caplog):
@@ -267,10 +260,10 @@ def test_server_retry_then_success_correlates_and_preserves_request_and_result(m
     def request(*args):
         seen.append(args)
         if len(seen) == 1:
-            raise ServerError(503, {"error": {"status": "UNAVAILABLE", "message": "Overloaded"}})
+            raise sdk_error(503, message="Overloaded")
         return expected
 
-    monkeypatch.setattr(llm, "_request_gemini", request)
+    monkeypatch.setattr(llm, "_request_openai", request)
     monkeypatch.setattr(llm, "perf_counter", lambda: 100.0)
     monkeypatch.setattr(llm, "sleep", sleeps.append)
     schema = {"type": "object"}
@@ -278,10 +271,10 @@ def test_server_retry_then_success_correlates_and_preserves_request_and_result(m
         result = llm._call_live(
             "private", schema, "hash", "model", 20, 10, case_id="case", step="R4_select"
         )
-        assert llm._BUDGET.get().remaining == 2
+        assert llm._BUDGET.get().remaining == llm.LLM_MAX_ATTEMPTS - 2
     assert result is expected
     assert sleeps == [llm.LLM_RETRY_BACKOFF_SECONDS]
-    assert seen == [("private", schema, "hash", "model", "runtime-google-key", 20)] * 2
+    assert seen == [("private", schema, "hash", "model", "runtime-openai-key", 20)] * 2
     first, second = events(caplog)
     assert first["call_id"] == second["call_id"]
     assert [first["attempt_index"], second["attempt_index"]] == [1, 2]
@@ -290,8 +283,8 @@ def test_server_retry_then_success_correlates_and_preserves_request_and_result(m
     assert first["retry_backoff_ms"] == 1000
     assert second["success"] is True and second["will_retry"] is False
     assert second["retry_backoff_ms"] == 0
-    assert second["attempts_remaining_before"] == 3
-    assert second["attempts_remaining_after"] == 2
+    assert second["attempts_remaining_before"] == llm.LLM_MAX_ATTEMPTS - 1
+    assert second["attempts_remaining_after"] == llm.LLM_MAX_ATTEMPTS - 2
     assert second["remaining_case_time_s"] == 60
     assert second["prompt_chars"] == len("private")
     assert second["prompt_hash12"] == hashlib.sha256(b"private").hexdigest()[:12]
@@ -303,10 +296,8 @@ def test_transient_final_attempt_does_not_sleep(monkeypatch, caplog):
     monkeypatch.setattr(llm, "sleep", lambda _: pytest.fail("must not sleep"))
     monkeypatch.setattr(
         llm,
-        "_request_gemini",
-        lambda *args: (_ for _ in ()).throw(
-            ServerError(503, {"error": {"status": "UNAVAILABLE", "message": "Overloaded"}})
-        ),
+        "_request_openai",
+        lambda *args: (_ for _ in ()).throw(sdk_error(503, message="Overloaded")),
     )
     assert not llm._call_live("private", {}, "hash", "model", 20, 0).ok
     event = events(caplog)[0]
@@ -319,27 +310,28 @@ def test_retry_backoff_skips_sleep_near_deadline_and_preserves_budget(monkeypatc
 
     def unavailable(*args):
         seen.append(args)
-        raise ServerError(503, {"error": {"status": "UNAVAILABLE", "message": "Overloaded"}})
+        raise sdk_error(503, message="Overloaded")
 
-    monkeypatch.setattr(llm, "_request_gemini", unavailable)
+    monkeypatch.setattr(llm, "_request_openai", unavailable)
     monkeypatch.setattr(llm, "perf_counter", lambda: 100.0)
     monkeypatch.setattr(llm, "sleep", sleeps.append)
     with llm.case_call_budget():
         llm._BUDGET.get().deadline = 101.5
         assert not llm._call_live("private", {}, "hash", "model", 20, 1).ok
-        assert llm._BUDGET.get().remaining == 2
+        assert llm._BUDGET.get().remaining == llm.LLM_MAX_ATTEMPTS - 2
     assert len(seen) == 2 and sleeps == []
     assert [event["retry_backoff_ms"] for event in events(caplog)] == [0, 0]
 
 
 def test_shared_budget_skips_requests_after_four_attempts(monkeypatch, caplog):
+    monkeypatch.setattr(llm, "LLM_MAX_ATTEMPTS", 4)
     seen = []
 
     def unavailable(*args):
         seen.append(args)
-        raise ServerError(500, {"error": {"status": "INTERNAL", "message": "offline"}})
+        raise sdk_error(500, message="offline")
 
-    monkeypatch.setattr(llm, "_request_gemini", unavailable)
+    monkeypatch.setattr(llm, "_request_openai", unavailable)
     with llm.case_call_budget():
         for _ in range(3):
             assert not llm._call_live("private", {}, "hash", "model", 20, 1).ok
@@ -357,7 +349,7 @@ def test_deadline_block_and_effective_timeout_are_unchanged(monkeypatch, caplog)
     seen = []
     monkeypatch.setattr(llm, "perf_counter", lambda: 100.0)
     monkeypatch.setattr(
-        llm, "_request_gemini", lambda *args: seen.append(args) or llm._success({}, "hash", "model")
+        llm, "_request_openai", lambda *args: seen.append(args) or llm._success({}, "hash", "model")
     )
     with llm.case_call_budget():
         llm._BUDGET.get().deadline = 107.9
@@ -365,18 +357,18 @@ def test_deadline_block_and_effective_timeout_are_unchanged(monkeypatch, caplog)
         assert seen[0][-1] == 7
         llm._BUDGET.get().deadline = 100.0
         assert not llm._call_live("private", {}, "hash", "model", 50, 1).ok
-        assert llm._BUDGET.get().remaining == 3
+        assert llm._BUDGET.get().remaining == llm.LLM_MAX_ATTEMPTS - 1
     assert len(seen) == 1
     skipped = events(caplog)[1:]
     assert len(skipped) == 2
     assert all(event["event"] == "llm_provider_attempt_skipped" for event in skipped)
     assert all(event["retryable"] is False and event["will_retry"] is False for event in skipped)
     assert all(event["stop_reason"] == "case_budget_or_deadline" for event in skipped)
-    assert llm.LLM_MAX_ATTEMPTS == 4 and llm.CASE_TIMEOUT_SECONDS == 60
+    assert llm.LLM_MAX_ATTEMPTS == 5 and llm.CASE_TIMEOUT_SECONDS == 60
 
 
 def test_without_budget_and_distinct_calls_do_not_invent_context(monkeypatch, caplog):
-    monkeypatch.setattr(llm, "_request_gemini", lambda *args: llm._success({}, "hash", "model"))
+    monkeypatch.setattr(llm, "_request_openai", lambda *args: llm._success({}, "hash", "model"))
     for _ in range(2):
         assert llm._call_live("private", {}, "hash", "model", 20, 0).ok
     first, second = events(caplog)
@@ -395,7 +387,7 @@ def test_without_budget_and_distinct_calls_do_not_invent_context(monkeypatch, ca
 
 def test_real_case_uuid_remains_correlatable(monkeypatch, caplog):
     case_id = "4cb9832c-3df9-4b52-a5d8-314f29e25bde"
-    monkeypatch.setattr(llm, "_request_gemini", lambda *args: llm._success({}, "hash", "model"))
+    monkeypatch.setattr(llm, "_request_openai", lambda *args: llm._success({}, "hash", "model"))
     assert llm._call_live("private", {}, "hash", "model", 20, 0, case_id=case_id).ok
     assert events(caplog)[0]["case_id"] == case_id
 
@@ -405,80 +397,20 @@ def test_diagnostic_and_logging_failure_preserve_original_semantics(monkeypatch)
         raise RuntimeError("diagnostics unavailable")
 
     expected = llm._success({"answer": "same"}, "hash", "model")
-    monkeypatch.setattr(llm, "_request_gemini", lambda *args: expected)
+    monkeypatch.setattr(llm, "_request_openai", lambda *args: expected)
     monkeypatch.setattr(llm, "LOGGER", SimpleNamespace(warning=broken))
     assert llm._call_live("private", {}, "hash", "model", 20, 1) is expected
     monkeypatch.setattr(llm, "LOGGER", logging.getLogger("offline-test"))
-    monkeypatch.setattr(llm, "exception_diagnostic", broken)
-    error = ClientError(400, {"error": {"message": "invalid"}})
+    monkeypatch.setattr(llm, "sanitize_diagnostic", broken)
+    error = sdk_error(400, "invalid_schema")
 
     def invalid(*args):
         raise error
 
-    monkeypatch.setattr(llm, "_request_gemini", invalid)
+    monkeypatch.setattr(llm, "_request_openai", invalid)
     with llm.case_call_budget():
         assert not llm._call_live("private", {}, "hash", "model", 20, 1).ok
-        assert llm._BUDGET.get().remaining == 3
-
-
-def test_actual_request_config_and_json_parse_are_unchanged(monkeypatch):
-    from google import genai
-
-    seen = {}
-
-    def generate_content(**kwargs):
-        seen.update(kwargs)
-        return SimpleNamespace(text='{"answer": "same"}')
-
-    def client(**kwargs):
-        seen["client"] = kwargs
-        return SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
-
-    monkeypatch.setattr(genai, "Client", client)
-    schema = {"type": "object", "properties": {"answer": {"type": "string"}}}
-    result = llm._request_gemini("private", schema, "hash", "model", "fake-key", 17)
-    assert result.data == {"answer": "same"} and result.ok
-    assert seen["contents"] == "private" and seen["model"] == "model"
-    assert seen["client"]["api_key"] == "fake-key"
-    assert seen["client"]["http_options"].timeout == 17000
-    config = seen["config"]
-    assert config.temperature == 0.0
-    assert config.response_mime_type == "application/json"
-    assert config.response_json_schema == schema
-
-
-def test_parse_failure_and_exception_identity_are_unchanged(monkeypatch, caplog):
-    from google import genai
-
-    monkeypatch.setattr(
-        genai,
-        "Client",
-        lambda **kwargs: SimpleNamespace(
-            models=SimpleNamespace(
-                generate_content=lambda **kwargs: SimpleNamespace(text="not-json-private"),
-            )
-        ),
-    )
-    assert not llm._call_live("private", {}, "hash", "model", 20, 1).ok
-    assert len(events(caplog)) == 1 and events(caplog)[0]["retryable"] is False
-    assert "not-json-private" not in caplog.text
-    error = ClientError(400, {"error": {"message": "invalid"}})
-
-    def invalid(**kwargs):
-        raise error
-
-    monkeypatch.setattr(
-        genai,
-        "Client",
-        lambda **kwargs: SimpleNamespace(
-            models=SimpleNamespace(
-                generate_content=invalid,
-            )
-        ),
-    )
-    with pytest.raises(ClientError) as captured:
-        llm._request_gemini("private", {}, "hash", "model", "fake-key", 20)
-    assert captured.value is error
+        assert llm._BUDGET.get().remaining == llm.LLM_MAX_ATTEMPTS - 1
 
 
 def test_cache_replay_and_missing_key_do_not_emit_provider_attempts(monkeypatch, caplog):
@@ -490,6 +422,6 @@ def test_cache_replay_and_missing_key_do_not_emit_provider_attempts(monkeypatch,
     monkeypatch.setenv("LLM_CACHE", "1")
     monkeypatch.setattr(llm, "_load_cache", lambda *args: expected)
     assert llm.call_json("private", schema={}, step="R2_extract", case_id="case").ok
-    monkeypatch.delenv("GOOGLE_API_KEY")
+    monkeypatch.delenv("OPENAI_API_KEY")
     assert not llm._call_live("private", {}, "hash", "model", 20, 1).ok
     assert not events(caplog)

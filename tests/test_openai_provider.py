@@ -27,15 +27,12 @@ def offline(monkeypatch):
     monkeypatch.setattr(llm, "fetch_one", forbidden)
     monkeypatch.setattr(llm, "_record_latency", lambda *args: None)
     monkeypatch.setattr(llm, "_store_cache", lambda *args: None)
-    monkeypatch.setattr(llm, "_request_gemini", forbidden)
     monkeypatch.setattr(llm, "_request_openai", forbidden)
     monkeypatch.setattr(llm, "sleep", lambda _: None)
     monkeypatch.setenv("LLM_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_MODEL", "configured-model")
     monkeypatch.delenv("OPENAI_REASONING_EFFORT", raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "short-openai-secret")
-    monkeypatch.setenv("GOOGLE_API_KEY", "fake-google-secret")
-    monkeypatch.setenv("GEMINI_MODEL", "configured-model")
     monkeypatch.setenv("LLM_MODE", "live")
     monkeypatch.setenv("LLM_CACHE", "0")
 
@@ -44,30 +41,29 @@ def call():
     return llm.call_json("private email", schema={}, step="R2", case_id="case")
 
 
-@pytest.mark.parametrize("provider", ["gemini", "openai"])
-def test_dispatch_and_pin_case_configuration(monkeypatch, provider, caplog):
-    monkeypatch.setenv("LLM_PROVIDER", provider)
+def test_dispatch_and_pin_case_configuration(monkeypatch, caplog):
+    monkeypatch.delenv("LLM_PROVIDER")
+    assert llm._provider_config() == ("openai", "configured-model")
     seen = []
 
     def request(*args):
         seen.append(args)
         return llm._success({"answer": True}, args[2], args[3])
 
-    monkeypatch.setattr(llm, f"_request_{provider}", request)
+    monkeypatch.setattr(llm, "_request_openai", request)
     with llm.case_call_budget():
         assert call().ok
-        monkeypatch.setenv("LLM_PROVIDER", "gemini" if provider == "openai" else "openai")
         monkeypatch.setenv("OPENAI_MODEL", "changed")
-        monkeypatch.setenv("GEMINI_MODEL", "changed")
         assert call().ok
     assert len(seen) == 2 and all(args[3] == "configured-model" for args in seen)
     events = [r.provider_attempt for r in caplog.records if hasattr(r, "provider_attempt")]
-    assert all(event["provider"] == provider for event in events)
+    assert all(event["provider"] == "openai" for event in events)
 
 
 @pytest.mark.parametrize("mode", ["live", "record", "replay"])
-def test_invalid_provider_fails_safely_before_any_mode(monkeypatch, mode, caplog):
-    monkeypatch.setenv("LLM_PROVIDER", "unknown short-openai-secret student@example.test")
+@pytest.mark.parametrize("provider", ["gemini", "unknown short-openai-secret student@example.test"])
+def test_invalid_provider_fails_safely_before_any_mode(monkeypatch, mode, provider, caplog):
+    monkeypatch.setenv("LLM_PROVIDER", provider)
     monkeypatch.setenv("LLM_MODE", mode)
     result = call()
     assert not result.ok and "LLM_PROVIDER" in result.error
@@ -169,6 +165,32 @@ def test_sdk_config_and_structured_parsing(monkeypatch, content, refusal, finish
 ORIGINAL_OPENAI_REQUEST = llm._request_openai
 
 
+def test_sdk_exception_identity_and_wrapper_parse_failure(monkeypatch, caplog):
+    client = MagicMock()
+    client.__enter__.return_value = client
+    monkeypatch.setattr(openai, "OpenAI", MagicMock(return_value=client))
+    error = sdk_error("invalid")
+    client.chat.completions.create.side_effect = error
+    with pytest.raises(openai.BadRequestError) as captured:
+        ORIGINAL_OPENAI_REQUEST("private", {}, "hash", "model", "fake-key", 20)
+    assert captured.value is error
+
+    client.chat.completions.create.side_effect = None
+    client.chat.completions.create.return_value = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="not-json-private", refusal=None),
+                finish_reason="stop",
+            )
+        ]
+    )
+    monkeypatch.setattr(llm, "_request_openai", ORIGINAL_OPENAI_REQUEST)
+    assert not call().ok
+    events = [r.provider_attempt for r in caplog.records if hasattr(r, "provider_attempt")]
+    assert len(events) == 1 and events[0]["retryable"] is False
+    assert "not-json-private" not in caplog.text
+
+
 @pytest.mark.parametrize(
     "effort,temperature",
     [
@@ -252,7 +274,7 @@ def test_error_mapping_no_fallback_and_no_body_logging(monkeypatch, caplog, kind
     monkeypatch.setattr(llm, "_request_openai", request)
     with llm.case_call_budget():
         result = call()
-        assert llm._BUDGET.get().remaining == 4 - len(seen)
+        assert llm._BUDGET.get().remaining == llm.LLM_MAX_ATTEMPTS - len(seen)
     assert not result.ok and len(seen) == (2 if retryable else 1)
     events = [r.provider_attempt for r in caplog.records if hasattr(r, "provider_attempt")]
     assert events[0]["retryable"] is retryable
@@ -277,7 +299,7 @@ def test_shared_budget_deadline_and_retry_cap(monkeypatch, caplog):
         for _ in range(3):
             assert not llm._call_live("private", {}, "hash", "model", 50, 99, provider="openai").ok
         assert llm._BUDGET.get().remaining == 0
-    assert len(seen) == 4 and all(args[-1] == llm.LLM_TIMEOUT_S for args in seen)
+    assert len(seen) == llm.LLM_MAX_ATTEMPTS and all(args[-1] == llm.LLM_TIMEOUT_S for args in seen)
     seen.clear()
     with llm.case_call_budget():
         llm._BUDGET.get().deadline = 107.9
@@ -285,50 +307,55 @@ def test_shared_budget_deadline_and_retry_cap(monkeypatch, caplog):
         assert seen[0][-1] == 7
         llm._BUDGET.get().deadline = 100.0
         assert not call().ok
-        assert llm._BUDGET.get().remaining == 3
+        assert llm._BUDGET.get().remaining == llm.LLM_MAX_ATTEMPTS - 1
     assert len(seen) == 1
-    assert llm.LLM_MAX_ATTEMPTS == 4 and llm.CASE_TIMEOUT_SECONDS == 60
+    assert llm.LLM_MAX_ATTEMPTS == 5 and llm.CASE_TIMEOUT_SECONDS == 60
 
 
-def test_provider_hash_isolates_cache_and_cassettes(monkeypatch, tmp_path):
+def test_model_hash_isolates_cache_and_cassettes(monkeypatch, tmp_path):
     monkeypatch.setattr(llm, "CASSETTE_DIRECTORY", tmp_path)
     cache = {}
     monkeypatch.setattr(llm, "_load_cache", lambda h, m: cache.get(h))
     monkeypatch.setattr(llm, "_store_cache", lambda r: cache.update({r.prompt_hash: r}))
     monkeypatch.setenv("LLM_CACHE", "1")
     monkeypatch.setenv("LLM_MODE", "record")
+    seen = []
+
+    def request(*args):
+        seen.append(args[3])
+        return llm._success({"model": args[3]}, args[2], args[3])
+
+    monkeypatch.setattr(llm, "_request_openai", request)
     hashes = []
-    for provider in ("gemini", "openai"):
-        monkeypatch.setenv("LLM_PROVIDER", provider)
-        monkeypatch.setattr(
-            llm,
-            f"_request_{provider}",
-            lambda *a: llm._success({"provider": provider}, a[2], a[3]),
-        )
+    for model in ("model-a", "model-b"):
+        monkeypatch.setenv("OPENAI_MODEL", model)
         result = call()
         hashes.append(result.prompt_hash)
-        assert call().data == {"provider": provider}
+        assert call().data == {"model": model}
+    assert seen == ["model-a", "model-b"]
     assert hashes[0] != hashes[1] and set(cache) == set(hashes)
     assert llm._cache_key(hashes[0]) != llm._cache_key(hashes[1])
     assert len(list(tmp_path.glob("*.json"))) == 2
     monkeypatch.setenv("LLM_MODE", "replay")
-    for provider in ("gemini", "openai"):
-        monkeypatch.setenv("LLM_PROVIDER", provider)
-        assert call().data == {"provider": provider}
+    monkeypatch.setattr(
+        llm, "_request_openai", lambda *a: pytest.fail("replay must not call provider")
+    )
+    for model in ("model-a", "model-b"):
+        monkeypatch.setenv("OPENAI_MODEL", model)
+        assert call().data == {"model": model}
 
 
 @pytest.mark.parametrize("mode", ["replay", "live"])
-def test_old_gemini_identity_read_only_and_openai_cannot_use_it(monkeypatch, tmp_path, mode):
-    legacy = hashlib.sha256(
+def test_unscoped_identity_is_not_used(monkeypatch, tmp_path, mode):
+    unscoped = hashlib.sha256(
         json.dumps(
-            ["configured-model", {}, "private email", 0.0],
-            sort_keys=True,
-            ensure_ascii=False,
+            ["configured-model", {}, "private email", 0.0], sort_keys=True, ensure_ascii=False
         ).encode()
     ).hexdigest()
-    payload = {"data": {"legacy": True}, "model": "configured-model"}
-    path = tmp_path / f"{legacy}.json"
-    path.write_text(json.dumps(payload), encoding="utf-8")
+    path = tmp_path / f"{unscoped}.json"
+    path.write_text(
+        json.dumps({"data": {"unscoped": True}, "model": "configured-model"}), encoding="utf-8"
+    )
     original = path.read_bytes()
     monkeypatch.setattr(llm, "CASSETTE_DIRECTORY", tmp_path)
     monkeypatch.setenv("LLM_CACHE", "1")
@@ -337,17 +364,12 @@ def test_old_gemini_identity_read_only_and_openai_cannot_use_it(monkeypatch, tmp
 
     def load(h, m):
         lookups.append(h)
-        return llm._success(payload["data"], h, m) if h == legacy else None
+        return llm._success({"unscoped": True}, h, m) if h == unscoped else None
 
     monkeypatch.setattr(llm, "_load_cache", load)
-    monkeypatch.setenv("LLM_PROVIDER", "gemini")
-    result = call()
-    assert result.ok and result.data == {"legacy": True} and result.prompt_hash != legacy
-    lookups.clear()
-    monkeypatch.setenv("LLM_PROVIDER", "openai")
     monkeypatch.delenv("OPENAI_API_KEY")
     assert not call().ok
-    assert legacy not in lookups and path.read_bytes() == original
+    assert unscoped not in lookups and path.read_bytes() == original
 
 
 def test_openai_key_redaction_including_case_uuid(monkeypatch):

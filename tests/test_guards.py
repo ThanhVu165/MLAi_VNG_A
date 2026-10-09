@@ -1,4 +1,5 @@
 from dataclasses import asdict, replace
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
@@ -26,7 +27,12 @@ from core.prepolicy import decision_lock
 from core.evidence import validate_evidence
 from core.generate import generate_reply
 from core.ground_guard import GroundednessResult, guard_groundedness, guard_resume_groundedness
-from core.question_gen import generate_escalation_card, generate_multi_intent_card
+from core.question_gen import (
+    BasisValidationError,
+    _basis,
+    generate_escalation_card,
+    generate_multi_intent_card,
+)
 from core.question_guard import guard_question, question_failures
 from core.retrieval import retrieve_evidence
 from core.sanitize import detect_language, mask_pii, sanitize_body
@@ -46,7 +52,7 @@ from core.types import (
     PolicyDecision,
     RequestItem,
 )
-from infra import db
+from infra import db, llm
 from infra.audit import events_for_case
 from infra.llm import LLMResult
 from infra.settings import PENDING_SEND_SECONDS
@@ -474,10 +480,10 @@ def test_evidence_validator_records_all_failures_and_audits(monkeypatch, tmp_pat
     assert result.status is EvidenceStatus.NO_AUTHORITATIVE_SOURCE
     assert result.failed_checks == ["similarity", "conflict", "facts"]
     assert [event.action for event in events] == ["EVIDENCE_VALIDATED"]
-    assert (
-        events[0].reason is not None
-        and "similarity" in events[0].reason
-        and "facts" in events[0].reason
+    assert events[0].reason == (
+        "Đã đối chiếu quy định: chưa tìm được điều khoản trả lời câu hỏi; "
+        "các căn cứ liên quan mâu thuẫn nhau; "
+        "thiếu dữ kiện cần thiết để áp dụng quy định."
     )
 
 
@@ -566,7 +572,10 @@ def test_extract_strips_injection_before_llm_and_audits_removed_text(monkeypatch
     assert "12345678901" not in events[0].reason and "[MSSV]" in events[0].reason
 
 
-def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:
+def test_extract_uses_schema_and_maps_eight_domain_samples(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "extract.db")
     domains = iter(
         (
             "conduct_score",
@@ -612,9 +621,12 @@ def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:
         )
 
     monkeypatch.setattr("core.extract.call_json", fake_call)
-    extractions = [extract_facts(f"Email mẫu {index}", f"case-{index}") for index in range(8)]
+    extractions = [
+        extract_facts(f"Email mẫu {index}", f"case-{index}") for index in range(8)
+    ]
 
     assert all(extraction.llm_error is None for extraction in extractions)
+    assert db.fetch_one("SELECT COUNT(*) AS n FROM audit_events")["n"] == 8
     assert [extraction.requests[0].domain.value for extraction in extractions] == [
         "conduct_score",
         "course_withdrawal",
@@ -636,8 +648,17 @@ def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:
     }
 
 
-def test_extraction_schema_uses_gemini_supported_fields() -> None:
-    """SDK 0.8.3 chỉ nhận OpenAPI Schema subset cho response_schema."""
+def test_extraction_schema_normalizes_for_openai_without_mutation() -> None:
+    """Adapter đóng object schemas mà không sửa schema nguồn."""
+    original = deepcopy(EXTRACTION_SCHEMA)
+    normalized = llm._openai_schema(EXTRACTION_SCHEMA)
+    assert normalized["additionalProperties"] is False
+    assert normalized["properties"]["requests"]["items"]["additionalProperties"] is False
+    facts = normalized["properties"]["critical_facts"]
+    assert facts["type"] == "array"
+    assert facts["items"]["type"] == "object"
+    assert facts["items"]["additionalProperties"] is False
+    assert EXTRACTION_SCHEMA == original
     assert "additionalProperties" not in EXTRACTION_SCHEMA
     requests = EXTRACTION_SCHEMA["properties"]
     assert isinstance(requests, dict)
@@ -645,6 +666,7 @@ def test_extraction_schema_uses_gemini_supported_fields() -> None:
     assert isinstance(request_items, dict)
     assert "additionalProperties" not in request_items["items"]
     assert "additionalProperties" not in requests["critical_facts"]
+    assert "additionalProperties" not in requests["critical_facts"]["items"]
 
 
 def test_extract_retries_invalid_payload_once_then_records_error(monkeypatch, tmp_path) -> None:
@@ -754,8 +776,114 @@ def test_generate_reply_rejects_uncited_paragraph(monkeypatch) -> None:
         )
 
 
+@pytest.mark.parametrize("timeout_stage", ["question", "repair"])
+@pytest.mark.parametrize("attempt_limit", [4, 5])
+def test_r7_retry_and_basis_repair_share_bounded_budget(
+    monkeypatch, tmp_path, timeout_stage, attempt_limit
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_MODEL", "offline-model")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder")
+    monkeypatch.setenv("LLM_MODE", "live")
+    monkeypatch.setenv("LLM_CACHE", "0")
+    monkeypatch.setattr(llm, "LLM_MAX_ATTEMPTS", attempt_limit)
+    monkeypatch.setattr(llm, "perf_counter", lambda: 100.0)
+    monkeypatch.setattr(llm, "sleep", lambda _: None)
+    monkeypatch.setattr(llm, "_store_cache", lambda _: None)
+    seen = []
+    timeout_at = 3 if timeout_stage == "question" else 4
+
+    def request(prompt, schema, prompt_hash, model, api_key, timeout_s):
+        del schema, api_key
+        seen.append((prompt, timeout_s))
+        if len(seen) == timeout_at:
+            raise TimeoutError("offline transport timeout")
+        quote = "Căn cứ." if prompt.startswith("Tạo thẻ") and "Sửa basis:" in prompt else "Sai."
+        return llm._success(
+            {
+                "summary": "Cần quyết định.",
+                "facts": ["Có yêu cầu."],
+                "question": "Chuyên viên có chấp thuận yêu cầu này không?",
+                "options": ["Có", "Không"],
+                "basis": [{"chunk_id": "chunk-1", "quote": quote}],
+            },
+            prompt_hash,
+            model,
+        )
+
+    monkeypatch.setattr(llm, "_request_openai", request)
+    with llm.case_call_budget():
+        for step in ["R2_extract", "R4_select"]:
+            assert llm.call_json("offline", schema={}, step=step, case_id="budget-control").ok
+        kwargs = dict(
+            case_id="budget-control",
+            actor="SYSTEM",
+            corpus_version="cv_test",
+            escalation_type=EscalationType.AUTHORITY_REQUIRED,
+            extraction=_evidence_extraction(),
+            evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
+            inp=_input(),
+        )
+        if attempt_limit == 4:
+            with pytest.raises(ValueError):
+                generate_escalation_card(**kwargs)
+        else:
+            card = generate_escalation_card(**kwargs)
+            assert card.basis == [("Điều 1", "Căn cứ.")]
+        assert llm._BUDGET.get().remaining == 0
+    assert len(seen) == attempt_limit
+    assert all(timeout <= 30 for _, timeout in seen)
+
+
+@pytest.mark.parametrize("model_id", ["abc", "[abc]"])
+def test_basis_resolves_exact_and_single_wrapped_ids(model_id) -> None:
+    chunk = replace(_evidence_chunk(), chunk_id="abc", text="Kết quả được trả trong 5 ngày.")
+    evidence = EvidenceResult(EvidenceStatus.OK, [chunk], [])
+    assert _basis([{"chunk_id": model_id, "quote": chunk.text}], evidence) == [
+        (chunk.breadcrumb, chunk.text)
+    ]
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    ["[xyz]", "[[abc]]", "[abc", "abc]", "[]", "[ABC]", "[ab]", "[ abc ]"],
+)
+def test_basis_rejects_invalid_wrapped_ids(model_id) -> None:
+    chunk = replace(_evidence_chunk(), chunk_id="abc")
+    with pytest.raises(BasisValidationError):
+        _basis(
+            [{"chunk_id": model_id, "quote": chunk.text}],
+            EvidenceResult(EvidenceStatus.OK, [chunk], []),
+        )
+
+
+@pytest.mark.parametrize("quote", ["Kết quả được trả trong 10 ngày.", "Căn cứ chunk khác."])
+def test_basis_wrapped_id_keeps_quote_provenance_strict(quote) -> None:
+    chunk = replace(_evidence_chunk(), chunk_id="abc", text="Kết quả được trả trong 5 ngày.")
+    other = replace(chunk, chunk_id="xyz", text="Căn cứ chunk khác.")
+    with pytest.raises(BasisValidationError):
+        _basis(
+            [{"chunk_id": "[abc]", "quote": quote}],
+            EvidenceResult(EvidenceStatus.OK, [chunk, other], []),
+        )
+
+
+def test_basis_exact_bracket_id_takes_precedence_over_unwrapped_id() -> None:
+    bare = replace(_evidence_chunk(), chunk_id="abc", text="Quote bare.")
+    wrapped = replace(bare, chunk_id="[abc]", breadcrumb="Exact bracket ID", text="Quote wrapped.")
+    evidence = EvidenceResult(EvidenceStatus.OK, [bare, wrapped], [])
+    assert _basis([{"chunk_id": "[abc]", "quote": wrapped.text}], evidence) == [
+        (wrapped.breadcrumb, wrapped.text)
+    ]
+    # Exact ID có quote sai phải fail, không thử chunk abc để cứu quote.
+    with pytest.raises(BasisValidationError):
+        _basis([{"chunk_id": "[abc]", "quote": bare.text}], evidence)
+
+
+@pytest.mark.parametrize("model_id", ["chunk-1", "[chunk-1]"])
 def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, model_id
 ) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
@@ -767,8 +895,10 @@ def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
         False,
         "{}",
     )
+    calls = []
 
     def fake_call(prompt: str, **kwargs: object) -> LLMResult:
+        calls.append(kwargs["step"])
         assert "450.000₫ hoặc 480.000₫" in prompt
         assert "Ảnh hóa đơn bị mờ" in prompt
         assert "Điều 1" in prompt and "FACT_UNRESOLVED" in prompt
@@ -778,7 +908,7 @@ def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
             {
                 "summary": "Hóa đơn mờ nên chưa xác định được số tiền.",
                 "facts": ["Số tiền có thể là 450.000₫ hoặc 480.000₫."],
-                "basis": [{"chunk_id": "chunk-1", "quote": "Căn cứ."}],
+                "basis": [{"chunk_id": model_id, "quote": "Căn cứ."}],
                 "question": "Hóa đơn ghi 450.000₫ hay 480.000₫?",
                 "options": ["450.000₫", "480.000₫"],
             },
@@ -803,6 +933,7 @@ def test_generate_escalation_card_keeps_amount_choices_and_breadcrumb(
     assert "450.000₫" in card.question and "480.000₫" in card.question
     assert card.options == ["450.000₫", "480.000₫"]
     assert card.basis == [("Điều 1", "Căn cứ.")]
+    assert calls == ["R7_question"]
     assert [event.action for event in events] == ["QUESTION_GENERATED"]
 
 
@@ -919,6 +1050,111 @@ def test_ground_guard_escalates_unsupported_number_without_editing_draft(
     assert [event.action for event in events] == ["GROUNDEDNESS_FAILED"]
 
 
+@pytest.mark.parametrize(
+    ("body", "course_code", "input_text", "source", "number_failure"),
+    [
+        ("INT301", "INT301", "Em hỏi môn Cơ sở dữ liệu (INT301).", "Căn cứ.", False),
+        ("ECO201", "ECO201", "Em hỏi học phần ECO201.", "Căn cứ.", False),
+        ("INT301", "", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("INT301", "INT301", "Em nghe nói INT301.", "Căn cứ.", True),
+        ("INT301", "INT301", "Em hỏi môn INT3010.", "Căn cứ.", True),
+        ("MAT999", "MAT999", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("USD450", "", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("VAT100", "", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("Hạn 15 ngày", "", "", "Hạn 15 ngày.", False),
+        ("Phí 450.000 đồng", "", "", "Phí 450000 đồng.", False),
+        ("Hoàn 60%", "", "", "Hoàn 60 phần trăm.", False),
+        ("Hạn 16 ngày", "", "", "Hạn 15 ngày.", True),
+        ("Phí 950.000 đồng", "", "", "Phí 450.000 đồng.", True),
+        ("Hoàn 70%", "", "", "Hoàn 60 phần trăm.", True),
+        ("INT301: hoàn 70%", "INT301", "Em hỏi môn INT301.", "Hoàn 60%.", True),
+        ("INT301: hạn 15 ngày", "INT301", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("INT301: phí 450.000 đồng", "INT301", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("INT301%", "INT301", "Em hỏi môn INT301.", "Căn cứ.", True),
+        ("INT301 đồng", "INT301", "Em hỏi môn INT301.", "Căn cứ.", True),
+        (
+            "INT301: hoàn 90%",
+            "INT301",
+            "Em hỏi môn INT301. Em nghe nói được hoàn 90%.",
+            "Hoàn 60%.",
+            True,
+        ),
+    ],
+)
+def test_numeric_guard_only_exempts_input_backed_course_identifier(
+    monkeypatch, body, course_code, input_text, source, number_failure
+) -> None:
+    monkeypatch.setattr("core.ground_guard.is_active", lambda _: True)
+    draft = _draft(f"{body} [chunk-1].")
+    evidence = EvidenceResult(EvidenceStatus.OK, [replace(_evidence_chunk(), text=source)], [])
+
+    result = guard_groundedness(
+        case_id="offline-numeric",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=draft,
+        evidence=evidence,
+        record_event=False,
+        course_code=course_code,
+        input_text=input_text,
+    )
+
+    assert ("number" in result.failed_checks) is number_failure
+    assert result.draft.body == draft.body
+    if not number_failure:
+        assert result.draft.grounded and result.decision is None
+
+
+def test_b4_synthetic_pipeline_replay_preserves_citations_and_completes_auto(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    _install_routine_pipeline(monkeypatch, Domain.COURSE_WITHDRAWAL)
+    monkeypatch.setattr(pipeline, "guard_groundedness", guard_groundedness)
+    monkeypatch.setattr("core.ground_guard.is_active", lambda _: True)
+    extraction = _evidence_extraction(
+        domain=Domain.COURSE_WITHDRAWAL, facts={"course_code": "INT301"}
+    )
+    deadline = "Hạn chót gửi yêu cầu rút học phần là 17 giờ 00 thứ Sáu của tuần học thứ 8."
+    portal = "Yêu cầu được thực hiện trên cổng dịch vụ sinh viên."
+    chunks = [
+        replace(_evidence_chunk(), chunk_id="HP-2026-1:seed:5", text=deadline),
+        replace(_evidence_chunk(), chunk_id="RH-2026-101:seed:3", text=portal),
+    ]
+    evidence = EvidenceResult(EvidenceStatus.OK, chunks, [])
+    draft = _draft(
+        f"{deadline}[HP-2026-1:seed:5] Yêu cầu rút môn Cơ sở dữ liệu (INT301) "
+        "được thực hiện trên cổng dịch vụ sinh viên.[RH-2026-101:seed:3]",
+        [chunk.chunk_id for chunk in chunks],
+    )
+    monkeypatch.setattr(pipeline, "extract_facts", lambda body, case_id: extraction)
+    monkeypatch.setattr(pipeline, "retrieve_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "validate_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "generate_reply", lambda **kwargs: draft)
+
+    result = pipeline.process_case(_input(body="Em hỏi hạn rút môn Cơ sở dữ liệu (INT301)."))
+
+    assert result.decision.decision is Decision.AUTO_REPLY
+    assert result.decision.rule_id == "P05"
+    assert result.status is CaseStatus.PENDING_SEND
+    assert result.draft is not None and result.draft.grounded
+    assert result.draft.body == draft.body
+    assert result.draft.citations == draft.citations
+
+    monkeypatch.setattr("core.ground_guard.is_active", lambda _: False)
+    rejected = guard_groundedness(
+        case_id="offline-b4-inactive",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=draft,
+        evidence=evidence,
+        record_event=False,
+        course_code="INT301",
+        input_text="Em hỏi môn INT301.",
+    )
+    assert rejected.failed_checks == ["citation"]
+
+
 def test_ground_guard_covers_citation_authority_and_ratio(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
     evidence = EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], [])
@@ -991,6 +1227,78 @@ def test_question_guard_reports_each_quality_rule() -> None:
         assert expected_failure in question_failures(card)
 
 
+def test_question_guard_contains_unsupported_option_duration(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    partial_draft = DraftReply("Lệ phí", "Lệ phí là 150.000 đồng.", [], True, [])
+    card = _card(
+        summary="Sinh viên hỏi lệ phí và nghe nói kết quả trả trong 5 ngày.",
+        facts=["Lệ phí: 150.000 đồng.", "Sinh viên nghe nói 10 ngày."],
+        basis=[
+            ("PK-204 / 5 ngày / 10 ngày", "Lệ phí phúc khảo là 150.000 đồng mỗi học phần."),
+            ("PK-204", "Kết quả được thông báo sau khi Hội đồng chuyên môn hoàn tất."),
+        ],
+        question="Anh/chị xác nhận có thời hạn tối đa trả kết quả phúc khảo không?",
+        options=[
+            "Không có thời hạn tối đa được quy định",
+            "Có, tối đa 5 ngày",
+            "Có, tối đa 10 ngày",
+            "Có, thời hạn khác",
+        ],
+        escalation_type=EscalationType.OUT_OF_POLICY,
+        partial_draft=partial_draft,
+    )
+    assert question_failures(card) == ["unsupported_option_duration"]
+
+    def regenerate() -> EscalationCard:
+        pytest.fail("Unsupported duration phải containment mà không regenerate.")
+
+    contained = guard_question(
+        case_id="case-b1-duration",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=card,
+        regenerate=regenerate,
+    )
+    assert contained.options == [
+        "Tiếp nhận và xử lý thủ công",
+        "Hướng dẫn sinh viên liên hệ đơn vị phù hợp",
+    ]
+    assert question_failures(contained) == []
+    assert contained.summary == card.summary
+    assert contained.facts is card.facts
+    assert contained.basis is card.basis
+    assert contained.partial_draft is partial_draft
+    assert contained.escalation_type is card.escalation_type
+    events = events_for_case("case-b1-duration")
+    assert any(
+        event.action == "QUESTION_GUARD_FAILED" and "unsupported_option_duration" in event.reason
+        for event in events
+    )
+    for unit in ("giây", "phút", "giờ", "ngày", "tuần", "tháng", "năm"):
+        assert "unsupported_option_duration" in question_failures(
+            replace(card, options=[f"Trong 3 {unit}", "Chưa xác định"])
+        )
+    # Số 5 không được khớp nhầm với 15 hoặc với đơn vị khác.
+    for quote in ("Trả trong 15 ngày.", "Trả trong 5 tuần."):
+        assert "unsupported_option_duration" in question_failures(
+            replace(card, basis=[("PK-204", quote)])
+        )
+
+
+def test_question_guard_accepts_supported_option_duration() -> None:
+    for unit in ("giây", "phút", "giờ", "ngày", "tuần", "tháng", "năm"):
+        card = _card(
+            basis=[("Quy định", f"Kết quả được trả trong 5 {unit}.")],
+            options=[f"Trong 5 {unit}", "Chưa xác định"],
+        )
+        assert question_failures(card) == []
+
+
+def test_question_guard_accepts_non_factual_and_placeholder_options() -> None:
+    for options in (["Có", "Không"], ["... ngày", "Chưa xác định"]):
+        assert question_failures(_card(options=options)) == []
+
+
 def test_question_guard_regenerates_once_then_uses_yaml_fallback(monkeypatch, tmp_path) -> None:
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
@@ -1026,6 +1334,213 @@ def test_question_guard_regenerates_once_then_uses_yaml_fallback(monkeypatch, tm
     assert regenerated.question == _card().question
     assert "xem xét lại trường hợp này" not in fallback.question
     assert len(fallback.options) == 2
+
+
+def test_a1_fallback_names_personal_request_and_keeps_missing_facts(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    extraction = _evidence_extraction(
+        facts={"submission": "Biểu mẫu đã gửi nhưng chưa được kiểm tra."},
+        missing=["Ngày nộp thực tế", "Hạn tiếp nhận của đợt xử lý"],
+    )
+    extraction.requests = [
+        RequestItem(Domain.GRADE_APPEAL, "Hỏi lệ phí hồ sơ", True, False, False, False, False),
+        RequestItem(Domain.GRADE_APPEAL, "Hỏi quy trình nộp", True, False, False, False, False),
+        RequestItem(
+            Domain.GRADE_APPEAL,
+            "Xác nhận hồ sơ đã nộp có hợp lệ không",
+            False,
+            True,
+            False,
+            False,
+            False,
+        ),
+    ]
+    chunk = replace(
+        _evidence_chunk(),
+        text="Chuyên viên tiếp nhận hồ sơ; cấp có thẩm quyền quyết định ngoại lệ.",
+    )
+    evidence = EvidenceResult(EvidenceStatus.FACT_MISSING, [chunk], ["facts"])
+    card = _card(question="Không hợp lệ", escalation_type=EscalationType.AUTHORITY_REQUIRED)
+
+    result = guard_question(
+        case_id="offline-a1-fallback",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=card,
+        regenerate=None,
+        extraction=extraction,
+        evidence=evidence,
+    )
+
+    assert all("yêu cầu 3" in option for option in result.options)
+    assert all("phương án đã nêu" not in option for option in result.options)
+    assert "yêu cầu 3" in result.question
+    assert any(extraction.requests[2].intent in fact for fact in result.facts)
+    assert all(
+        any(missing in fact for fact in result.facts)
+        for missing in extraction.missing_critical_facts
+    )
+    assert result.basis == [(chunk.breadcrumb, chunk.text)]
+    assert question_failures(result) == []
+
+
+def test_a2_fallback_preserves_unreceived_proof_and_both_conflicting_sources(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    caveat = "Chứng từ được nhắc trong email nhưng chưa được hệ thống tiếp nhận."
+    extraction = _evidence_extraction(facts={"arbitrary_document_state": caveat})
+    extraction.requests = [
+        RequestItem(
+            Domain.COURSE_WITHDRAWAL,
+            "Xin quyết định ngoại lệ cho hồ sơ",
+            False,
+            False,
+            True,
+            False,
+            True,
+        ),
+        RequestItem(
+            Domain.COURSE_WITHDRAWAL, "Hỏi quyền lợi áp dụng", True, False, False, False, False
+        ),
+    ]
+    chunks = [
+        replace(_evidence_chunk(), breadcrumb="Nguồn thứ nhất", text="Tỷ lệ hoàn là 60 phần trăm."),
+        replace(_evidence_chunk(), breadcrumb="Nguồn thứ hai", text="Tỷ lệ hoàn là 70 phần trăm."),
+    ]
+    evidence = EvidenceResult(EvidenceStatus.CONFLICTING_SOURCES, chunks, ["conflict"])
+
+    result = guard_question(
+        case_id="offline-a2-fallback",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=_card(question="Không hợp lệ", escalation_type=EscalationType.AUTHORITY_REQUIRED),
+        regenerate=None,
+        extraction=extraction,
+        evidence=evidence,
+    )
+
+    assert any(caveat in fact and "chưa xác minh" in fact for fact in result.facts)
+    assert any("nguồn đang mâu thuẫn" in fact for fact in result.facts)
+    assert result.basis == [(chunk.breadcrumb, chunk.text) for chunk in chunks]
+    assert all("yêu cầu 1" in option and "%" not in option for option in result.options)
+    assert len(result.options) == 2
+    assert result.escalation_type is EscalationType.AUTHORITY_REQUIRED
+
+
+@pytest.mark.parametrize("has_requests", [True, False])
+def test_fallback_without_evidence_or_facts_does_not_invent_verification(
+    monkeypatch, tmp_path, has_requests
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    extraction = _evidence_extraction(missing=["Dữ kiện áp dụng chưa được xác nhận"])
+    if not has_requests:
+        extraction.requests = []
+    evidence = EvidenceResult(EvidenceStatus.FACT_MISSING, [], ["facts"])
+    result = guard_question(
+        case_id="offline-empty-fallback",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=_card(question="Không hợp lệ"),
+        regenerate=None,
+        extraction=extraction,
+        evidence=evidence,
+    )
+
+    assert result.basis == []
+    assert any("Không có trích dẫn" in fact for fact in result.facts)
+    assert any("Dữ kiện áp dụng chưa được xác nhận" in fact for fact in result.facts)
+    assert all("chấp thuận" not in option.casefold() for option in result.options)
+    assert len(result.options) == 2
+    if not has_requests:
+        assert "làm rõ nội dung" in result.options[0]
+
+
+@pytest.mark.parametrize(
+    "path", ["no_regeneration", "exception", "invalid_regeneration", "duration"]
+)
+def test_all_existing_fallback_paths_keep_structured_context(monkeypatch, tmp_path, path) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    partial = _draft("Phần thông tin chưa gửi [chunk-1].")
+    card = _card(question="Không hợp lệ", partial_draft=partial)
+    if path == "duration":
+        card = _card(
+            options=["Trả kết quả trong 15 ngày", "Trả kết quả trong 30 ngày"],
+            partial_draft=partial,
+        )
+    extraction = _evidence_extraction(facts={"state": "Hồ sơ chưa được xác minh."})
+    evidence = EvidenceResult(EvidenceStatus.FACT_MISSING, [_evidence_chunk()], ["facts"])
+    original = deepcopy(card)
+    calls = []
+
+    def regenerate() -> EscalationCard:
+        calls.append(True)
+        if path == "exception":
+            raise TimeoutError("Synthetic exhausted attempt budget")
+        return card
+
+    result = guard_question(
+        case_id=f"offline-fallback-{path}",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        card=card,
+        regenerate=None if path == "no_regeneration" else regenerate,
+        extraction=extraction,
+        evidence=evidence,
+    )
+
+    assert len(calls) == (0 if path in ("no_regeneration", "duration") else 1)
+    assert any("Hồ sơ chưa được xác minh." in fact for fact in result.facts)
+    assert result.partial_draft is partial
+    assert result.escalation_type is card.escalation_type
+    assert card == original
+    assert question_failures(result) == []
+
+
+@pytest.mark.parametrize(
+    ("rule", "status", "subtype"),
+    [
+        ("P01", EvidenceStatus.CONFLICTING_SOURCES, EscalationType.AUTHORITY_REQUIRED),
+        ("P02", EvidenceStatus.NO_AUTHORITATIVE_SOURCE, EscalationType.OUT_OF_POLICY),
+        ("P03", EvidenceStatus.FACT_MISSING, EscalationType.FACT_UNRESOLVED),
+        ("P05", EvidenceStatus.OK, None),
+    ],
+)
+def test_fallback_content_does_not_change_pipeline_policy_or_status(
+    monkeypatch, tmp_path, rule, status, subtype
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
+    _install_routine_pipeline(monkeypatch, Domain.CONDUCT_SCORE)
+    extraction = _evidence_extraction(facts={"proof": "Minh chứng chưa được tiếp nhận."})
+    if rule == "P01":
+        extraction.requests[0].is_informational = False
+        extraction.requests[0].asks_authority_decision = True
+    evidence = EvidenceResult(status, [_evidence_chunk()], [] if rule == "P05" else ["facts"])
+    monkeypatch.setattr(pipeline, "extract_facts", lambda body, case_id: extraction)
+    monkeypatch.setattr(pipeline, "retrieve_evidence", lambda **kwargs: evidence)
+    monkeypatch.setattr(pipeline, "validate_evidence", lambda **kwargs: evidence)
+    calls = []
+
+    def bad_card(*args) -> EscalationCard:
+        calls.append(True)
+        if len(calls) > 1:
+            raise TimeoutError("Synthetic exhausted attempt budget")
+        return _card(question="Không hợp lệ", escalation_type=subtype)
+
+    monkeypatch.setattr(pipeline, "_escalation_card", bad_card)
+    result = pipeline.process_case(_input())
+
+    assert result.decision.rule_id == rule
+    assert result.decision.escalation_type is subtype
+    if rule == "P05":
+        assert result.decision.decision is Decision.AUTO_REPLY
+        assert result.status is CaseStatus.PENDING_SEND
+        assert result.card is None and calls == []
+    else:
+        assert result.decision.decision is Decision.ESCALATE
+        assert result.status is CaseStatus.AWAITING_HUMAN
+        assert len(calls) == 2 and result.card is not None
+        assert any("Minh chứng chưa được tiếp nhận." in fact for fact in result.card.facts)
 
 
 def test_multi_intent_card_keeps_routine_draft_and_asks_only_locked_part(monkeypatch) -> None:
@@ -1079,7 +1594,9 @@ def test_multi_intent_card_keeps_routine_draft_and_asks_only_locked_part(monkeyp
     assert card.partial_draft is seen["partial_draft"]
     assert card.partial_draft is not None and card.partial_draft.grounded
     assert card.partial_draft.citations == partial.citations
-    assert "Đã chuẩn bị phần trả lời thông tin; phần còn lại chờ chuyên viên quyết định." in card.facts
+    assert (
+        "Đã chuẩn bị phần trả lời thông tin; phần còn lại chờ chuyên viên quyết định." in card.facts
+    )
 
 
 def _stored_case(case_id: str, *, status: CaseStatus = CaseStatus.RECEIVED) -> None:
@@ -1149,8 +1666,12 @@ def test_pending_send_dispatches_after_deadline_and_cannot_be_rescheduled(
     )
     row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", ("case-send-due",))
     assert row is not None and row["status"] == CaseStatus.SENT
-    with pytest.raises(ValueError, match="SENT"):
+    before = dict(db.fetch_one("SELECT * FROM cases WHERE case_id = ?", ("case-send-due",)))
+    events_before = events_for_case("case-send-due")
+    with pytest.raises(ValueError, match="Email không còn ở trạng thái có thể lên lịch gửi"):
         schedule_auto_reply("case-send-due", decision=_auto_decision(), actor="SYSTEM")
+    assert dict(db.fetch_one("SELECT * FROM cases WHERE case_id = ?", ("case-send-due",))) == before
+    assert events_for_case("case-send-due") == events_before
 
 
 def test_pending_send_can_escalate_and_sent_case_creates_linked_correction(
@@ -1159,7 +1680,10 @@ def test_pending_send_can_escalate_and_sent_case_creates_linked_correction(
     database_path = tmp_path / "app.db"
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", database_path)
     _case_with_decision("case-send-escalate")
-    db.execute("UPDATE cases SET status = ? WHERE case_id = ?", (CaseStatus.PROCESSING, "case-send-escalate"))
+    db.execute(
+        "UPDATE cases SET status = ? WHERE case_id = ?",
+        (CaseStatus.PROCESSING, "case-send-escalate"),
+    )
     schedule_auto_reply("case-send-escalate", decision=_auto_decision(), actor="SYSTEM")
     escalate_from_pending("case-send-escalate", actor="HUMAN:reviewer", reason="Cần quyết định.")
     row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", ("case-send-escalate",))

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "A3-clean",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Em đã qua thời hạn rút học phần vì thời gian đó có việc gia đình đột xuất. Trường hợp của em bây giờ nhà trường có xem xét cho em rút học phần này được không ạ?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "AUTHORITY_REQUIRED",
+    "expected_rule_id": "P01",
+    "rationale": "M2 STEP 5B — DEV ROBUSTNESS EXPLORATORY BASELINE. Pair 1 clean control; original A3 body unchanged. DEV/regression input, not final held-out evidence. Full paired R1–R8 criteria: reports/sprints/M2_core_decision_escalation_quality.md, Step 5B."
+  },
+  {
+    "id": "A3-no-diacritic",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Em da qua thoi han rut hoc phan vi thoi gian do co viec gia dinh dot xuat. Truong hop cua em bay gio nha truong co xem xet cho em rut hoc phan nay duoc khong a?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "AUTHORITY_REQUIRED",
+    "expected_rule_id": "P01",
+    "rationale": "M2 STEP 5B — DEV ROBUSTNESS EXPLORATORY BASELINE. Pair 1 noisy member; ONLY Vietnamese diacritics removed, including đ -> d. Same authority semantic envelope as A3-clean. DEV/regression input, not final held-out evidence. Full paired criteria: reports/sprints/M2_core_decision_escalation_quality.md, Step 5B."
+  },
+  {
+    "id": "B3-clean",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Cho em hỏi khi làm phúc khảo thì hồ sơ cần chuẩn bị những gì và lệ phí phải nộp là bao nhiêu ạ?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "M2 STEP 5B — DEV ROBUSTNESS EXPLORATORY BASELINE. Pair 2 clean control; original B3 body unchanged. Both form/info and fee must remain covered. DEV/regression input, not final held-out evidence. Full paired R1–R8 criteria: reports/sprints/M2_core_decision_escalation_quality.md, Step 5B."
+  },
+  {
+    "id": "B3-chat-abbreviation",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Cho e hỏi khi làm phúc khảo thì hồ sơ cần chuẩn bị những gì và lệ phí phải nộp là bn ạ?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "M2 STEP 5B — DEV ROBUSTNESS EXPLORATORY BASELINE. Pair 2 noisy member; ONLY em -> e and bao nhiêu -> bn. Preserve all other diacritics, facts and both premises. DEV/regression input, not final held-out evidence. Full paired criteria: reports/sprints/M2_core_decision_escalation_quality.md, Step 5B."
+  }
+]
