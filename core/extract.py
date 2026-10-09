@@ -9,6 +9,8 @@ from core.sanitize import mask_pii, strip_prompt_injection
 from core.types import Domain, Extraction, RequestItem
 from infra.audit import log_event
 from infra.llm import call_json
+from infra.llm import LOGGER as LLM_LOGGER
+from infra.provider_observability import current_correlation
 
 EXTRACT_PROMPT_V1 = """Bạn chỉ trích xuất dữ kiện từ email sinh viên dưới đây.
 Không trả lời email, không suy đoán, không đưa ra quyết định AUTO_REPLY hoặc ESCALATE.
@@ -133,6 +135,54 @@ EXTRACTION_SCHEMA: dict[str, object] = {
 EXTRACTION_PARSE_ATTEMPTS = 2
 
 
+class _FactValidationError(ValueError):
+    """Stable diagnostic code; retain the existing public-facing error text."""
+
+    def __init__(
+        self,
+        reason_code: Literal["FACT_NAME_EMPTY", "FACT_VALUE_EMPTY", "FACT_DUPLICATE_CONFLICT"],
+    ) -> None:
+        super().__init__("Dữ kiện cần tên, nội dung rõ ràng và không tự mâu thuẫn.")
+        self.reason_code = reason_code
+
+
+def _record_validation(
+    case_id: str,
+    logical_call_index: int,
+    *,
+    provider_success: bool,
+    stage: str,
+    domain_validation: Literal["PASS", "FAIL", "NOT_RUN"],
+    reason_code: str | None = None,
+    retry_reason: str = "NONE",
+) -> None:
+    """Metadata only: no identity, exception text, fact names/values or LLM content.
+
+    Separate from provider_attempt: a validation retry is a new logical call,
+    while transport attempts remain observable through the existing emitter.
+    """
+    try:
+        event = {
+            "event": "r2_validation",
+            "correlation_id": current_correlation(case_id),
+            "phase": "R2_extract",
+            "logical_call_index": logical_call_index,
+            "provider_result": "SUCCESS" if provider_success else "FAILURE",
+            "domain_validation": domain_validation,
+            "validation_stage": stage,
+            "reason_code": reason_code,
+            "retry_reason": retry_reason,
+        }
+        LLM_LOGGER.warning(
+            "R2 validation evidence %s",
+            json.dumps(event, ensure_ascii=False),
+            extra={"r2_validation": event},
+        )
+    except Exception:
+        # Like provider telemetry, a failing log sink must not alter runtime behavior.
+        return
+
+
 def _scope_facts(body: str) -> dict[str, str]:
     facts: dict[str, str] = {}
     if "đại học chính quy" in body.casefold():
@@ -140,9 +190,7 @@ def _scope_facts(body: str) -> dict[str, str]:
     if cohort := re.search(r"\bK\d{2,}\b", body, re.IGNORECASE):
         facts["cohort"] = cohort.group().upper()
     if academic_year := re.search(r"\b20\d{2}\s*[-–]\s*20\d{2}\b", body):
-        facts["academic_year"] = (
-            academic_year.group().replace("–", "-").replace(" ", "")
-        )
+        facts["academic_year"] = academic_year.group().replace("–", "-").replace(" ", "")
     return facts
 
 
@@ -203,16 +251,18 @@ def _language(value: object) -> Literal["vi", "en", "other"]:
 def _facts(value: object) -> dict[str, str]:
     if isinstance(value, Mapping):
         # Đọc được phản hồi và dữ liệu đã lưu trước khi đổi schema structured output.
-        return {
-            key: _string(item, f"critical_facts.{key}") for key, item in value.items()
-        }
+        return {key: _string(item, f"critical_facts.{key}") for key, item in value.items()}
     facts: dict[str, str] = {}
     for item in _items(value, "critical_facts"):
         entry = _mapping(item, "critical_facts item")
         name = _string(entry.get("name"), "critical_facts.name").strip()
         fact = _string(entry.get("value"), "critical_facts.value").strip()
-        if not name or not fact or (name in facts and facts[name] != fact):
-            raise ValueError("Dữ kiện cần tên, nội dung rõ ràng và không tự mâu thuẫn.")
+        if not name:
+            raise _FactValidationError("FACT_NAME_EMPTY")
+        if not fact:
+            raise _FactValidationError("FACT_VALUE_EMPTY")
+        if name in facts and facts[name] != fact:
+            raise _FactValidationError("FACT_DUPLICATE_CONFLICT")
         facts[name] = fact
     return facts
 
@@ -246,32 +296,69 @@ def extract_facts(body: str, case_id: str) -> Extraction:
             temperature=0.0,
         )
         if not result.ok:
-            return _failed_extraction(
-                case_id, result.error or "Lỗi LLM không xác định."
+            _record_validation(
+                case_id,
+                attempt + 1,
+                provider_success=False,
+                stage="provider_result",
+                domain_validation="NOT_RUN",
+                retry_reason="PROVIDER_FAILURE",
             )
+            return _failed_extraction(case_id, result.error or "Lỗi LLM không xác định.")
+        stage = "response"
         try:
             data = _mapping(result.data, "response")
+            stage = "requests"
             requests = _items(data.get("requests"), "requests")
+            stage = "language"
+            language = _language(data.get("language"))
+            stage = "requests"
+            parsed_requests = [_request(request) for request in requests]
+            stage = "critical_facts"
+            facts = {**_facts(data.get("critical_facts")), **_scope_facts(body)}
+            stage = "missing_critical_facts"
+            missing = _strings(data.get("missing_critical_facts"), "missing_critical_facts")
+            stage = "injection_suspected"
+            suspected = bool(injection.removed) or _boolean(
+                data.get("injection_suspected"), "injection_suspected"
+            )
+            stage = "serialization"
             extraction = Extraction(
-                language=_language(data.get("language")),
-                requests=[_request(request) for request in requests],
-                critical_facts={
-                    **_facts(data.get("critical_facts")),
-                    **_scope_facts(body),
-                },
-                missing_critical_facts=_strings(
-                    data.get("missing_critical_facts"), "missing_critical_facts"
-                ),
-                injection_suspected=bool(injection.removed)
-                or _boolean(data.get("injection_suspected"), "injection_suspected"),
+                language=language,
+                requests=parsed_requests,
+                critical_facts=facts,
+                missing_critical_facts=missing,
+                injection_suspected=suspected,
                 raw_json=json.dumps(result.data, ensure_ascii=False),
             )
         except (TypeError, ValueError) as error:
+            _record_validation(
+                case_id,
+                attempt + 1,
+                provider_success=True,
+                stage=stage,
+                domain_validation="FAIL",
+                reason_code=(
+                    error.reason_code
+                    if isinstance(error, _FactValidationError)
+                    else "R2_PAYLOAD_INVALID"
+                ),
+                retry_reason=(
+                    "INTERNAL_VALIDATION_RETRY"
+                    if attempt + 1 < EXTRACTION_PARSE_ATTEMPTS
+                    else "VALIDATION_RETRY_EXHAUSTED"
+                ),
+            )
             if attempt + 1 == EXTRACTION_PARSE_ATTEMPTS:
-                return _failed_extraction(
-                    case_id, f"Phản hồi LLM không hợp lệ: {error}"
-                )
+                return _failed_extraction(case_id, f"Phản hồi LLM không hợp lệ: {error}")
         else:
+            _record_validation(
+                case_id,
+                attempt + 1,
+                provider_success=True,
+                stage="complete",
+                domain_validation="PASS",
+            )
             log_event(
                 case_id=case_id,
                 actor="SYSTEM",
