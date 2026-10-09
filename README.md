@@ -29,7 +29,10 @@ source .venv-bootstrap/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-Tạo `.env` từ `.env.example`, rồi điền `GOOGLE_API_KEY` để chạy ứng dụng. Chế độ
+Tạo `.env` từ `.env.example`, rồi cấu hình `OPENAI_API_KEY` riêng trên máy,
+`LLM_PROVIDER=openai`, `OPENAI_MODEL=gpt-6-luna` và
+`OPENAI_REASONING_EFFORT=none` để chạy ứng dụng. OpenAI là provider duy nhất;
+provider khác bị từ chối, không có fallback. Chế độ
 `replay` chỉ dùng khi kho đã có cassette được ghi bằng `LLM_MODE=record`; không dùng
 replay cho demo sạch nếu chưa có cassette.
 Các lệnh kiểm tra được tách sang RUNBOOK để chạy ở giai đoạn nghiệm thu sau tái cấu trúc.

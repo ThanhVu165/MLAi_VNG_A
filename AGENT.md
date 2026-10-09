@@ -106,7 +106,7 @@ infra   → (không import gì của dự án)
 
 ## 6. Quy tắc gọi LLM
 
-1. **Chỉ gọi qua `infra.llm.call_json()`.** Không ai được `import google.generativeai` ngoài `infra/llm.py`.
+1. **Chỉ gọi qua `infra.llm.call_json()`.** Provider SDK chỉ được gọi trong `infra/llm.py`; runtime chỉ hỗ trợ OpenAI.
 2. `temperature=0`, structured output, schema cố định. Không free-form text ở bước ra quyết định.
 3. Tối đa **4 lượt gọi LLM cho một case**. Phân bổ cứng: R2 extract (1) + R7a hoặc R7b (1) + regenerate nếu Question Guard fail (1, tuỳ điều kiện) + R11 resume (1). Không có lượt thứ 5 trong bất kỳ nhánh nào. Nếu logic yêu cầu lượt thứ 5, đó là bug thiết kế, không phải ngoại lệ.
 4. Mỗi lượt gọi phải truyền `step` và `case_id` để ghi latency và `prompt_hash`.

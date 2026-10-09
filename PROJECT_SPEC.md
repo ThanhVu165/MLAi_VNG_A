@@ -129,7 +129,7 @@ Mọi lời gọi qua infra.llm.call_json. Không dùng replay/câu trả lời 
 
 Ngân sách và timeout lấy từ infra/settings.py và infra/llm.py: hiện tại tối đa bốn attempt và 60 giây cho một lượt xử lý, kể cả retry; mỗi call có timeout hữu hạn. Lỗi tạm thời chỉ thử lại tối đa một lần trong ngân sách. Lỗi cấu hình/schema không được retry vòng lặp. Không giữ giao dịch ghi SQLite qua call LLM.
 
-Schema gửi Gemini phải đúng dạng SDK đang dùng: type đơn, nullable khi cần, enum phù hợp. Không đưa JSON Schema union dạng type: [string, null] vào SDK không hỗ trợ. Ngày tiếp tục được kiểm tra trong mã, content_hash do hệ thống tính; đề xuất metadata không tự kích hoạt nguồn.
+Runtime chỉ hỗ trợ OpenAI qua infra/llm.py; provider khác bị từ chối, không fallback. Schema nguồn được sao chép và đóng object bằng `_openai_schema` trước khi gửi structured output; không mutate schema gốc. Ngày tiếp tục được kiểm tra trong mã, content_hash do hệ thống tính; đề xuất metadata không tự kích hoạt nguồn.
 
 Khi dịch vụ đang trả 503 hoặc lỗi cấu hình, lưu rõ vấn đề và ngừng vòng gọi lặp. Hướng khắc phục phải phân biệt thử lại sau với sửa cấu hình/mã; không khẳng định lỗi nhà cung cấp đã được sửa chỉ vì unit test xanh.
 
