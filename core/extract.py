@@ -27,6 +27,19 @@ asks_appeal, asks_exception, asks_authority_decision đều false. Chỉ đặt 
 Hỏi cách tra cứu kết quả, cách nộp phúc khảo hay ai có quyền duyệt không cần xem hồ sơ.
 Xin miễn điều kiện, xin nộp muộn, xin sửa điểm cá nhân mới là yêu cầu quyết định.
 
+asks_appeal=true chỉ khi sinh viên yêu cầu thực hiện việc xem xét lại, sửa điểm hoặc
+giải quyết khiếu nại cá nhân, không chỉ nêu dự định để hỏi điều kiện, thủ tục hay quyền lợi.
+Đọc toàn bộ email để xác định sinh viên muốn biết thông tin hay muốn người nhận xử lý hồ sơ.
+Không tạo request hành động riêng từ câu nêu dự định như "em muốn phúc khảo" khi các yêu cầu
+tiếp theo chỉ hỏi lệ phí, cách nộp, điều kiện miễn giảm hoặc chính sách hoàn phí.
+"Em muốn phúc khảo, cho em hỏi lệ phí và điều kiện miễn giảm?" chỉ hỏi thông tin:
+is_informational=true, asks_appeal=false, asks_exception=false, asks_authority_decision=false.
+"Em đề nghị xem xét lại điểm thi của em." yêu cầu xử lý: is_informational=false, asks_appeal=true.
+Yêu cầu chấp thuận ngoại lệ vẫn cần thẩm quyền dù viết dưới dạng câu hỏi:
+"Cho em hỏi trường có thể cho phép em nộp trễ không, nhờ trường xác nhận cho em."
+→ asks_exception=true, asks_authority_decision=true; không xóa cờ chỉ vì có chữ "hỏi".
+Email vừa hỏi thủ tục vừa xin phê duyệt: tách từng ý; giữ cờ thẩm quyền ở yêu cầu thực sự xin quyết định.
+
 Hỏi quy định nào áp dụng là hỏi thông tin về phạm vi áp dụng, kể cả áp dụng cho cá nhân.
 Ví dụ: "Quy định học phí nào áp dụng cho sinh viên chương trình liên kết?"
 → is_informational=true, requires_personal_record=false, asks_exception=false,
@@ -93,7 +106,14 @@ EXTRACTION_SCHEMA: dict[str, object] = {
                     "is_informational": {"type": "boolean"},
                     "requires_personal_record": {"type": "boolean"},
                     "asks_exception": {"type": "boolean"},
-                    "asks_appeal": {"type": "boolean"},
+                    "asks_appeal": {
+                        "type": "boolean",
+                        "description": (
+                            "True khi có yêu cầu thực hiện xem xét lại, sửa điểm hoặc giải quyết "
+                            "khiếu nại cá nhân; false khi chỉ nêu dự định để hỏi thông tin "
+                            "về điều kiện, thủ tục, lệ phí hoặc quyền lợi."
+                        ),
+                    },
                     "asks_authority_decision": {"type": "boolean"},
                 },
             },
@@ -120,7 +140,9 @@ def _scope_facts(body: str) -> dict[str, str]:
     if cohort := re.search(r"\bK\d{2,}\b", body, re.IGNORECASE):
         facts["cohort"] = cohort.group().upper()
     if academic_year := re.search(r"\b20\d{2}\s*[-–]\s*20\d{2}\b", body):
-        facts["academic_year"] = academic_year.group().replace("–", "-").replace(" ", "")
+        facts["academic_year"] = (
+            academic_year.group().replace("–", "-").replace(" ", "")
+        )
     return facts
 
 
@@ -181,7 +203,9 @@ def _language(value: object) -> Literal["vi", "en", "other"]:
 def _facts(value: object) -> dict[str, str]:
     if isinstance(value, Mapping):
         # Đọc được phản hồi và dữ liệu đã lưu trước khi đổi schema structured output.
-        return {key: _string(item, f"critical_facts.{key}") for key, item in value.items()}
+        return {
+            key: _string(item, f"critical_facts.{key}") for key, item in value.items()
+        }
     facts: dict[str, str] = {}
     for item in _items(value, "critical_facts"):
         entry = _mapping(item, "critical_facts item")
@@ -222,14 +246,19 @@ def extract_facts(body: str, case_id: str) -> Extraction:
             temperature=0.0,
         )
         if not result.ok:
-            return _failed_extraction(case_id, result.error or "Lỗi LLM không xác định.")
+            return _failed_extraction(
+                case_id, result.error or "Lỗi LLM không xác định."
+            )
         try:
             data = _mapping(result.data, "response")
             requests = _items(data.get("requests"), "requests")
             extraction = Extraction(
                 language=_language(data.get("language")),
                 requests=[_request(request) for request in requests],
-                critical_facts={**_facts(data.get("critical_facts")), **_scope_facts(body)},
+                critical_facts={
+                    **_facts(data.get("critical_facts")),
+                    **_scope_facts(body),
+                },
                 missing_critical_facts=_strings(
                     data.get("missing_critical_facts"), "missing_critical_facts"
                 ),
@@ -239,7 +268,9 @@ def extract_facts(body: str, case_id: str) -> Extraction:
             )
         except (TypeError, ValueError) as error:
             if attempt + 1 == EXTRACTION_PARSE_ATTEMPTS:
-                return _failed_extraction(case_id, f"Phản hồi LLM không hợp lệ: {error}")
+                return _failed_extraction(
+                    case_id, f"Phản hồi LLM không hợp lệ: {error}"
+                )
         else:
             log_event(
                 case_id=case_id,

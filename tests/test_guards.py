@@ -572,7 +572,10 @@ def test_extract_strips_injection_before_llm_and_audits_removed_text(monkeypatch
     assert "12345678901" not in events[0].reason and "[MSSV]" in events[0].reason
 
 
-def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:
+def test_extract_uses_schema_and_maps_eight_domain_samples(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "extract.db")
     domains = iter(
         (
             "conduct_score",
@@ -618,9 +621,12 @@ def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch) -> None:
         )
 
     monkeypatch.setattr("core.extract.call_json", fake_call)
-    extractions = [extract_facts(f"Email mẫu {index}", f"case-{index}") for index in range(8)]
+    extractions = [
+        extract_facts(f"Email mẫu {index}", f"case-{index}") for index in range(8)
+    ]
 
     assert all(extraction.llm_error is None for extraction in extractions)
+    assert db.fetch_one("SELECT COUNT(*) AS n FROM audit_events")["n"] == 8
     assert [extraction.requests[0].domain.value for extraction in extractions] == [
         "conduct_score",
         "course_withdrawal",
