@@ -17,7 +17,8 @@ Biến V1 thành một production-minded prototype:
 - Có production/scale readiness story.
 - Final evidence đủ để submit VNG.
 
-Project có **7 internal mini-sprints**, thực hiện theo thứ tự M1–M7.
+Project có **7 internal mini-sprints** M1–M7; acceptance dependencies và các việc
+được chuẩn bị song song được phân biệt ở phần dưới.
 Trạng thái hiện tại xem [STATUS.md](../STATUS.md); chi tiết M1 xem
 [living report M1](../reports/sprints/M1_runtime_reliability.md).
 
@@ -27,18 +28,24 @@ Trạng thái hiện tại xem [STATUS.md](../STATUS.md); chi tiết M1 xem
 - M2: **`M2_CONDITIONAL_CLOSEOUT`**; không đổi thành PASS. Giới hạn và historical
   failures nằm trong [M2 final closeout](../reports/sprints/M2_FINAL_CLOSEOUT_AND_M1_M2_CHECKIN_20261009.md).
 - M3: **`M3_AUTHORIZED_WITH_CARRYOVER`** theo quyết định của Project Coordinator.
-  Authorization này cho phép thực hiện Task Contract M3 nhưng không xóa carryover
-  M2 hoặc tự cấp quyền LIVE/API.
+  Authorization này cho phép lập kế hoạch M3; triển khai vẫn cần Task Contract và
+  Coordinator phê duyệt riêng, không xóa carryover M2 hoặc tự cấp quyền LIVE/API.
 - Trello là nguồn phân công/trạng thái task; workflow xem
   [TEAM_WORKFLOW.md](TEAM_WORKFLOW.md).
 
-| Mini-sprint | Mục tiêu điều phối hiện hành |
+| Mini-sprint | Thời gian mục tiêu hiện hành (2026, UTC+07:00) |
 |---|---|
-| M3 | 10/10 |
-| M4 | 11/10 |
-| M5 | 12/10 |
-| M6 | 13/10 |
-| M7 | 14–15/10 |
+| M3 | 11–12/10 |
+| M4 | 12–13/10 |
+| M5 | 12–13/10 |
+| M6 | 12–13/10 |
+| M7 | 13–15/10 |
+
+Lịch trên được Coordinator chốt trong DOC-T01 để đồng bộ kế hoạch Trello; đây là
+planning targets, không phải bằng chứng triển khai hoặc nghiệm thu. M5/M6 có thể
+chuẩn bị từ **10/10**, nhưng ngày bắt đầu mini-sprint chính thức trên Trello là
+**12/10**. Lịch coordination trước DOC-T01: M3 10/10, M4 11/10, M5 12/10,
+M6 13/10, M7 14–15/10; giữ lại làm lịch sử, không dùng để giao việc hiện hành.
 
 Feature freeze mục tiêu: **13/10/2026**. Chuẩn bị tuyển người dùng, evaluation,
 deployment và submission được làm song song theo Task Contract, không được dùng để
@@ -46,7 +53,17 @@ deployment và submission được làm song song theo Task Contract, không đ�
 
 ## Core Chain, Parallel Prep & Historical Baseline Timeline
 
-Core dependency chain: **M1 → M2 → M3 → M4 → M5 → M6 → M7**.
+Baseline dependency chain lịch sử: **M1 → M2 → M3 → M4 → M5 → M6 → M7**.
+Lịch hiện hành có các khoảng ngày chồng lấn; không yêu cầu chờ tuần tự mới chuẩn bị,
+nhưng cũng không tự bỏ acceptance dependencies hoặc cấp quyền triển khai.
+
+- M3 lập kế hoạch từ M2 conditional theo carryover; implementation cần Task Contract riêng.
+- M4 Set A chỉ chạy sau M3 theo gate; author/gold/hash và bảo vệ sealed Set B vẫn
+  giữ nguyên yêu cầu độc lập. Final Set B chỉ chạy trên frozen revision trong M7.
+- M5/M6 được chuẩn bị song song theo Task Contract; study/deployment proof phải
+  ghi revision, môi trường và dependencies đã đáp ứng, không suy ra gate PASS từ lịch.
+- M7 cần evidence các milestone liên quan, freeze và final evaluation theo gate;
+  ngày bắt đầu 13/10 không tự chứng nhận các milestone trước đã hoàn tất.
 
 Parallel prep có thể bắt đầu theo scope được giao:
 
@@ -54,6 +71,11 @@ Parallel prep có thể bắt đầu theo scope được giao:
 - P2: Author/gold/hash evaluation sets.
 - P3: Live deployment readiness.
 - P4: Defense notes/build log.
+
+Từ 10/10 có thể chuẩn bị M5 tuyển/lên lịch nhân sự, consent và session protocol;
+M6 chuẩn bị runbook, Docker/deployment và kế hoạch fresh-clone/replay/Verify theo
+Task Contract. Ngày prep không thay ngày bắt đầu Trello 12/10 hoặc cho phép chạy
+study/evaluation/LIVE khi chưa đủ dependency và authorization.
 
 Parallel prep không được giả định sprint trước PASS, tune core bằng future
 evaluation results, hoặc implement future core logic trước dependency.
@@ -132,7 +154,9 @@ Sprint Gate Review phải gồm tối thiểu:
 - Evidence summary.
 - Kết luận PASS / FAIL.
 
-Chỉ PASS mới được chuyển sang mini-sprint tiếp theo.
+Chuyển milestone khi Gate PASS, hoặc khi Coordinator ghi rõ conditional
+disposition cùng authorization/carryover theo Mục H. Ngoại lệ này không biến M2
+conditional thành PASS và không thay thế Task Contract triển khai.
 
 ### C. Gate FAIL behavior
 
@@ -351,13 +375,32 @@ adaptation hay không; không tạo threshold giả chỉ để có adaptation.
 ### Objective
 
 Đảm bảo AI không hành động vượt quyền và human có thể kiểm soát.
+Human Control theo hướng test-first: xác định regression/E2E acceptance trước
+thay đổi triển khai được duyệt. Automatic feedback-driven escalation-threshold
+adaptation (tự động điều chỉnh ngưỡng chuyển tiếp từ phản hồi vận hành) là mục tiêu
+yêu cầu Sprint 2, chưa phải tính năng đã triển khai hoặc nghiệm thu.
 
 ### Entry
 
 **`M3_AUTHORIZED_WITH_CARRYOVER`.** Baseline gate yêu cầu M2 PASS được giữ làm mục
-tiêu chất lượng; Coordinator đã cho phép M3 tiếp tục từ M2 conditional với các
-carryover trong `STATUS.md`. Authorization không tự cho phép LIVE/API và không nới
-hard P01, OUT_OF_POLICY hoặc suspicious-input safety behavior.
+tiêu chất lượng; Coordinator đã cho phép lập kế hoạch M3 từ M2 conditional với các
+carryover trong `STATUS.md`. Implementation Human Control và adaptation vẫn cần
+Task Contract cùng Coordinator phê duyệt riêng. Authorization không tự cho phép
+LIVE/API và không nới hard-stop safety rules.
+
+### Adaptation feasibility — GO / STOP trước triển khai
+
+Feasibility phải xác định biến soft có ý nghĩa trên đường quyết định thực, feedback
+labels phù hợp, tác động lên routing và cách validation; không tạo confidence/score
+giả hoặc coi thay thời gian chờ gửi là thay ngưỡng escalation.
+
+- **GO:** evidence khả thi đủ để Coordinator xem xét thuật toán và Task Contract
+  implementation riêng; GO không tự cấp quyền triển khai hoặc chứng nhận M3 PASS.
+- **STOP:** ghi rõ lý do/giới hạn, báo Coordinator quyết định hướng tiếp theo;
+  không tự triển khai, hạ gate hoặc miễn nghĩa vụ automatic adaptation.
+
+Human-approved policy revision chỉ có thể bổ sung, không tự tương đương automatic
+feedback-driven adaptation. DOC-T01 không chọn thuật toán hoặc đổi technical contract.
 
 ### Exit Gate
 
@@ -375,6 +418,8 @@ Adaptation chỉ áp dụng với suitable soft decision variables; không nới
 authority rule, hard OUT_OF_POLICY rule hoặc suspicious-input safety behavior.
 Adaptation phải versioned, bounded, auditable, reversible; final evaluation dùng
 frozen adaptation state.
+Feasibility GO, code tồn tại hoặc synthetic demonstration không thay thế evidence
+đạt gate và Coordinator acceptance; chưa đủ evidence phải ghi chưa hoàn tất.
 
 Cuối M3 phải có live/study environment available. Tách dev DB, study DB và
 demo/judge DB, kèm reset/seed procedure.
@@ -488,7 +533,8 @@ Sau freeze không tuning dựa trên held-out.
 
 ## Scope Compression / Cut Policy
 
-Mandatory scope-compression checkpoint: tối 08/10.
+Historical mandatory scope-compression checkpoint: tối 08/10. Giữ mốc baseline
+này làm lịch sử; không dùng như deadline hiện hành hoặc tự suy ra đã hoàn thành.
 
 **DO NOT CUT:** live reliability; unseen-input robustness; independent evaluation;
 missed/over-escalation metrics; minimal compliant adaptation; >=3 real users;
