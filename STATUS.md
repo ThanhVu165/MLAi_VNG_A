@@ -13,9 +13,14 @@ Last coordination update: **10/10/2026** (Asia/Saigon).
 
 **M3 — Human Control + Feedback Adaptation: `M3_AUTHORIZED_WITH_CARRYOVER`.**
 
-Authorization cho phép thực hiện M3 theo Task Contract được Coordinator duyệt. Nó
-không đổi verdict M2 thành PASS, không xóa historical failures và không tự cấp
-quyền LIVE/API.
+Authorization cho phép lập kế hoạch M3 với M2 carryover. Implementation vẫn cần
+Task Contract và Coordinator phê duyệt riêng; adaptation cần feasibility GO/STOP
+trước khi xem xét triển khai. Quyền lập kế hoạch không đồng nghĩa đã triển khai,
+đạt gate hoặc được nghiệm thu, không đổi verdict M2 thành PASS, không xóa
+historical failures và không tự cấp quyền LIVE/API.
+
+Kế hoạch M3–M7 đã được Coordinator chốt trong DOC-T01; lịch hiện hành và ranh giới
+chuẩn bị song song M5/M6 xem [SPRINT_ROADMAP.md](docs/SPRINT_ROADMAP.md).
 
 ## Closed milestones
 

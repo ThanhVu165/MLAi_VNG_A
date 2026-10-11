@@ -57,23 +57,33 @@ chưa được exercise LIVE; nhánh identifier-specific không được nâng t
 Nguồn authoritative:
 [M2 final closeout](../reports/sprints/M2_FINAL_CLOSEOUT_AND_M1_M2_CHECKIN_20261009.md).
 M3 được Coordinator cho phép ở trạng thái **M3_AUTHORIZED_WITH_CARRYOVER**; quyền
-này không đổi verdict M2 thành PASS và không xóa các giới hạn trên.
+này cho phép lập kế hoạch, không đổi verdict M2 thành PASS và không xóa các giới
+hạn trên. Implementation vẫn cần Task Contract và Coordinator phê duyệt riêng;
+quyền lập kế hoạch không đồng nghĩa đã triển khai hoặc nghiệm thu M3.
 
 ## Roadmap M3–M7
 
-- **M3 — Human Control + Feedback Adaptation:** kiểm chứng pause/resume, approval,
-  escalation queue, cancel, correction/undo, payload binding và audit; adaptation
-  phải bounded, reversible và không nới hard safety rules.
+- **M3 — Human Control + Feedback Adaptation:** Human Control theo hướng test-first,
+  xác định regression/E2E acceptance trước thay đổi được duyệt cho pause/resume,
+  approval, escalation queue, cancel, correction/undo, payload binding và audit.
+  Adaptation cần feasibility GO/STOP trước triển khai; GO chỉ là căn cứ để
+  Coordinator xem xét thuật toán/Task Contract implementation riêng. Automatic
+  feedback-driven escalation-threshold adaptation là mục tiêu yêu cầu, chưa phải
+  tính năng hoàn thành; phải bounded, reversible và không nới hard safety rules.
 - **M4 — Evaluation:** tách DEV/REGRESSION khỏi independent Set A và sealed Set B;
   preregister metrics, không tune theo held-out results.
-- **M5 — Human Impact Study:** tối thiểu ba người dùng ngoài đội có consent, đo
-  review time/quyết định và tạo ít nhất một thay đổi sản phẩm từ feedback.
+- **M5 — Human Impact Study:** tối thiểu ba nhân sự thực tế ngoài đội đang trực tiếp
+  làm công việc phù hợp workflow nghiên cứu, có consent và identity/role evidence,
+  written feedback; đo review time/quyết định và tạo ít nhất một thay đổi sản phẩm
+  từ feedback có commit evidence.
 - **M6 — Reproducibility & Deployment:** fresh clone, Docker, migration/seed,
   replay, live URL và concurrent-session smoke.
 - **M7 — Freeze, final evaluation và submission:** khóa revision, chạy Set B một
   lần, hoàn thiện metrics, demo, slide, video, build log và defense kit.
 
-Chi tiết gate và timeline: [SPRINT_ROADMAP.md](SPRINT_ROADMAP.md).
+Nguồn kế hoạch chính, gồm gate, lịch M3–M7 và phân biệt prep từ 10/10 với ngày bắt
+đầu Trello 12/10 của M5/M6: [SPRINT_ROADMAP.md](SPRINT_ROADMAP.md). Lịch và GO/STOP
+không thay thế evidence, gate acceptance hoặc quyền LIVE/API.
 
 ## Bắt đầu làm việc
 
