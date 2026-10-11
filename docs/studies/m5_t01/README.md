@@ -39,8 +39,10 @@ trước session phải ghi cả version/hash thực tế và revision sản ph�
 Repository được xác minh **PUBLIC**. HEAD hiện hành không chứa `gold_labels.md`, bảng đáp án hoặc
 chú giải lời giải theo case ngoài nội dung email synthetic. Lịch sử PR từng có
 chú giải; xóa ở HEAD không xóa exposure trong lịch sử. Tách file trong public repo không bảo vệ Gold.
-Coordinator phải chọn kho có kiểm soát, kiểm tra cả quyền của card Trello đang
-chứa Gold, rồi cấp quyền reviewer. Không sao chép nguyên comment có đáp án lên Git.
+Coordinator đã phê duyệt review Gold tại chỗ, read-only và có giám sát trực tiếp.
+Không bàn giao Gold qua Google Drive hoặc công khai nội dung. Technical semantic review
+8/8 PASS theo báo cáo; independent reviewer sign-off và Coordinator acceptance vẫn PENDING.
+Không sao chép nguyên comment có đáp án lên Git.
 
 Participant chỉ nhận email thuộc condition hiện tại, corpus ACTIVE được đóng gói
 và script hướng dẫn trung tính trong protocol; không phát toàn bộ thư mục GitHub,
@@ -50,8 +52,11 @@ dừng phân bổ và báo Coordinator, không tự thay case hoặc giữ trong
 
 Owner đã hoàn thiện nội dung và kiểm tra tài liệu. Minh cần review độc lập rồi
 gửi PASS/CHANGE REQUEST; Coordinator quyết định acceptance/merge và điều kiện GO.
-Các blocker study gồm Gold sign-off/storage, isolation M3-T03, revision/runtime,
-consent/lịch >=3 người và retention/access. Xem checklist trong protocol.
+Gold local review đã được Coordinator phê duyệt; technical 8/8 PASS theo báo cáo,
+independent reviewer sign-off vẫn PENDING. Participant evidence storage chưa được
+Coordinator phê duyệt trước recruitment. Runtime/isolation M3-T03, revision sản phẩm,
+consent/lịch >=3 người, retention/access và các study prerequisites chưa được nghiệm thu.
+Xem checklist trong protocol.
 
 Tám case là draft mới được chuẩn bị trên Trello khi **CHƯA TÌM THẤY BẢN GỐC**;
 không gọi là tám case lịch sử hoặc N01–N08 robustness. Không mở/sử dụng Set A/Set B.
