@@ -83,6 +83,20 @@ Consent lưu riêng, không commit chữ ký/tên/contact vào Git. Role eligibi
 moderator xác nhận tối thiểu; nếu yêu cầu identity/role evidence, chỉ thu mức
 Coordinator duyệt, lưu riêng, không đưa vào public repo.
 
+
+## Correction CR-03 — xác minh vai trò và quyền cung cấp evidence cho BTC
+
+**Eligibility/role verification (trước session):** Moderator hỏi mô tả công việc ở mức nhóm vai trò (ví dụ CTSV, đào tạo, khảo thí, hành chính) và số năm kinh nghiệm theo khoảng; yêu cầu participant tự xác nhận họ đang trực tiếp xử lý email/hồ sơ hành chính sinh viên hoặc công việc tương đương. Nếu BTC yêu cầu bằng chứng chức danh, Coordinator xác định loại bằng chứng tối thiểu và phương thức kiểm chứng được chấp thuận (ví dụ email xác nhận chức vụ từ đầu mối hợp lệ hoặc minh chứng chức danh có che thông tin không cần thiết), không thu tự động. Reviewer kiểm tra tính hợp lệ của tiêu chí tương đương trước tuyển; trường hợp không đủ bằng chứng ghi NOT VERIFIED, không tính vào >=3 hợp lệ.
+
+**Tách riêng lựa chọn consent cho evidence định danh gửi BTC/giám khảo:** Tham gia study **không đồng nghĩa** cho phép gửi danh tính/chức danh hoặc phản hồi định danh. Moderator giải thích rõ recipient, mục đích, danh mục dữ liệu, phương thức truyền, thời hạn lưu và quyền rút trước khi xin lựa chọn. Chỉ dùng checkbox riêng bên dưới sau khi Coordinator điền storage plan và yêu cầu từ BTC được xác minh; không tự gửi bằng AI. Nếu không đồng ý, không chia sẻ định danh; Coordinator đánh giá liệu participant còn đủ điều kiện cho yêu cầu bằng chứng của cuộc thi mà không gây áp lực hoặc ép consent.
+
+- [ ] Tôi **đồng ý** cho nhóm cung cấp bằng chứng danh tính/chức danh tối thiểu và phản hồi viết có thể nhận dạng tôi cho **BTC/giám khảo**, đúng phạm vi và thời hạn đã được thông báo.
+- [ ] Tôi **không đồng ý** chia sẻ bằng chứng định danh với BTC/giám khảo; điều này không ảnh hưởng quyền dừng hoặc từ chối tham gia, nhưng có thể khiến dữ liệu của tôi không đáp ứng yêu cầu bằng chứng định danh của cuộc thi.
+- [ ] Tôi **đồng ý riêng** cho chia sẻ phản hồi viết đã loại định danh với BTC/giám khảo.
+- [ ] Tôi **không đồng ý** chia sẻ phản hồi viết với BTC/giám khảo.
+
+Các lựa chọn chia sẻ phải được ghi riêng với consent tham gia; không chọn sẵn. Không đưa giấy tờ, danh tính, số liên hệ, chữ ký hay phản hồi có thể định danh lên GitHub PUBLIC hoặc comment Trello công khai. Kho bằng chứng định danh phải do Coordinator chốt custodian, nơi lưu, quyền của từng reviewer/BTC, cách chuyển giao an toàn, retention và deletion trước khi thu. Nếu chưa xác minh được yêu cầu của BTC hoặc quyền truy cập kho, dừng thu/chia sẻ evidence định danh, không tự cam kết hoặc bịa evidence.
+
 ## Dừng và bảo vệ dữ liệu
 
 Dừng khi participant yêu cầu, không consent, quá mệt/khó chịu, dữ liệu thật vô
