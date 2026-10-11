@@ -31,6 +31,11 @@ ID was supplied; no ID was invented. The work is isolated from PR #40 on branch
 - Allowed the Owner to handle ordinary in-scope technical details without reporting a
   mechanical blocker; preserved stop rules for scope, safety, contract, conflict and
   data-loss risks.
+- Added the required pause for implementer agreement before moving to the next step and
+  the rule that a Codex prompt is created only when requested or permitted.
+- Documented the default single-repository/single-task-branch workflow and prohibited
+  unsolicited worktrees, clones and backup repositories.
+- Removed the duplicate Project Coordinator role entry from `docs/TEAM_WORKFLOW.md`.
 - Preserved safety rules, technical-contract authority, baseline checks, Git protections,
   LIVE/API restrictions and Coordinator acceptance/merge authority.
 
@@ -60,8 +65,10 @@ evaluation or safety change still requires the normal contract and review path.
 
 ## Handoff
 
-- Commit: `1c2d901` (`docs(workflow): align coordinator and owner process`).
-- Draft PR: will target `dev`; not created yet.
+- Commit: `ab1f49a` (`docs(workflow): clarify handoff and repository policy`), on top of
+  the earlier workflow commit `1c2d901`.
+- Draft PR: **PR #41** ([open](https://github.com/ThanhVu165/MLAi_VNG_A/pull/41)), OPEN/DRAFT, targeting
+  `dev`; this report update is included in the next commit on that PR.
 - Trello: no update requested for this cardless directive.
 - Reviewer: Coordinator review required; additional reviewer only if later scope adds
   higher-risk behavior.
