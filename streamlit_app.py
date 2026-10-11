@@ -12,7 +12,7 @@ from ui.presentation import readable_text
 
 
 def main() -> None:
-    st.set_page_config(page_title="Hỗ trợ email sinh viên", page_icon="📨", layout="wide")
+    st.set_page_config(page_title="Exodia · Trợ lý email sinh viên", page_icon="🏛️", layout="wide")
     try:
         ensure_seeded()
         start_worker()
@@ -24,17 +24,27 @@ def main() -> None:
         st.stop()
     page = st.navigation(
         [
-            st.Page("pages/1_Xu_ly_email.py", title="Email", default=True),
+            st.Page("pages/1_Xu_ly_email.py", title="Xử lý email", icon="✉️", default=True),
             st.Page(
                 "pages/2_Hang_cho_duyet.py",
                 title="Cần chuyên viên xử lý",
+                icon="👤",
                 url_path="Hang_cho_duyet",
             ),
-            st.Page("pages/3_Quan_tri_quy_dinh.py", title="Quy định", url_path="Quan_tri_quy_dinh"),
             st.Page(
-                "pages/4_Nhat_ky_kiem_toan.py", title="Lịch sử xử lý", url_path="Nhat_ky_kiem_toan"
+                "pages/3_Quan_tri_quy_dinh.py",
+                title="Quy định & căn cứ",
+                icon="📚",
+                url_path="Quan_tri_quy_dinh",
             ),
-            st.Page("pages/5_Verify.py", title="Kiểm tra hệ thống", url_path="Verify"),
+            st.Page(
+                "pages/4_Nhat_ky_kiem_toan.py",
+                title="Nhật ký kiểm toán",
+                icon="📋",
+                url_path="Nhat_ky_kiem_toan",
+            ),
+            st.Page("pages/5_Verify.py", title="Verify", icon="🛡️", url_path="Verify"),
+            st.Page("pages/6_Do_luong.py", title="Đo lường", icon="📊", url_path="Do_luong"),
         ]
     )
     paused = is_automation_paused()
@@ -54,6 +64,19 @@ def main() -> None:
                     st.error(readable_text(str(error)))
                 else:
                     st.rerun()
+    st.sidebar.markdown(
+        """
+        <div style="margin-top: 1.5rem; padding: 10px 12px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;">
+            <div style="font-size: 11.5px; font-weight: 700; color: #047857; display: flex; align-items: center; gap: 6px;">
+                <span>🟢</span> Hệ thống hoạt động
+            </div>
+            <div style="font-size: 11px; color: #64748B; margin-top: 2px;">
+                Môi trường mô phỏng an toàn
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     page.run()
 
 
