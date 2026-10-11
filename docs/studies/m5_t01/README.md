@@ -1,6 +1,6 @@
 # M5-T01 — Chuẩn bị nghiên cứu B0/B2
 
-**Owner draft v1 — READY_FOR_INDEPENDENT_REVIEW.** Independent review: **PENDING**.
+**Owner correction v1.1 — CHANGE REQUEST đang xử lý.** Independent re-review: **PENDING**.
 Đây là sản phẩm chuẩn bị; chưa chạy session, chưa tuyển/consent người thật,
 chưa nghiệm thu M5-T01 hoặc M5. Next Task Unlocked: **NONE**.
 
@@ -32,6 +32,7 @@ trước session phải ghi cả version/hash thực tế và revision sản ph�
 | [recruitment_consent.md](recruitment_consent.md) | Tuyển chọn, giới thiệu, consent và bảo vệ dữ liệu |
 | [measurement_forms.md](measurement_forms.md) | Form trống, metrics, aggregation và trace cải tiến |
 | [owner_handoff.md](owner_handoff.md) | Evidence AC1–AC6, validation và blocker |
+| [xy_equivalence_assessment.md](xy_equivalence_assessment.md) | Đánh giá X/Y theo tiêu chí độ khó, không công bố Gold |
 
 Repository được xác minh **PUBLIC**. Không có `gold_labels.md`, bảng đáp án hoặc
 lời giải theo case trong PR. Tách file trong public repo không bảo vệ Gold.
@@ -51,3 +52,7 @@ consent/lịch >=3 người và retention/access. Xem checklist trong protocol.
 
 Tám case là draft mới được chuẩn bị trên Trello khi **CHƯA TÌM THẤY BẢN GỐC**;
 không gọi là tám case lịch sử hoặc N01–N08 robustness. Không mở/sử dụng Set A/Set B.
+
+## Review correction sau PR #30
+
+X3 được làm rõ trong participant pack; protocol bổ sung rule priority; có bảng X/Y equivalence không chứa Gold và mẫu role-verification/BTC consent. Đây là bản correction từ `dev@16f584fa`, không chỉnh policy/seed. PR #30 đã merge trước verdict CHANGE REQUEST, được ghi nhận là workflow deviation cần Coordinator quyết định; không revert hay rewrite history. Không coi merge là acceptance. Gold case-level vẫn ở Trello/restricted review, cần storage/access do Coordinator chốt trước reviewer sign-off. Không thực hiện study.
