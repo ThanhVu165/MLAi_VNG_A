@@ -23,13 +23,32 @@ Streamlit/local input
   → pipeline R0–R14
   → OpenAI qua infra.llm.call_json() để trích xuất/chọn căn cứ/diễn đạt
   → mã deterministic kiểm input, evidence, policy và groundedness
-  → AUTO_REPLY/P05, ESCALATE/P01–P03 hoặc technical fail-safe/P04
+  → AUTO_REPLY/P05, ESCALATE/P01–P03, dừng do content guard/P04 hoặc technical ERROR
   → hàng chờ con người, duyệt và gửi mô phỏng
 ```
 
 Các contract và ranh giới module nằm trong [PROJECT_SPEC.md](../PROJECT_SPEC.md).
 Runtime hiện tại **chỉ hỗ trợ OpenAI**; provider khác bị từ chối và không có
 automatic fallback. LLM không tự quyết định `AUTO_REPLY` hay `ESCALATE`.
+
+### Bất biến sản phẩm và giám sát con người có chọn lọc
+
+Exodia là **Escalation Referee cho email hành chính học vụ**, không phải chatbot tự
+do và cũng không phải hệ thống bắt con người duyệt mọi email. Ca thường quy có căn
+cứ hợp lệ được xử lý tự động; ba kiểu dừng nghiệp vụ phải giữ riêng:
+`FACT_UNRESOLVED`, `OUT_OF_POLICY`, `AUTHORITY_REQUIRED`. Hệ thống phải trình bày
+căn cứ/lý do có thể kiểm tra, giữ quyết định thuộc người có thẩm quyền và cho phép
+theo dõi, can thiệp, audit; tránh cả bỏ sót ca cần chuyển người (missed escalation)
+lẫn chuyển người không cần thiết (over-escalation).
+
+Quyền kiểm soát của con người phải có hiệu lực trên hành động thật: pause/resume cần
+tác động tới worker/runtime, cancel phải chặn trước gửi, approval phải gắn đúng nội
+dung thực thi (payload) và hành động, còn override/correction phải được audit. Chuỗi
+trạng thái cần phân biệt `Draft → Approved → Sent → Correction`; correction sau gửi
+không phải undo/recall.
+Chỉ lưu Draft ID hoặc trạng thái Approved chưa chứng minh payload cuối chính là nội
+dung đã preview; nếu payload/trạng thái hiệu lực đổi, phải kiểm lại theo contract
+trước gửi. Không tuyên bố stale-approval regression đã PASS nếu chưa có E2E evidence.
 
 Các khả năng đã có trong code gồm tiếp nhận email, xử lý nền, quản lý nguồn quy
 định, citation/evidence checks, policy routing, thẻ escalation, human decision,
@@ -70,12 +89,26 @@ quyền lập kế hoạch không đồng nghĩa đã triển khai hoặc nghi�
   Coordinator xem xét thuật toán/Task Contract implementation riêng. Automatic
   feedback-driven escalation-threshold adaptation là mục tiêu yêu cầu, chưa phải
   tính năng hoàn thành; phải bounded, reversible và không nới hard safety rules.
+  [M3-T02 feasibility](../reports/sprints/M3_T02_FEASIBILITY_REPORT.md) ghi nhận
+  evidence được chọn đều có `score=1.0` trên baseline khảo sát nên thay similarity
+  threshold hiện hành chưa chứng minh được routing boundary có ý nghĩa: khuyến nghị kỹ thuật
+  là **STOP cho baseline đã khảo sát**, không phải kết luận adaptation vĩnh viễn bất
+  khả thi. Ghi log feedback có cấu trúc, correction/override, policy update được admin
+  duyệt hoặc đổi pending-send window không tự là cơ chế tự động điều chỉnh threshold.
+  Adaptation thực sự cần feedback gắn signal/threshold version, tác động routing được
+  chứng minh, giữ hard-stop, cùng validation MER/OER, audit và rollback; report này
+  không tạo GO, implementation PASS hay M3 PASS.
 - **M4 — Evaluation:** tách DEV/REGRESSION khỏi independent Set A và sealed Set B;
   preregister metrics, không tune theo held-out results.
 - **M5 — Human Impact Study:** tối thiểu ba nhân sự thực tế ngoài đội đang trực tiếp
   làm công việc phù hợp workflow nghiên cứu, có consent và identity/role evidence,
   written feedback; đo review time/quyết định và tạo ít nhất một thay đổi sản phẩm
-  từ feedback có commit evidence.
+  từ feedback có commit evidence. Ngoài thời gian, protocol được duyệt có thể xem
+  correctness, missed/unnecessary escalation, override/correction, mức độ tin cậy phù
+  hợp (appropriate reliance) hoặc chấp nhận khi AI sai (accept-on-wrong), workload/chi
+  phí review và trở ngại thực tế. Đây là
+  các chiều đánh giá, không tự trở thành metric bắt buộc; chưa có evidence rằng
+  real-user study đã hoàn thành.
 - **M6 — Reproducibility & Deployment:** fresh clone, Docker, migration/seed,
   replay, live URL và concurrent-session smoke.
 - **M7 — Freeze, final evaluation và submission:** khóa revision, chạy Set B một
@@ -105,3 +138,13 @@ không thay thế evidence, gate acceptance hoặc quyền LIVE/API.
 - Offline tests không chứng minh provider LIVE đúng; LIVE/API chỉ chạy khi có ủy
   quyền cụ thể của Project Coordinator.
 - Corpus hiện nhỏ; chưa có bằng chứng scale cho kho hàng nghìn văn bản hoặc tải lớn.
+- Policy evidence/citation có thể kiểm tra khác với lời giải thích (explanation) do AI sinh; lời giải
+  thích trôi chảy, human approval hoặc reviewer agreement không tự chứng minh
+  correctness. Không hiển thị confidence/accuracy/error rate như số đã đo nếu thiếu
+  phương pháp và dữ liệu tương ứng.
+- VNG carryover cần giữ rõ ba kiểu dừng, WAL/SQLite concurrency, Docker/reproducibility,
+  latency/token/cost theo case và over-escalation measurement. BGK/BTC còn yêu cầu
+  sản phẩm chạy được, live URL/Verify, dữ liệu mới, human control/audit, evidence người
+  dùng thật và submission artifacts; tài liệu này không tuyên bố các mục đó đã PASS.
+- Tiếp nhận/gửi email hiện được mô phỏng. Gmail draft/shared inbox chỉ là tham chiếu sản phẩm;
+  Gmail API integration thực tế cần Task Contract và safety authorization riêng.
