@@ -119,3 +119,14 @@ có căn cứ. Coordinator quyết định acceptance/merge và GO study sau đ�
 Production code/policy/schema/UI changes: **0**. Study sessions: **0**.
 LIVE LLM/API calls: **0** (GitHub/Trello metadata/document operations không phải
 provider execution). Không gửi email, không mở Set A/Set B, không merge.
+
+## Correction after independent CHANGE REQUEST — 11/10/2026
+
+Reviewer comment: https://trello.com/c/nSzHYb2a#comment-6acb507ae1bdd51c41d186e4. Đây là vòng sửa Owner, chưa có verdict review lại.
+
+- **CR-01 (P0) — PARTIAL / PENDING:** X3 sửa thành câu hỏi quy định chung K50, HK1 2026–2027, tuần 5 đúng hạn; `study_protocol.md` giải thích rule priority. Gold theo case và reviewer rationale giữ ngoài public repo; restricted store, access proof và independent verification 8/8 vẫn cần Coordinator/reviewer. Không tuyên bố Gold PASS.
+- **CR-02 (P1) — OWNER COMPLETED / PENDING REVIEW:** Thêm `xy_equivalence_assessment.md` với domain, số request, số văn bản, fact/authority/conflict, độ khó tương đối và bias của crossover n=3. Không công khai Gold mapping. Không claim hai bộ đồng khó.
+- **CR-03 (P1) — OWNER COMPLETED / PENDING REVIEW:** `recruitment_consent.md` bổ sung eligibility/role verification và separate opt-in chia sẻ danh tính/chức danh/feedback với BTC, storage/access/retention cần Coordinator điền trước tuyển. Không thu hoặc chia sẻ PII thật.
+- **CR-04 (workflow) — PENDING COORDINATOR:** PR #30 merge lúc 15:32 +07 ngày 11/10 (merge commit `72fc188525bd2164f2df47c6372d1bfd18b70109`) trước reviewer verdict lúc 16:01. Không revert/rewrite; Coordinator xác minh authorization và ghi deviation/biện pháp correction. Merge trước review không tương đương DONE.
+
+**Verified correction baseline:** `dev@16f584fa213416db30b247a431b92fffb94be075`, includes PR #30 and #31. Branch `sprint/m5-t01-review-corrections`, PR correction linked from Trello after creation. Validation: source-level comparison against current `dev`, focused doc links/PII/Gold-content audit + reviewed GitHub diff; runtime study/tests NOT RUN; LIVE LLM/API = 0. **Result: READY_FOR_REVIEW for correction docs, with CR-01 restricted Gold/storage blocker and CR-04 Coordinator decision still pending.**
