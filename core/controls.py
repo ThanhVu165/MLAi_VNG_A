@@ -22,7 +22,7 @@ from core.types import (
 )
 from infra.audit import log_event
 from corpus.api import get_chunk
-from infra.db import execute, fetch_one, get_connection, now_iso
+from infra.db import execute, fetch_one, get_connection, now_iso, transaction
 
 AUTOMATION_PAUSED_KEY = "automation_paused"
 PAUSED_VALUE = "1"
@@ -64,17 +64,19 @@ def pause_automation(actor: str, reason: str) -> None:
     _require_admin(actor)
     if not reason.strip():
         raise ValueError("Lý do tạm dừng là bắt buộc.")
-    _set_automation(PAUSED_VALUE, actor)
-    log_event(case_id=None, actor=actor, action="PAUSE_AUTOMATION", reason=reason)
+    with transaction():
+        _set_automation(PAUSED_VALUE, actor)
+        log_event(case_id=None, actor=actor, action="PAUSE_AUTOMATION", reason=reason)
 
 
 def resume_automation(actor: str) -> None:
     """Bật lại lịch gửi tự động cho các case mới."""
     _require_admin(actor)
-    _set_automation(RUNNING_VALUE, actor)
-    log_event(
-        case_id=None, actor=actor, action="RESUME_AUTOMATION", reason="Đã bật lại tự động hóa."
-    )
+    with transaction():
+        _set_automation(RUNNING_VALUE, actor)
+        log_event(
+            case_id=None, actor=actor, action="RESUME_AUTOMATION", reason="Đã bật lại tự động hóa."
+        )
 
 
 def _latest_decision(case_id: str) -> Row:

@@ -245,61 +245,62 @@ def _finalization_valid(case: Row, draft: Row) -> bool:
 
 def create_correction_email(parent_case_id: str, *, actor: str, draft: DraftReply) -> str:
     """Tạo Correction Email mới cho một case SENT, không sửa case gốc."""
-    parent = _case(parent_case_id)
-    if parent["status"] != CaseStatus.SENT:
-        raise ValueError("Correction Email chỉ được tạo từ case SENT.")
-    case_id = f"c_{_new_ulid()}"
-    created_at = now_iso()
-    body_masked = mask_pii(draft.body)
-    execute(
-        """
-        INSERT INTO cases (
-            case_id, trace_id, channel, sender, subject, body_raw, body_clean, body_masked,
-            received_at, created_at, status, corpus_version, parent_case_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            case_id,
-            str(uuid4()),
-            parent["channel"],
-            parent["sender"],
-            draft.subject,
-            draft.body,
-            body_masked,
-            body_masked,
-            created_at,
-            created_at,
-            CaseStatus.PENDING_APPROVAL,
-            parent["corpus_version"],
-            parent_case_id,
-        ),
-    )
-    execute(
-        """
-        INSERT INTO drafts (
-            draft_id, case_id, kind, subject, body, citations_json, grounded, guard_failures_json,
-            created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            str(uuid4()),
-            case_id,
-            "correction",
-            draft.subject,
-            body_masked,
-            json.dumps(draft.citations, ensure_ascii=False),
-            int(draft.grounded),
-            json.dumps(draft.guard_failures, ensure_ascii=False),
-            created_at,
-        ),
-    )
-    log_event(
-        case_id=parent_case_id,
-        actor=actor,
-        action="CORRECTION_CREATED",
-        output_ref=case_id,
-        reason="Đã tạo Correction Email liên kết với case đã gửi.",
-        corpus_version=parent["corpus_version"],
-    )
+    with transaction():
+        parent = _case(parent_case_id)
+        if parent["status"] != CaseStatus.SENT:
+            raise ValueError("Correction Email chỉ được tạo từ case SENT.")
+        case_id = f"c_{_new_ulid()}"
+        created_at = now_iso()
+        body_masked = mask_pii(draft.body)
+        execute(
+            """
+            INSERT INTO cases (
+                case_id, trace_id, channel, sender, subject, body_raw, body_clean, body_masked,
+                received_at, created_at, status, corpus_version, parent_case_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                case_id,
+                str(uuid4()),
+                parent["channel"],
+                parent["sender"],
+                draft.subject,
+                draft.body,
+                body_masked,
+                body_masked,
+                created_at,
+                created_at,
+                CaseStatus.PENDING_APPROVAL,
+                parent["corpus_version"],
+                parent_case_id,
+            ),
+        )
+        execute(
+            """
+            INSERT INTO drafts (
+                draft_id, case_id, kind, subject, body, citations_json, grounded, guard_failures_json,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(uuid4()),
+                case_id,
+                "correction",
+                draft.subject,
+                body_masked,
+                json.dumps(draft.citations, ensure_ascii=False),
+                int(draft.grounded),
+                json.dumps(draft.guard_failures, ensure_ascii=False),
+                created_at,
+            ),
+        )
+        log_event(
+            case_id=parent_case_id,
+            actor=actor,
+            action="CORRECTION_CREATED",
+            output_ref=case_id,
+            reason="Đã tạo Correction Email liên kết với case đã gửi.",
+            corpus_version=parent["corpus_version"],
+        )
     logger.info("Đã tạo Correction Email %s cho case %s.", case_id, parent_case_id)
     return case_id
