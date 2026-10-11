@@ -19,6 +19,7 @@ from ui.presentation import (
     ACTION_LABELS,
     action_badge_html,
     actor_badge_html,
+    escape_html,
     inject_app_css,
     local_time,
     page_header_html,
@@ -29,37 +30,37 @@ from ui.presentation import (
 
 
 def _build_story_summary(case: dict, events: list) -> list[str]:
-    """Tạo chuỗi tóm tắt tiến trình tự nhiên (Story of the Case) từ các sự kiện thực tế."""
+    """Tạo chuỗi tóm tắt tiến trình tự nhiên từ các sự kiện thực tế."""
     bullets: list[str] = []
     # 1. Tiếp nhận
     recv_ev = next((e for e in events if e.action == "CASE_RECEIVED"), None)
     recv_time = local_time(recv_ev.ts if recv_ev else case.get("received_at"))
-    bullets.append(f"<strong>Tiếp nhận:</strong> Email gửi từ <code>{case.get('sender', 'ẩn danh')}</code> lúc {recv_time}.")
+    bullets.append(f"<strong>Tiếp nhận:</strong> Email gửi từ <code>{escape_html(case.get('sender', 'ẩn danh'))}</code> lúc {escape_html(recv_time)}.")
 
     # 2. Đối chiếu căn cứ
     evid_ev = next((e for e in events if e.action in ("EVIDENCE_RETRIEVED", "EVIDENCE_VALIDATED")), None)
     if evid_ev:
         src_cnt = len(evid_ev.sources or [])
-        bullets.append(f"<strong>Đối chiếu căn cứ:</strong> Hệ thống đã rà soát {src_cnt} đoạn quy định có hiệu lực ({evid_ev.corpus_version or 'phiên bản chuẩn'}).")
+        bullets.append(f"<strong>Đối chiếu căn cứ:</strong> Hệ thống đã rà soát {src_cnt} đoạn quy định có hiệu lực ({escape_html(evid_ev.corpus_version or 'phiên bản chuẩn')}).")
 
     # 3. Quyết định AI ban đầu
     dec_ev = next((e for e in events if e.action == "POLICY_DECIDED"), None)
     if dec_ev:
-        rule_info = f" (theo quy tắc <code>{dec_ev.rule_id}</code>)" if dec_ev.rule_id else ""
-        bullets.append(f"<strong>Quyết định AI:</strong> Đưa ra phương án xử lý{rule_info}: {readable_text(dec_ev.reason or 'Theo quy định.')}")
+        rule_info = f" (theo quy tắc <code>{escape_html(dec_ev.rule_id)}</code>)" if dec_ev.rule_id else ""
+        bullets.append(f"<strong>Quyết định AI:</strong> Đưa ra phương án xử lý{rule_info}: {escape_html(readable_text(dec_ev.reason or 'Theo quy định.'))}")
 
     # 4. Can thiệp con người (nếu có)
     human_evs = [e for e in events if e.action in ("HUMAN_DECISION", "OVERRIDE_DECISION", "HUMAN_APPROVED_SEND", "HUMAN_REJECTED_DRAFT")]
     if human_evs:
         for he in human_evs:
             act_name = ACTION_LABELS.get(he.action, he.action)
-            bullets.append(f"<strong>Can thiệp con người ({he.actor}):</strong> {act_name} — {readable_text(he.reason or 'Đã xác nhận.')}")
+            bullets.append(f"<strong>Can thiệp con người ({escape_html(he.actor)}):</strong> {escape_html(act_name)} — {escape_html(readable_text(he.reason or 'Đã xác nhận.'))}")
     else:
         bullets.append("<strong>Can thiệp con người:</strong> Chưa có can thiệp ngoại lệ từ chuyên viên hoặc quản trị viên.")
 
     # 5. Kết quả hiện tại
     status_str = status_label(case.get("status", "UNKNOWN"))
-    bullets.append(f"<strong>Trạng thái hiện hành:</strong> <code>{status_str}</code>.")
+    bullets.append(f"<strong>Trạng thái hiện hành:</strong> <code>{escape_html(status_str)}</code>.")
     return bullets
 
 
@@ -71,7 +72,7 @@ def main() -> None:
     with header_col1:
         st.markdown(
             page_header_html(
-                "Audit & Traceability",
+                "KIỂM TOÁN & TRUY VẾT",
                 "Nhật ký kiểm toán",
                 "Theo dõi và truy vết toàn bộ hành động của AI và con người trong quá trình xử lý email.",
             ),
@@ -96,7 +97,7 @@ def main() -> None:
               - `Hệ thống (SYSTEM)`: Tác vụ tự động hóa (tiếp nhận, đối chiếu căn cứ, lập lịch gửi).
               - `Chuyên viên (HUMAN)`: Cán bộ phòng ban phê duyệt phản hồi hoặc xử lý các ca escalation.
               - `Quản trị viên (ADMIN)`: Người có thẩm quyền điều chỉnh quyết định hoặc xử lý lại ca.
-            - **Quy trình can thiệp:** Mọi thao tác điều chỉnh quyết định đều yêu cầu lý do giải trình, bước xác nhận hai lớp (Two-Step Confirmation) và lưu dấu vết vĩnh viễn.
+            - **Quy trình can thiệp:** Mọi thao tác điều chỉnh quyết định đều yêu cầu lý do giải trình, bước xác nhận hai lớp và lưu dấu vết vĩnh viễn.
             """
         )
 
@@ -282,12 +283,12 @@ def main() -> None:
             card_html = (
                 f'<div style="background: {bg_color}; border: 1.5px solid {border_color}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;">'
                 f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">'
-                f'<span style="font-family: monospace; font-size: 11.5px; font-weight: 700; color: #1E40AF;">{c["case_id"]}</span>'
+                f'<span style="font-family: monospace; font-size: 11.5px; font-weight: 700; color: #1E40AF;">{escape_html(c["case_id"])}</span>'
                 f'<div style="display: flex; gap: 4px;">{status_badge_html(c["status"])} {human_tag}</div>'
                 f'</div>'
-                f'<div style="font-size: 13px; font-weight: 600; color: #0F172A; margin-bottom: 3px; line-height: 1.35;">{c["subject"]}</div>'
+                f'<div style="font-size: 13px; font-weight: 600; color: #0F172A; margin-bottom: 3px; line-height: 1.35;">{escape_html(c["subject"])}</div>'
                 f'<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #64748B;">'
-                f'<span>👤 {c["sender"][:22]}...</span>'
+                f'<span>👤 {escape_html(c["sender"][:22])}...</span>'
                 f'<span>{local_time(c["received_at"]).split("ngày")[0]}</span>'
                 f'</div>'
                 f'</div>'
@@ -353,12 +354,12 @@ def main() -> None:
                 f'<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">'
                 f'<div>'
                 f'<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">'
-                f'<span style="font-family: monospace; font-size: 12px; font-weight: 700; color: #2563EB; background: #EFF6FF; padding: 2px 8px; border-radius: 4px;">{case_id}</span>'
+                f'<span style="font-family: monospace; font-size: 12px; font-weight: 700; color: #2563EB; background: #EFF6FF; padding: 2px 8px; border-radius: 4px;">{escape_html(case_id)}</span>'
                 f'{status_badge_html(selected_case["status"])} {human_tag_header}'
                 f'</div>'
-                f'<h2 style="margin: 4px 0 2px 0; font-size: 1.25rem; font-weight: 700; color: #0F172A;">{selected_case["subject"]}</h2>'
+                f'<h2 style="margin: 4px 0 2px 0; font-size: 1.25rem; font-weight: 700; color: #0F172A;">{escape_html(selected_case["subject"])}</h2>'
                 f'<div style="font-size: 13px; color: #64748B;">'
-                f'👤 Người gửi: <strong style="color: #1E293B;">{selected_case["sender"]}</strong> · 📅 Nhận lúc: {local_time(selected_case["received_at"])}'
+                f'👤 Người gửi: <strong style="color: #1E293B;">{escape_html(selected_case["sender"])}</strong> · 📅 Nhận lúc: {escape_html(local_time(selected_case["received_at"]))}'
                 f'</div>'
                 f'</div>'
                 f'</div>'
@@ -376,8 +377,8 @@ def main() -> None:
                 else:
                     st.link_button("🧪 Chạy kiểm thử Verify", "/Verify", use_container_width=True)
 
-            # B. Story of the Case (Tiến trình tóm tắt tự nhiên)
-            st.markdown('<div class="ex-card-title" style="margin-top: 14px;">📖 Tiến trình xử lý (Story of the Case)</div>', unsafe_allow_html=True)
+            # B. Tiến trình tóm tắt tự nhiên
+            st.markdown('<div class="ex-card-title" style="margin-top: 14px;">📖 Tiến trình xử lý của ca</div>', unsafe_allow_html=True)
             story_bullets = _build_story_summary(selected_case, events)
             story_html = "".join(f"<div style='margin-bottom: 6px; font-size: 13.5px; color: #1E293B; line-height: 1.5;'>• {bullet}</div>" for bullet in story_bullets)
             st.markdown(
@@ -398,11 +399,11 @@ def main() -> None:
 
                     detail_lines: list[str] = []
                     if ev.reason:
-                        detail_lines.append(f"<div style='margin-bottom: 3px;'><strong>Lý do / Giải trình:</strong> {readable_text(ev.reason)}</div>")
+                        detail_lines.append(f"<div style='margin-bottom: 3px;'><strong>Lý do / Giải trình:</strong> {escape_html(readable_text(ev.reason))}</div>")
                     if ev.rule_id:
-                        detail_lines.append(f"<div style='margin-bottom: 3px;'><strong>Mã quy tắc áp dụng:</strong> <span style='font-family: monospace; font-weight: 600; color: #047857;'>{ev.rule_id}</span></div>")
+                        detail_lines.append(f"<div style='margin-bottom: 3px;'><strong>Mã quy tắc áp dụng:</strong> <span style='font-family: monospace; font-weight: 600; color: #047857;'>{escape_html(ev.rule_id)}</span></div>")
                     if ev.sources:
-                        detail_lines.append(f"<div style='font-size: 12px; color: #64748B;'><strong>Căn cứ:</strong> {', '.join(ev.sources)}</div>")
+                        detail_lines.append(f"<div style='font-size: 12px; color: #64748B;'><strong>Căn cứ:</strong> {escape_html(', '.join(ev.sources))}</div>")
 
                     body_content = "".join(detail_lines) if detail_lines else "<div style='color: #64748B;'>Đã hoàn tất bước xử lý tiêu chuẩn.</div>"
 
@@ -454,15 +455,15 @@ def main() -> None:
                 for ck in chunks_to_display:
                     st.markdown(
                         f'<div class="ex-evidence-box">'
-                        f'<div class="ex-evidence-breadcrumb">📌 {ck["breadcrumb"]} · <span style="font-family: monospace; font-size: 11px;">{ck["chunk_id"]}</span></div>'
-                        f'<div class="ex-evidence-text">{ck["text"]}</div>'
+                        f'<div class="ex-evidence-breadcrumb">📌 {escape_html(ck["breadcrumb"])} · <span style="font-family: monospace; font-size: 11px;">{escape_html(ck["chunk_id"])}</span></div>'
+                        f'<div class="ex-evidence-text">{escape_html(ck["text"])}</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
 
-            # E. Can thiệp của Người quản trị (Admin Intervention với Two-Step Confirm)
+            # E. Can thiệp của người quản trị với xác nhận hai bước
             st.markdown("<hr style='margin: 22px 0 16px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
-            st.markdown('<div class="ex-card-title">🛡️ Quyền can thiệp của người quản trị (Admin Intervention)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="ex-card-title">🛡️ Quyền can thiệp của người quản trị</div>', unsafe_allow_html=True)
 
             with st.container():
                 st.markdown(

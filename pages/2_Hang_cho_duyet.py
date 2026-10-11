@@ -24,6 +24,7 @@ from ui.presentation import (
     badge_html,
     decision_badge_html,
     empty_state_card_html,
+    escape_html,
     inject_app_css,
     local_time,
     page_header_html,
@@ -354,17 +355,17 @@ def _render_card(case: QueueCase) -> None:
     st.markdown(
         f"""
         <div class="ex-card">
-            <div class="ex-card-title">Hồ sơ xem xét · Case ID: <code>{case.case_id[:16]}</code></div>
-            <h2 style="margin: 0 0 10px 0; font-size: 1.25rem; font-weight: 700; color: #0F172A;">{case.subject}</h2>
+            <div class="ex-card-title">Hồ sơ xem xét · Mã ca: <code>{escape_html(case.case_id[:16])}</code></div>
+            <h2 style="margin: 0 0 10px 0; font-size: 1.25rem; font-weight: 700; color: #0F172A;">{escape_html(case.subject)}</h2>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
                 {decision_badge_html('ESCALATE')}
                 {status_badge_html(case.status)}
                 {stop_reason_badge_html(case.escalation_type)}
             </div>
             <div style="font-size: 12.5px; color: #64748B; display: flex; gap: 20px; flex-wrap: wrap; border-top: 1px solid #F1F5F9; padding-top: 10px;">
-                <span><strong>Sinh viên:</strong> {case.sender}</span>
+                <span><strong>Sinh viên:</strong> {escape_html(case.sender)}</span>
                 <span><strong>Thời điểm tiếp nhận:</strong> {local_time(case.queued_at)}</span>
-                <span><strong>Phiên bản quy định:</strong> <code>{case.corpus_version}</code></span>
+                <span><strong>Phiên bản quy định:</strong> <code>{escape_html(case.corpus_version)}</code></span>
             </div>
         </div>
         """,
@@ -382,7 +383,7 @@ def _render_card(case: QueueCase) -> None:
             </div>
             <p class="ex-stop-desc">{stop_desc}</p>
             <div style="margin-top: 8px; font-size: 13px; color: #92400E;">
-                <strong>Tóm tắt nhận định:</strong> {readable_text(case.summary)}
+                <strong>Tóm tắt nhận định:</strong> {escape_html(readable_text(case.summary))}
             </div>
         </div>
         """,
@@ -413,8 +414,8 @@ def _render_card(case: QueueCase) -> None:
                 st.markdown(
                     f"""
                     <div class="ex-evidence-box">
-                        <div class="ex-evidence-breadcrumb">{breadcrumb}</div>
-                        <div class="ex-evidence-text">{excerpt}</div>
+                        <div class="ex-evidence-breadcrumb">{escape_html(breadcrumb)}</div>
+                        <div class="ex-evidence-text">{escape_html(excerpt)}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -427,7 +428,7 @@ def _render_card(case: QueueCase) -> None:
         f"""
         <div style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 6px; padding: 12px 16px; margin: 12px 0 16px 0;">
             <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">❓ Câu hỏi cần chuyên viên kết luận</div>
-            <div style="font-size: 14px; font-weight: 600; color: #0F172A;">{case.question}</div>
+            <div style="font-size: 14px; font-weight: 600; color: #0F172A;">{escape_html(case.question)}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -456,9 +457,9 @@ def _render_decision_form(case: QueueCase, record: Row) -> None:
             f"""
             <div class="ex-card" style="border-left: 4px solid #7C3AED;">
                 <div class="ex-card-title">Đã ghi nhận quyết định của chuyên viên</div>
-                <div style="font-size: 14px; font-weight: 600; color: #4C1D95; margin-bottom: 6px;">Quyết định: {previous['choice']}</div>
-                <div style="font-size: 13px; color: #334155; margin-bottom: 8px;"><strong>Lý do:</strong> {previous['reason']}</div>
-                <div style="font-size: 12px; color: #64748B;">Thời gian xem xét: {previous['review_seconds'] or 0:.1f} giây · Người duyệt: <code>{previous['actor']}</code></div>
+                <div style="font-size: 14px; font-weight: 600; color: #4C1D95; margin-bottom: 6px;">Quyết định: {escape_html(previous['choice'])}</div>
+                <div style="font-size: 13px; color: #334155; margin-bottom: 8px;"><strong>Lý do:</strong> {escape_html(previous['reason'])}</div>
+                <div style="font-size: 12px; color: #64748B;">Thời gian xem xét: {previous['review_seconds'] or 0:.1f} giây · Người duyệt: <code>{escape_html(previous['actor'])}</code></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -512,7 +513,7 @@ def _render_decision_form(case: QueueCase, record: Row) -> None:
         """,
         unsafe_allow_html=True,
     )
-    with st.expander("Chi tiết kỹ thuật & kiểm toán (Audit trace)", expanded=False):
+    with st.expander("Chi tiết kỹ thuật & dấu vết kiểm toán", expanded=False):
         st.caption("Chuyển trạng thái: HUMAN_DECIDED · Người thao tác: HUMAN:local · Sự kiện kiểm toán: HUMAN_DECISION · Xếp lịch tác tử nền")
 
     can_submit = choice is not None and bool(reason.strip())
@@ -551,15 +552,15 @@ def _render_preview(preview: PreviewDraft) -> None:
     st.markdown(
         f"""
         <div class="ex-card">
-            <div class="ex-card-title">Kiểm tra phản hồi trước khi gửi · Draft ID: <code>{preview.draft_id[:16]}</code></div>
-            <h2 style="margin: 0 0 10px 0; font-size: 1.25rem; font-weight: 700; color: #0F172A;">{preview.subject}</h2>
+            <div class="ex-card-title">Kiểm tra phản hồi trước khi gửi · Mã bản nháp: <code>{escape_html(preview.draft_id[:16])}</code></div>
+            <h2 style="margin: 0 0 10px 0; font-size: 1.25rem; font-weight: 700; color: #0F172A;">{escape_html(preview.subject)}</h2>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
                 {status_badge_html('PENDING_APPROVAL')}
                 {badge_html('Căn cứ hợp lệ (Grounding OK)', 'auto') if preview.grounded else badge_html('Cần kiểm tra căn cứ', 'danger')}
-                <span style="font-size: 12px; color: #64748B;">Quy chế: <code>{preview.corpus_version}</code></span>
+                <span style="font-size: 12px; color: #64748B;">Quy chế: <code>{escape_html(preview.corpus_version)}</code></span>
             </div>
             <div style="font-size: 12.5px; color: #64748B; border-top: 1px solid #F1F5F9; padding-top: 8px;">
-                <strong>Người nhận:</strong> {preview.recipient}
+                <strong>Người nhận:</strong> {escape_html(preview.recipient)}
             </div>
         </div>
         """,
@@ -608,7 +609,7 @@ def _render_preview(preview: PreviewDraft) -> None:
         """,
         unsafe_allow_html=True,
     )
-    with st.expander("Chi tiết kỹ thuật & kiểm toán (Audit trace)", expanded=False):
+    with st.expander("Chi tiết kỹ thuật & dấu vết kiểm toán", expanded=False):
         st.caption("Trạng thái chuyển tiếp: SENT (nếu duyệt) hoặc AWAITING_HUMAN (nếu trả lại) · Sự kiện kiểm toán: HUMAN_APPROVED_SEND / HUMAN_REJECTED_DRAFT")
 
     confirm_key = f"confirm_pending_{preview.draft_id}"
@@ -684,7 +685,7 @@ def main() -> None:
     inject_app_css()
     st.markdown(
         page_header_html(
-            "Human Review Workspace",
+            "Không gian duyệt của chuyên viên",
             "Cần chuyên viên xử lý",
             "Trung tâm kiểm soát con người — Xem xét và xử lý các email vượt thẩm quyền, ngoài quy chế hoặc cần phê duyệt.",
         ),

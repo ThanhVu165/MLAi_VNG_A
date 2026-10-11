@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from html import escape
 
 from infra.db import to_local
 
@@ -139,6 +140,11 @@ def readable_text(text: str) -> str:
         text = re.sub(rf"\b{technical}\b", label, text, flags=re.IGNORECASE)
     text = re.sub(r"\b(?:R\d+[ab]?(?:_[a-z]+)?|P0[1-5]|TECHNICAL_ERROR)\b[:：]?", "", text)
     return re.sub(r"\b(?:cv_|c_)[A-Za-z0-9_-]+\b", "(đã lưu trong lịch sử)", text)
+
+
+def escape_html(value: object) -> str:
+    """Escape dữ liệu động trước khi chèn vào khối HTML tin cậy của giao diện."""
+    return escape(str(value), quote=True)
 
 
 def reply_text(body: str, citations: list[str]) -> str:
@@ -524,7 +530,7 @@ def inject_app_css() -> None:
 def badge_html(text: str, tone: str = "neutral") -> str:
     """Tạo mã HTML cho badge trạng thái."""
     tone_class = f"ex-badge-{tone}"
-    return f'<span class="ex-badge {tone_class}">{text}</span>'
+    return f'<span class="ex-badge {tone_class}">{escape_html(text)}</span>'
 
 
 def decision_badge_html(decision: str) -> str:
@@ -616,13 +622,13 @@ def kpi_card_html(
         "purple": "#6D28D9",
     }.get(tone, "#0F172A")
 
-    icon_html = f'<span style="font-size: 16px; margin-right: 4px;">{icon}</span>' if icon else ""
-    sub_html = f'<div class="ex-kpi-sub" style="margin-top: 4px; font-size: 12px; color: #64748B;">{subtext}</div>' if subtext else ""
+    icon_html = f'<span style="font-size: 16px; margin-right: 4px;">{escape_html(icon)}</span>' if icon else ""
+    sub_html = f'<div class="ex-kpi-sub" style="margin-top: 4px; font-size: 12px; color: #64748B;">{escape_html(subtext)}</div>' if subtext else ""
 
     return (
         f'<div class="ex-kpi-card" style="border: 1px solid {border_color}; border-radius: 8px; padding: 14px 16px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">'
-        f'<div class="ex-kpi-label" style="font-size: 13px; font-weight: 600; color: #64748B; display: flex; align-items: center; gap: 6px;">{icon_html}{label}</div>'
-        f'<div class="ex-kpi-val" style="color: {val_color}; font-size: 24px; font-weight: 700; margin: 4px 0 2px 0; line-height: 1.2;">{value}</div>'
+        f'<div class="ex-kpi-label" style="font-size: 13px; font-weight: 600; color: #64748B; display: flex; align-items: center; gap: 6px;">{icon_html}{escape_html(label)}</div>'
+        f'<div class="ex-kpi-val" style="color: {val_color}; font-size: 24px; font-weight: 700; margin: 4px 0 2px 0; line-height: 1.2;">{escape_html(value)}</div>'
         f'{sub_html}'
         f'</div>'
     )
@@ -632,9 +638,9 @@ def page_header_html(kicker: str, title: str, description: str) -> str:
     """Tạo tiêu đề trang thống nhất cho toàn bộ hệ thống Exodia."""
     return (
         f'<div style="margin-bottom: 1rem;">'
-        f'<div style="font-size: 11.5px; font-weight: 700; color: #2563EB; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">{kicker}</div>'
-        f'<h1 style="margin: 2px 0 4px 0; font-size: 1.85rem; font-weight: 700; color: #0F172A; line-height: 1.25;">{title}</h1>'
-        f'<p style="margin: 0; color: #64748B; font-size: 14px; line-height: 1.5;">{description}</p>'
+        f'<div style="font-size: 11.5px; font-weight: 700; color: #2563EB; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">{escape_html(kicker)}</div>'
+        f'<h1 style="margin: 2px 0 4px 0; font-size: 1.85rem; font-weight: 700; color: #0F172A; line-height: 1.25;">{escape_html(title)}</h1>'
+        f'<p style="margin: 0; color: #64748B; font-size: 14px; line-height: 1.5;">{escape_html(description)}</p>'
         f'</div>'
     )
 
@@ -643,8 +649,8 @@ def empty_state_card_html(icon: str, title: str, description: str) -> str:
     """Tạo thẻ trạng thái dữ liệu trống chuẩn Light Enterprise SaaS."""
     return (
         f'<div class="ex-card" style="text-align: center; padding: 36px 20px; background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 8px;">'
-        f'<div style="font-size: 32px; margin-bottom: 8px;">{icon}</div>'
-        f'<h3 style="margin: 0 0 6px 0; color: #0F172A; font-size: 16px; font-weight: 700;">{title}</h3>'
-        f'<p style="margin: 0; color: #64748B; font-size: 13.5px; line-height: 1.45; max-width: 500px; margin-left: auto; margin-right: auto;">{description}</p>'
+        f'<div style="font-size: 32px; margin-bottom: 8px;">{escape_html(icon)}</div>'
+        f'<h3 style="margin: 0 0 6px 0; color: #0F172A; font-size: 16px; font-weight: 700;">{escape_html(title)}</h3>'
+        f'<p style="margin: 0; color: #64748B; font-size: 13.5px; line-height: 1.45; max-width: 500px; margin-left: auto; margin-right: auto;">{escape_html(description)}</p>'
         f'</div>'
     )

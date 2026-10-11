@@ -13,6 +13,7 @@ from core.types import Decision, EscalationType
 from ui.presentation import (
     decision_badge_html,
     decision_label,
+    escape_html,
     inject_app_css,
     page_header_html,
     pass_fail_badge_html,
@@ -52,7 +53,7 @@ def _get_deterministic_fixtures(fixture_type: str) -> tuple[tuple[VerifyResult, 
     # Default all PASS fixture (4 ca sơ khảo)
     items = (
         VerifyResult("V01", "Quy trình và thang điểm rèn luyện", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1200, "09:00:00 ngày 21/09/2026", "cv_seed_001", "ref_v01", "P05"),
-        VerifyResult("V02", "Course withdrawal deadline", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1400, "09:01:00 ngày 21/09/2026", "cv_seed_001", "ref_v02", "P05"),
+        VerifyResult("V02", "Hạn rút học phần", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1400, "09:01:00 ngày 21/09/2026", "cv_seed_001", "ref_v02", "P05"),
         VerifyResult("V03", "Xin nộp phúc khảo muộn vì nhập viện", "Trường hợp nộp phúc khảo ngoài thời hạn do nhập viện, anh/chị có đồng ý tiếp nhận không?", Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, "P01", True, 1600, "09:02:00 ngày 21/09/2026", "cv_seed_001", "ref_v03", "P01"),
         VerifyResult("V04", "Đăng ký ký túc xá", "Vấn đề đăng ký ký túc xá không thuộc phạm vi xử lý đào tạo, anh/chị có chuyển đơn vị quản lý KTX không?", Decision.ESCALATE, EscalationType.OUT_OF_POLICY, Decision.ESCALATE, EscalationType.OUT_OF_POLICY, "P02", True, 1500, "09:03:00 ngày 21/09/2026", "cv_seed_001", "ref_v04", "P02"),
     )
@@ -65,8 +66,8 @@ def main() -> None:
     # 1. Header
     st.markdown(
         page_header_html(
-            "AUTOMATED VERIFICATION & BENCHMARK",
-            "Verify",
+            "KIỂM THỬ TỰ ĐỘNG & ĐỐI CHIẾU",
+            "Kiểm thử",
             "Chạy bộ kiểm thử các tình huống mẫu để kiểm tra hành vi AI theo quy định, ranh giới và quy trình kiểm soát.",
         ),
         unsafe_allow_html=True,
@@ -79,7 +80,7 @@ def main() -> None:
             - **ESCALATE:** Hệ thống phát hiện vượt thẩm quyền (`AUTHORITY_REQUIRED`), ngoài quy định (`OUT_OF_POLICY`), hoặc thiếu dữ kiện (`FACT_UNRESOLVED`) và dừng lại để chuyên viên xử lý.
             - **PASS:** Hành vi thực tế khớp hoàn toàn với mong đợi (về quyết định, loại chuyển tiếp và quy tắc áp dụng).
             - **FAIL:** Hành vi thực tế không khớp với mong đợi, cần kiểm tra lại quy định hoặc logic xử lý.
-            - **Audit Trail:** Toàn bộ quá trình chạy kiểm thử được ghi nhận đầy đủ trong Nhật ký kiểm toán như email thật.
+            - **Nhật ký kiểm toán:** Toàn bộ quá trình chạy kiểm thử được ghi nhận đầy đủ như email thật.
             """
         )
 
@@ -133,12 +134,19 @@ def main() -> None:
 
     # 4. Determine Active Data (Real vs Deterministic Fixture)
     fixture_param = st.query_params.get("fixture")
-    if fixture_param in {"all_pass", "with_fail"}:
+    is_synthetic = fixture_param in {"all_pass", "with_fail"}
+    if is_synthetic:
         results, elapsed, active_set = _get_deterministic_fixtures(fixture_param)
     elif "verification_result" in st.session_state:
         results, elapsed, active_set = st.session_state["verification_result"]
     else:
         results, elapsed, active_set = None, 0.0, case_set
+
+    if is_synthetic:
+        st.warning(
+            "DỮ LIỆU MÔ PHỎNG — Kết quả này chỉ dùng để kiểm tra giao diện, "
+            "không phải bằng chứng chạy pipeline hay kết quả nghiệm thu."
+        )
 
     # 5. Empty State (Chưa chạy)
     if results is None:
@@ -259,6 +267,7 @@ def main() -> None:
             json.dumps(
                 {
                     "set": active_set,
+                    "synthetic": is_synthetic,
                     "elapsed_seconds": elapsed,
                     "total": total,
                     "passed": pass_count,
@@ -268,7 +277,7 @@ def main() -> None:
                 ensure_ascii=False,
                 indent=2,
             ),
-            file_name=f"verify_{active_set}_results.json",
+            file_name=f"verify_{active_set}_{'synthetic_' if is_synthetic else ''}results.json",
             mime="application/json",
             use_container_width=True,
         )
@@ -293,8 +302,8 @@ def main() -> None:
         rows_html.append(
             f'<tr style="border-bottom: 1px solid #E2E8F0; background: {row_bg};">'
             f'<td style="padding: 10px 14px; color: #64748B;">{idx}</td>'
-            f'<td style="padding: 10px 14px; font-weight: 600; font-family: monospace; color: #0F172A;">{r.case_id}</td>'
-            f'<td style="padding: 10px 14px; color: #1E293B;">{r.subject}</td>'
+            f'<td style="padding: 10px 14px; font-weight: 600; font-family: monospace; color: #0F172A;">{escape_html(r.case_id)}</td>'
+            f'<td style="padding: 10px 14px; color: #1E293B;">{escape_html(r.subject)}</td>'
             f'<td style="padding: 10px 14px;">{decision_badge_html(r.expected_decision.value)}</td>'
             f'<td style="padding: 10px 14px;">{decision_badge_html(r.actual_decision.value)}</td>'
             f'<td style="padding: 10px 14px;">{pass_fail_badge_html(r.passed)}</td>'
@@ -308,7 +317,7 @@ def main() -> None:
         '<thead>'
         '<tr style="background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #475569; font-weight: 600;">'
         '<th style="padding: 11px 14px; width: 40px;">#</th>'
-        '<th style="padding: 11px 14px; width: 140px;">Mã test case</th>'
+        '<th style="padding: 11px 14px; width: 140px;">Mã ca kiểm thử</th>'
         '<th style="padding: 11px 14px;">Tình huống</th>'
         '<th style="padding: 11px 14px; width: 190px;">Quyết định kỳ vọng</th>'
         '<th style="padding: 11px 14px; width: 190px;">Kết quả thực tế</th>'
@@ -322,9 +331,9 @@ def main() -> None:
     )
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # 10. Selected Case Inspector (Expected vs Actual)
+    # 10. Đối chiếu ca đã chọn
     st.markdown("<hr style='margin: 20px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
-    st.markdown('<div class="ex-card-title">🔍 Đối chiếu chi tiết Expected vs Actual</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ex-card-title">🔍 Đối chiếu chi tiết kỳ vọng và thực tế</div>', unsafe_allow_html=True)
 
     case_ids = [r.case_id for r in filtered_results]
     if not case_ids:
@@ -357,14 +366,14 @@ def main() -> None:
     )
     selected_result = next((r for r in filtered_results if r.case_id == selected_id), filtered_results[0])
 
-    # Card so sánh Expected vs Actual
+    # Thẻ so sánh kỳ vọng và thực tế
     with st.container():
         st.markdown(
             f"""
             <div class="ex-card" style="border-top: 3px solid {'#10B981' if selected_result.passed else '#EF4444'};">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <div>
-                        <span style="font-weight: 700; font-size: 1.05rem; color: #0F172A;">{selected_result.case_id}: {selected_result.subject}</span>
+                        <span style="font-weight: 700; font-size: 1.05rem; color: #0F172A;">{escape_html(selected_result.case_id)}: {escape_html(selected_result.subject)}</span>
                     </div>
                     <div>
                         {pass_fail_badge_html(selected_result.passed)}
@@ -380,7 +389,7 @@ def main() -> None:
         st.markdown(
             f"""
             <div class="ex-card" style="background: #F8FAFC;">
-                <div class="ex-card-title" style="color: #2563EB;">🎯 Kỳ vọng (Expected)</div>
+                <div class="ex-card-title" style="color: #2563EB;">🎯 Kỳ vọng</div>
                 <div style="margin-bottom: 8px;">
                     <span style="font-size: 13px; color: #64748B;">Quyết định:</span><br/>
                     {decision_badge_html(selected_result.expected_decision.value)}
@@ -391,7 +400,7 @@ def main() -> None:
                 </div>
                 <div>
                     <span style="font-size: 13px; color: #64748B;">Mã quy tắc kỳ vọng:</span>
-                    <code>{selected_result.expected_rule_id or 'Không ràng buộc'}</code>
+                    <code>{escape_html(selected_result.expected_rule_id or 'Không ràng buộc')}</code>
                 </div>
             </div>
             """,
@@ -402,7 +411,7 @@ def main() -> None:
         st.markdown(
             f"""
             <div class="ex-card" style="background: #F8FAFC;">
-                <div class="ex-card-title" style="color: #475569;">⚙️ Thực tế (Actual)</div>
+                <div class="ex-card-title" style="color: #475569;">⚙️ Thực tế</div>
                 <div style="margin-bottom: 8px;">
                     <span style="font-size: 13px; color: #64748B;">Quyết định:</span><br/>
                     {decision_badge_html(selected_result.actual_decision.value)}
@@ -413,7 +422,7 @@ def main() -> None:
                 </div>
                 <div style="margin-bottom: 8px;">
                     <span style="font-size: 13px; color: #64748B;">Mã quy tắc áp dụng:</span>
-                    <code>{selected_result.rule_id}</code>
+                    <code>{escape_html(selected_result.rule_id)}</code>
                 </div>
                 <div>
                     <span style="font-size: 13px; color: #64748B;">Thời gian thực thi:</span>
@@ -438,14 +447,14 @@ def main() -> None:
         st.markdown(
             f"""
             <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: #92400E;">
-                ❓ <strong>Câu hỏi tham vấn chuyên viên:</strong> {selected_result.question}
+                ❓ <strong>Câu hỏi tham vấn chuyên viên:</strong> {escape_html(selected_result.question)}
             </div>
             """,
             unsafe_allow_html=True,
         )
 
     st.link_button(
-        f"🔍 Xem nhật ký kiểm toán (Audit Trail) của ca {selected_result.case_id} →",
+        f"🔍 Xem nhật ký kiểm toán của ca {selected_result.case_id} →",
         f"/Nhat_ky_kiem_toan?case_id={quote(selected_result.case_ref)}",
         use_container_width=True,
     )

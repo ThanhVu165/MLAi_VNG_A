@@ -22,6 +22,7 @@ from infra.db import fetch_all, fetch_one, seconds_until
 from infra.settings import PENDING_STATUS_REFRESH_SECONDS
 from ui.presentation import (
     decision_badge_html,
+    escape_html,
     inject_app_css,
     local_time,
     page_header_html,
@@ -312,7 +313,7 @@ def render_saved_case(case_id: str) -> None:
             f'</div>'
             f'</div>'
             f'<div style="margin-top: 10px; font-size: 13px; color: #78350F; background: #FFFDF5; border: 1px solid #FDE68A; padding: 8px 12px; border-radius: 6px;">'
-            f'<strong>Lý do dừng:</strong> {readable_text(result.decision.reason)}'
+            f'<strong>Lý do dừng:</strong> {escape_html(readable_text(result.decision.reason))}'
             f'</div>'
             f'</div>'
         )
@@ -328,7 +329,7 @@ def render_saved_case(case_id: str) -> None:
             if draft:
                 st.markdown(
                     f'<div style="font-size: 13.5px; font-weight: 600; color: #0F172A; margin-bottom: 6px;">'
-                    f'<strong>Tiêu đề:</strong> {draft.subject}'
+                    f'<strong>Tiêu đề:</strong> {escape_html(draft.subject)}'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -378,7 +379,7 @@ def render_saved_case(case_id: str) -> None:
             if result.card:
                 st.markdown(
                     f'<div style="font-size: 13.5px; font-weight: 600; color: #1E293B; margin-bottom: 6px;">'
-                    f'<strong>Vấn đề cần quyết định:</strong> {result.card.question}'
+                    f'<strong>Vấn đề cần quyết định:</strong> {escape_html(result.card.question)}'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -413,8 +414,8 @@ def render_saved_case(case_id: str) -> None:
                     has_citations = True
                     st.markdown(
                         f'<div class="ex-evidence-box">'
-                        f'<div class="ex-evidence-breadcrumb">📌 [{index}] {chunk.breadcrumb} · <span style="font-family: monospace; font-size: 11px;">{chunk.chunk_id}</span></div>'
-                        f'<div class="ex-evidence-text">"{chunk.text}"</div>'
+                        f'<div class="ex-evidence-breadcrumb">📌 [{index}] {escape_html(chunk.breadcrumb)} · <span style="font-family: monospace; font-size: 11px;">{escape_html(chunk.chunk_id)}</span></div>'
+                        f'<div class="ex-evidence-text">"{escape_html(chunk.text)}"</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
@@ -423,8 +424,8 @@ def render_saved_case(case_id: str) -> None:
             for breadcrumb, text in result.card.basis:
                 st.markdown(
                     f'<div class="ex-evidence-box">'
-                    f'<div class="ex-evidence-breadcrumb">📌 {breadcrumb}</div>'
-                    f'<div class="ex-evidence-text">"{text}"</div>'
+                    f'<div class="ex-evidence-breadcrumb">📌 {escape_html(breadcrumb)}</div>'
+                    f'<div class="ex-evidence-text">"{escape_html(text)}"</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
