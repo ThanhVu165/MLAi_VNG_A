@@ -1,6 +1,6 @@
 # M5-T01 — Chuẩn bị nghiên cứu B0/B2
 
-**Owner draft v1 — READY_FOR_INDEPENDENT_REVIEW.** Independent review: **PENDING**.
+**Owner correction v1.2 — CHANGE REQUEST đang xử lý.** Independent re-review: **PENDING**.
 Đây là sản phẩm chuẩn bị; chưa chạy session, chưa tuyển/consent người thật,
 chưa nghiệm thu M5-T01 hoặc M5. Next Task Unlocked: **NONE**.
 
@@ -16,7 +16,8 @@ theo thiết kế crossover trên cùng corpus và thước đo. Chỉ dùng syn
   [workflow](../../TEAM_WORKFLOW.md), [M5 Exit Gate](../../SPRINT_ROADMAP.md),
   [milestone status](../../../STATUS.md), [AGENT](../../../AGENT.md).
 
-Baseline đã fetch ngày 11/10/2026: `origin/dev@282c73b7dbf4ac7bf027d5710cce6ed673ab80d1`.
+Baseline correction xác minh lại ngày 11/10/2026: `origin/dev@16f584fa213416db30b247a431b92fffb94be075`.
+Baseline chuẩn bị lịch sử: `282c73b7dbf4ac7bf027d5710cce6ed673ab80d1`.
 Phiên bản tài liệu là Git commit chứa thư mục này. Corpus là đúng byte của sáu
 JSON tại [data/seed_docs](../../../data/seed_docs/) trong baseline; manifest SHA-256
 nằm trong [handoff](owner_handoff.md). Đây chưa phải corpus_version của Study DB;
@@ -32,9 +33,12 @@ trước session phải ghi cả version/hash thực tế và revision sản ph�
 | [recruitment_consent.md](recruitment_consent.md) | Tuyển chọn, giới thiệu, consent và bảo vệ dữ liệu |
 | [measurement_forms.md](measurement_forms.md) | Form trống, metrics, aggregation và trace cải tiến |
 | [owner_handoff.md](owner_handoff.md) | Evidence AC1–AC6, validation và blocker |
+| [xy_equivalence_assessment.md](xy_equivalence_assessment.md) | Đánh giá X/Y theo tiêu chí độ khó, không công bố Gold |
+| [validation_report.md](validation_report.md) | Validation offline và lệnh tái lập cho reviewer |
 
-Repository được xác minh **PUBLIC**. Không có `gold_labels.md`, bảng đáp án hoặc
-lời giải theo case trong PR. Tách file trong public repo không bảo vệ Gold.
+Repository được xác minh **PUBLIC**. HEAD hiện hành không chứa `gold_labels.md`, bảng đáp án hoặc
+chú giải lời giải theo case ngoài nội dung email synthetic. Lịch sử PR từng có
+chú giải; xóa ở HEAD không xóa exposure trong lịch sử. Tách file trong public repo không bảo vệ Gold.
 Coordinator phải chọn kho có kiểm soát, kiểm tra cả quyền của card Trello đang
 chứa Gold, rồi cấp quyền reviewer. Không sao chép nguyên comment có đáp án lên Git.
 
@@ -51,3 +55,15 @@ consent/lịch >=3 người và retention/access. Xem checklist trong protocol.
 
 Tám case là draft mới được chuẩn bị trên Trello khi **CHƯA TÌM THẤY BẢN GỐC**;
 không gọi là tám case lịch sử hoặc N01–N08 robustness. Không mở/sử dụng Set A/Set B.
+
+## Review correction sau PR #30
+
+Correction docs-only trên PR #32, baseline `dev@16f584fa`; không chỉnh policy/seed.
+Chú giải lời giải, locator và độ khó theo case đã đưa ra khỏi tài liệu public.
+Public equivalence chỉ giữ cấu trúc, phương pháp và giới hạn; assessment chi tiết
+đi cùng Gold matrix cục bộ ngoài Git, không upload. Coordinator đã cho phép local
+supervised read-only review và hủy phương án Drive cho Gold. Technical review được
+báo cáo 8/8 PASS; independent reviewer sign-off và Coordinator acceptance vẫn
+PENDING. Consent tách các lựa chọn chia sẻ và có checklist role verification/storage.
+Coordinator đã ghi nhận workflow deviation của PR #30; không coi merge là
+acceptance, không revert/rewrite. Không thực hiện study hoặc công bố Gold.

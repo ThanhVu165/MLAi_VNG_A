@@ -5,8 +5,8 @@ Chỉ Coordinator/người được giao liên hệ sau khi duyệt kế hoạch
 
 ## Tiêu chí và kế hoạch
 
-Tối thiểu 3 người ngoài team, >=18 tuổi, đang hoặc gần đây thực sự xử lý email/
-hồ sơ sinh viên hoặc hành chính tương đương; đọc quy định tiếng Việt và có kinh
+Tối thiểu 3 người ngoài team, >=18 tuổi, đang trực tiếp xử lý email/
+hồ sơ sinh viên hoặc workflow hành chính tương ứng; đọc quy định tiếng Việt và có kinh
 nghiệm chuyển chuyên viên. Không yêu cầu kỹ năng kỹ thuật. Ưu tiên đa dạng vai trò
 và kinh nghiệm; chỉ lưu role band/experience band cần thiết.
 
@@ -82,6 +82,72 @@ Không tick sẵn. Nếu không đồng ý tham gia hoặc chưa hiểu thì kh�
 Consent lưu riêng, không commit chữ ký/tên/contact vào Git. Role eligibility do
 moderator xác nhận tối thiểu; nếu yêu cầu identity/role evidence, chỉ thu mức
 Coordinator duyệt, lưu riêng, không đưa vào public repo.
+
+
+## Correction CR-03 — xác minh vai trò và quyền cung cấp evidence cho BTC
+
+**Eligibility/role verification (trước session):** Moderator hỏi mô tả công việc ở mức nhóm vai trò (ví dụ CTSV, đào tạo, khảo thí, hành chính) và số năm kinh nghiệm theo khoảng; yêu cầu participant tự xác nhận họ đang trực tiếp xử lý email/hồ sơ hành chính sinh viên hoặc công việc tương đương. M5 Exit Gate yêu cầu identity/role evidence; trước khi thu, Coordinator xác minh yêu cầu BTC và xác định loại bằng chứng tối thiểu và phương thức kiểm chứng được chấp thuận (ví dụ email xác nhận chức vụ từ đầu mối hợp lệ hoặc minh chứng chức danh có che thông tin không cần thiết), không thu tự động. Reviewer kiểm tra tính hợp lệ của tiêu chí tương đương trước tuyển; trường hợp không đủ bằng chứng ghi NOT VERIFIED, không tính vào >=3 hợp lệ.
+
+**Tách riêng lựa chọn consent cho evidence định danh gửi BTC/giám khảo:** Tham gia study **không đồng nghĩa** cho phép gửi danh tính/chức danh hoặc phản hồi định danh. Moderator giải thích rõ recipient, mục đích, danh mục dữ liệu, phương thức truyền, thời hạn lưu và quyền rút trước khi xin lựa chọn. Chỉ dùng checkbox riêng bên dưới sau khi Coordinator điền storage plan và yêu cầu từ BTC được xác minh; không tự gửi bằng AI. Nếu không đồng ý, không chia sẻ định danh; Coordinator đánh giá liệu participant còn đủ điều kiện cho yêu cầu bằng chứng của cuộc thi mà không gây áp lực hoặc ép consent.
+
+Chọn **đúng một Có/Không cho từng dòng**, không chọn sẵn. Bỏ trống hoặc chọn
+cả hai = CHƯA XÁC NHẬN; không chia sẻ mục đó trước khi làm rõ. Các dòng độc lập:
+
+| Quyền chia sẻ với BTC/giám khảo | Có | Không |
+|---|---|---|
+| Bằng chứng danh tính/chức danh tối thiểu theo danh mục đã thông báo | [ ] | [ ] |
+| Phản hồi viết có thể nhận dạng tôi theo danh mục đã thông báo | [ ] | [ ] |
+| Phản hồi viết đã loại định danh | [ ] | [ ] |
+
+Đồng ý một dòng không cấp quyền cho dòng khác hoặc công bố public. Từ chối không
+ảnh hưởng quyền rút/dừng; Coordinator kiểm tra khả năng đáp ứng evidence cuộc thi,
+không gây áp lực xin đồng ý. Opt-in trích dẫn trong consent tham gia cũng phải có
+khi dùng trích dẫn, kể cả đã đồng ý chia sẻ phản hồi với BTC. Khi hai lựa chọn
+khác nhau, dùng phạm vi hẹp hơn và làm rõ với participant trước khi chia sẻ.
+
+### Role verification log — mẫu chỉ lưu trong kho hạn chế
+
+| Trường cần ghi trước session | Giá trị |
+|---|---|
+| Participant code / verifier / verification date | ____ |
+| Vai trò và nhiệm vụ thực sự đang xử lý (mô tả tối thiểu) | ____ |
+| Phương thức, loại bằng chứng đã được Coordinator duyệt / evidence ref riêng | ____ |
+| Trạng thái VERIFIED / NOT VERIFIED và lý do | ____ |
+| Cần exception về kinh nghiệm tương đương/gần đây? Reviewer + Coordinator decision | ____ |
+| Exposure screening / consent version / quyền chia sẻ từng mục | ____ |
+
+Tự khai vai trò chưa thay thế evidence identity/role. Không tự tính kinh nghiệm
+quá khứ hoặc workflow khác vào >=3 hợp lệ; exception phải được reviewer đánh giá,
+Coordinator chấp thuận và đối chiếu yêu cầu BTC trước tuyển. NOT VERIFIED chưa
+được tính. Không xác nhận đã có người tham gia từ mẫu trống.
+
+### Bổ sung storage plan trước thu thập
+
+| Trường phải được Coordinator phê duyệt | Giá trị chưa xác nhận |
+|---|---|
+| Yêu cầu BTC và recipient/danh mục dữ liệu tối thiểu đã xác minh | ____ |
+| Identity/role evidence store, tách consent/contact và results | ____ |
+| Custodian; Owner/reviewer/BTC nào được quyền đọc từng nhóm dữ liệu | ____ |
+| Access proof: người được cấp mở được, người không được cấp bị từ chối | ____ |
+| Cách truyền cho recipient cụ thể / ai thực hiện / consent check | ____ |
+| Ngày xóa riêng cho identity/role, consent/contact, raw results và bản sao | ____ |
+| Hạn rút/xóa trước anonymization; xử lý bản sao đã giao BTC | ____ |
+
+Gold matrix không dùng Google Drive: Coordinator đã duyệt local supervised
+read-only review, không upload hoặc chia sẻ Gold qua mạng. Quyết định này không
+chọn kho cho dữ liệu participant.
+
+Đối với participant evidence/consent, Google Drive PRIVATE với General access
+Restricted và quyền đích danh tối thiểu chỉ là phương án đề xuất, chưa được duyệt
+hoặc tạo. Identity/role evidence, consent/contact và results phải là các nhóm tách
+quyền. Raw evidence/contact/consent dự kiến xóa trong 90 ngày sau
+Coordinator closure, có ngày cụ thể trước thu; retention của BTC phải xác minh
+riêng, không hứa xóa bản sao ngoài quyền kiểm soát. Đây là đề xuất, chưa phải kho
+đã tạo hoặc retention đã được duyệt. Không điền đủ thì dừng recruitment/thu thập.
+
+Không đưa giấy tờ, danh tính, contact, chữ ký hoặc phản hồi định danh vào GitHub
+PUBLIC/Trello. AI không tạo kho, gửi invitation hoặc chuyển evidence ở task này.
+Không ghi âm/ghi hình; không thu hồ sơ thật phục vụ tác vụ synthetic.
 
 ## Dừng và bảo vệ dữ liệu
 

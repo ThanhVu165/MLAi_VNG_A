@@ -4,13 +4,13 @@
 Repository PUBLIC theo `gh repo view ThanhVu165/MLAi_VNG_A --json visibility,isPrivate`
 ngày 11/10/2026; do đó không tạo/commit `gold_labels.md` hoặc đáp án đầy đủ.
 
-## Phương án Coordinator cần quyết định
+## Quyết định truy cập hiện hành
 
-Đề xuất lưu bảng Gold trong thư mục Drive hoặc repository PRIVATE chỉ có Owner,
-Minh và Coordinator. Chưa tạo kho hoặc xác nhận access control. Trước khi copy từ
-Trello, Coordinator xác minh quyền card/board hiện tại, tắt public-link access ở
-kho đích, kiểm thử tài khoản không được phép và ghi log quyền. Không xem Trello
-là restricted khi chưa có bằng chứng. Không đưa URL chia sẻ có token vào public Git.
+Coordinator đã hủy phương án bàn giao Gold qua Google Drive và cho phép review
+tại chỗ trong môi trường local được duyệt. Chỉ phiên Codex hỗ trợ independent
+reviewer, dưới sự giám sát trực tiếp của reviewer, được đọc Gold ở chế độ
+read-only. Không upload, di chuyển hoặc chia sẻ Gold qua mạng; không công khai
+vị trí private, Gold labels, rationale hoặc source locator theo case.
 
 Coordinator ghi trong kho riêng: storage ID/location, custodian, access list,
 version, hash, ngày khóa, retention/deletion date và reviewer verdict.
@@ -18,8 +18,9 @@ Không lưu Gold trong participant pack, UI, Study export cho participant hay PR
 
 ## Quy trình độc lập
 
-1. Owner chuyển nguyên Gold Owner-side đã chốt trong FINAL OWNER SELF-REVIEW trên
-   card vào bảng riêng; bảo toàn tám email hiện hành, gồm X4 có K49. Không thay
+1. Owner chuẩn bị Gold matrix dự thảo cho tám email tại correction HEAD, lưu
+   cục bộ ngoài repository. Đối chiếu Owner-side lịch sử, không mặc định đã chốt
+   hoặc đã ký; mọi khác biệt phiên bản phải có rationale/reviewer verdict. Không thay
    Gold theo output AI hoặc để đáp án được sinh từ kết quả chạy hệ thống.
 2. Minh đọc [spec](../../../PROJECT_SPEC.md) §5.3–5.5,
    [policy](../../../policies/policy.yaml) và cả sáu văn bản seed ở baseline.
@@ -47,4 +48,22 @@ Một dòng mỗi case; restricted reviewer material. Bảng balance có route/r
 case và phân tích độ khó có lời giải cũng lưu riêng, không đưa vào participant pack.
 Chỉ khi Gold được xác nhận mới hậu kiểm metrics; nếu chưa xác nhận, ghi UNKNOWN,
 không tính nhãn pending thành sai/đúng. Việc tạo tài liệu quy trình này không đồng
-nghĩa kho Gold đã được lập hoặc quyền reviewer đã được cấp.
+nghĩa independent reviewer đã ký hoặc Coordinator đã nghiệm thu Gold.
+
+## Correction workflow CR-01
+
+Bản dự thảo 8 case có email/corpus hash, rationale, rule priority và locator;
+không upload, commit hoặc đăng nội dung matrix vào PR/Trello. Technical semantic
+review được báo cáo **8/8 PASS** trong phiên local được duyệt. Independent reviewer
+sign-off và Coordinator acceptance vẫn **PENDING**; kết quả Codex báo cáo không
+thay chữ ký reviewer.
+
+Trạng thái lịch sử **PENDING COORDINATOR DECISION** về kênh truy cập đã được giải
+quyết bằng quyết định local supervised review; cụm này không còn là blocker.
+
+Checklist review local: xác nhận đúng reviewer, giám sát trực tiếp, môi trường
+được duyệt và read-only; không mở rộng quyền sang thư mục khác. Xác minh
+reviewer được phép đọc được artifact và phiên không mở rộng sang người hoặc thư
+mục khác; lưu access proof không chứa Gold trong handoff phù hợp. Không tự tạo kho,
+gửi invitation hoặc chia sẻ artifact. Nếu chưa kiểm chứng được bất kỳ mục nào,
+giữ matrix cục bộ và không chia sẻ.

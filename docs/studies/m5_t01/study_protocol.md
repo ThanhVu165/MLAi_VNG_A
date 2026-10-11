@@ -14,12 +14,12 @@ Within-participant crossover: mỗi người xử lý 4 email B0 và 4 email kh�
 Không ai thấy cùng email ở cả hai điều kiện. Giữ chia X/Y của Trello, thứ tự trong
 bộ là 1→4; cùng chính sách thứ tự cho cả hai condition. Mỗi bộ có 4 email,
 7 request, 3 case đa ý định. X gồm conduct 2 / grade 1 / withdrawal 1;
-Y gồm grade 2 / conduct 1 / withdrawal 1. Owner đã kiểm phân bố route/rule trên
-Trello; bảng Gold và cân bằng nhãn lưu riêng theo [Gold review](gold_review.md).
+Y gồm grade 2 / conduct 1 / withdrawal 1. Đối chiếu route/rule và rationale
+chờ reviewer qua kho được phê duyệt theo [Gold review](gold_review.md).
 
 Độ khó chỉ là nhận định Owner, chưa có reviewer/pilot xác nhận. Số email/request
 cân bằng không chứng minh độ khó bằng nhau; lượng đọc và khó tra cứu vẫn có thể
-khác. Giữ X4 mới có K49. Reviewer phải đánh giá lại tương đương sau kiểm soát
+khác. Reviewer phải đánh giá lại tương đương sau kiểm soát
 ACTIVE-only, nhất là ảnh hưởng bỏ yêu cầu lọc nguồn cũ ở B0. Báo set/condition và
 sequence để thấy imbalance; không tạo điểm độ khó hoặc kết quả participant giả.
 
@@ -37,6 +37,17 @@ sequence còn thiếu. Không đổi allocation vì thấy kết quả. Không t
 hoàn hảo n=3; phải báo sequence/condition order imbalance và giới hạn học tập.
 Nghỉ 5 phút giữa điều kiện; dự kiến mỗi session 45–60 phút, không ép case timeout
 để tạo kết quả đẹp. Nếu phải dừng vì lịch, ghi incomplete và lý do.
+
+
+## Correction và đánh giá tương đương
+
+Participant pack hiện hành là [cases_xy.md](cases_xy.md) tại revision được duyệt;
+comment Trello trước đó chỉ là lịch sử. Reviewer đối chiếu phiên bản email,
+policy và corpus trong Gold matrix riêng; không phát chú giải theo case cho
+participant. [Đánh giá X/Y](xy_equivalence_assessment.md) phân biệt kiểm tra cấu
+trúc với equivalence chưa được xác nhận. Giữ nguyên bốn sequence và allocation;
+báo kết quả theo set × condition × sequence, kể cả khi không chứng minh được
+hai bộ tương đương. Không thay Gold để cân bằng bộ hoặc khớp output B2.
 
 ## Corpus và công bằng quyền truy cập
 
