@@ -48,3 +48,7 @@ case và phân tích độ khó có lời giải cũng lưu riêng, không đưa
 Chỉ khi Gold được xác nhận mới hậu kiểm metrics; nếu chưa xác nhận, ghi UNKNOWN,
 không tính nhãn pending thành sai/đúng. Việc tạo tài liệu quy trình này không đồng
 nghĩa kho Gold đã được lập hoặc quyền reviewer đã được cấp.
+
+## Correction workflow CR-01
+
+Owner đã sửa wording X3 trong `cases_xy.md` để nói rõ học kỳ, khóa và câu hỏi quy định chung, không xin duyệt hoàn tiền cá nhân. Independent reviewer phải đối chiếu ưu tiên P01 (authority) trước P02 (nguồn mâu thuẫn) trước P03 (thiếu fact) trong `policies/policy.yaml`; không được mặc định xung đột nguồn luôn thắng yêu cầu phê duyệt. Bảng Gold 8 case và rationale/locator chỉ được bàn giao qua kho restricted được Coordinator duyệt; mapping/đáp án không đưa vào public Git. **Kho Gold và quyền truy cập chưa được thiết lập/xác minh; CR-01 chưa PASS.**
