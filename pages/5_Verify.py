@@ -9,7 +9,8 @@ from urllib.parse import quote
 
 import streamlit as st
 
-from core.types import Decision, EscalationType
+from core.types import Decision
+from ui.deterministic_fixtures import get_deterministic_fixtures
 from ui.presentation import (
     decision_badge_html,
     decision_label,
@@ -19,7 +20,7 @@ from ui.presentation import (
     pass_fail_badge_html,
     stop_reason_badge_html,
 )
-from verify.harness import CASE_SETS, VerifyResult, load_cases, run_cases
+from verify.harness import CASE_SETS, load_cases, run_cases
 
 
 SET_LABELS: dict[str, str] = {
@@ -28,36 +29,6 @@ SET_LABELS: dict[str, str] = {
     "full15": "Bộ kiểm thử toàn diện 15 ca (Full 15)",
     "m2_combined_dev": "Bộ 12 ca kiểm thử phát triển (M2 Combined)",
 }
-
-
-def _get_deterministic_fixtures(fixture_type: str) -> tuple[tuple[VerifyResult, ...], float, str]:
-    """Cung cấp fixture kiểm thử tất định cho visual review/mock mà không gọi LLM thật."""
-    if fixture_type == "with_fail":
-        # 12 test cases: 10 PASS, 2 FAIL (tương ứng chính xác với visual mockup)
-        items = (
-            VerifyResult("TC_AUTO_001", "Hỏi về lịch đăng ký học phần", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1200, "14:15:00 ngày 10/10/2026", "cv_01", "ref_tc_01", "P05"),
-            VerifyResult("TC_AUTO_002", "Hỏi về học phí và thời hạn đóng", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1400, "14:15:02 ngày 10/10/2026", "cv_01", "ref_tc_02", "P05"),
-            VerifyResult("TC_ESC_POLICY_001", "Yêu cầu hỗ trợ ngoài chính sách", "Trường hợp xin hỗ trợ ngoài quy chế, anh/chị có tiếp nhận hồ sơ đặc biệt không?", Decision.ESCALATE, EscalationType.OUT_OF_POLICY, Decision.ESCALATE, EscalationType.OUT_OF_POLICY, "P02", True, 1600, "14:15:04 ngày 10/10/2026", "cv_01", "ref_tc_03", "P02"),
-            VerifyResult("TC_ESC_AUTH_001", "Yêu cầu giảm học phí (cần thẩm quyền)", "Thẩm quyền miễn giảm thuộc Hội đồng, anh/chị có trình hồ sơ xét duyệt không?", Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, "P01", True, 1500, "14:15:06 ngày 10/10/2026", "cv_01", "ref_tc_04", "P01"),
-            VerifyResult("TC_ESC_INFO_001", "Thiếu mã sinh viên và thông tin lớp", "Email thiếu mã số sinh viên, anh/chị có yêu cầu cung cấp thêm thông tin không?", Decision.ESCALATE, EscalationType.FACT_UNRESOLVED, Decision.ESCALATE, EscalationType.FACT_UNRESOLVED, "P03", True, 1300, "14:15:08 ngày 10/10/2026", "cv_01", "ref_tc_05", "P03"),
-            VerifyResult("TC_INVALID_001", "Nội dung không phải email", None, Decision.INVALID_INPUT, None, Decision.INVALID_INPUT, None, "INV", True, 1100, "14:15:10 ngày 10/10/2026", "cv_01", "ref_tc_06", "INV"),
-            VerifyResult("TC_FAIL_001", "Trường hợp biên chưa đúng quy định", "Cần chuyên viên xem xét.", Decision.AUTO_REPLY, None, Decision.ESCALATE, EscalationType.OUT_OF_POLICY, "P02", False, 1500, "14:15:12 ngày 10/10/2026", "cv_01", "ref_tc_07", "P05"),
-            VerifyResult("TC_FAIL_002", "Trường hợp căn cứ chưa đầy đủ", None, Decision.ESCALATE, EscalationType.FACT_UNRESOLVED, Decision.AUTO_REPLY, None, "P05", False, 1400, "14:15:14 ngày 10/10/2026", "cv_01", "ref_tc_08", "P03"),
-            VerifyResult("TC_AUTO_003", "Hỏi thủ tục cấp bảng điểm", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1350, "14:15:16 ngày 10/10/2026", "cv_01", "ref_tc_09", "P05"),
-            VerifyResult("TC_AUTO_004", "Hỏi địa điểm nộp hồ sơ sinh viên", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1250, "14:15:18 ngày 10/10/2026", "cv_01", "ref_tc_10", "P05"),
-            VerifyResult("TC_ESC_AUTH_002", "Xin bảo lưu kết quả học tập quá hạn", "Trường hợp xin bảo lưu quá hạn, anh/chị có đề xuất xét duyệt ngoại lệ không?", Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, "P01", True, 1650, "14:15:20 ngày 10/10/2026", "cv_01", "ref_tc_11", "P01"),
-            VerifyResult("TC_AUTO_005", "Hỏi thời gian làm việc phòng CTSV", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1150, "14:15:22 ngày 10/10/2026", "cv_01", "ref_tc_12", "P05"),
-        )
-        return items, 18.2, "m2_combined_dev"
-
-    # Default all PASS fixture (4 ca sơ khảo)
-    items = (
-        VerifyResult("V01", "Quy trình và thang điểm rèn luyện", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1200, "09:00:00 ngày 21/09/2026", "cv_seed_001", "ref_v01", "P05"),
-        VerifyResult("V02", "Hạn rút học phần", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1400, "09:01:00 ngày 21/09/2026", "cv_seed_001", "ref_v02", "P05"),
-        VerifyResult("V03", "Xin nộp phúc khảo muộn vì nhập viện", "Trường hợp nộp phúc khảo ngoài thời hạn do nhập viện, anh/chị có đồng ý tiếp nhận không?", Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, "P01", True, 1600, "09:02:00 ngày 21/09/2026", "cv_seed_001", "ref_v03", "P01"),
-        VerifyResult("V04", "Đăng ký ký túc xá", "Vấn đề đăng ký ký túc xá không thuộc phạm vi xử lý đào tạo, anh/chị có chuyển đơn vị quản lý KTX không?", Decision.ESCALATE, EscalationType.OUT_OF_POLICY, Decision.ESCALATE, EscalationType.OUT_OF_POLICY, "P02", True, 1500, "09:03:00 ngày 21/09/2026", "cv_seed_001", "ref_v04", "P02"),
-    )
-    return items, 5.7, "verify4"
 
 
 def main() -> None:
@@ -136,7 +107,7 @@ def main() -> None:
     fixture_param = st.query_params.get("fixture")
     is_synthetic = fixture_param in {"all_pass", "with_fail"}
     if is_synthetic:
-        results, elapsed, active_set = _get_deterministic_fixtures(fixture_param)
+        results, elapsed, active_set = get_deterministic_fixtures(fixture_param)
     elif "verification_result" in st.session_state:
         results, elapsed, active_set = st.session_state["verification_result"]
     else:

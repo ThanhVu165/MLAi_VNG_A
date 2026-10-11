@@ -1,5 +1,10 @@
 # Giới hạn và lỗi đã biết
 
+> **Lưu ý lịch sử:** Các mục có ngày và kết quả kiểm tra bên dưới ghi lại trạng thái
+> tại checkpoint tương ứng, không tự đại diện cho `dev` hiện hành. Khi cần kết luận
+> trạng thái mới nhất, đối chiếu `PROJECT_SPEC.md`, `STATUS.md`, Task Contract trên
+> Trello và chỉ mục bằng chứng tại [`reports/README.md`](../reports/README.md).
+
 Không xóa mục cũ. Khi đã xử lý, giữ nguyên mục và thêm nhãn `[đã sửa]`.
 
 ## Hiện trạng sau đợt sửa mã 22/09/2026 — chưa nghiệm thu
