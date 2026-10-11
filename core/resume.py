@@ -16,6 +16,7 @@ from core.types import CaseStatus, DraftReply, EvidenceResult, EvidenceStatus
 from infra.audit import log_event
 from infra.db import fetch_one, get_connection, now_iso
 from infra.llm import call_json, case_call_budget
+from infra.settings import LLM_RESUME_MAX_ATTEMPTS
 
 RESUME_PROMPT_V1 = """Soạn email bằng tiếng Việt chỉ để diễn đạt quyết định của chuyên viên.
 Quyết định: {choice}
@@ -126,7 +127,7 @@ def resume_case(case_id: str, choice: str, reason: str, actor: str) -> DraftRepl
     reason = _required_string(reason, "reason")
     case, evidence = _case_and_evidence(case_id)
     evidence_text = "\n\n".join(f"[{chunk.chunk_id}] {chunk.text}" for chunk in evidence.chunks)
-    with case_call_budget():
+    with case_call_budget(LLM_RESUME_MAX_ATTEMPTS):
         result = call_json(
             RESUME_PROMPT_V1.format(
                 choice=choice,

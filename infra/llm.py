@@ -50,11 +50,13 @@ _BUDGET: ContextVar[_CallBudget | None] = ContextVar("llm_case_budget", default=
 
 
 @contextmanager
-def case_call_budget() -> Iterator[None]:
+def case_call_budget(max_attempts: int = LLM_MAX_ATTEMPTS) -> Iterator[None]:
     """Một ngân sách chung cho toàn bộ lượt xử lý, kể cả các lần thử lại."""
+    if not 0 < max_attempts <= LLM_MAX_ATTEMPTS:
+        raise ValueError("Ngân sách lượt gọi phải nằm trong giới hạn của mỗi case.")
     provider, model = _provider_config()
     token = _BUDGET.set(
-        _CallBudget(LLM_MAX_ATTEMPTS, perf_counter() + CASE_TIMEOUT_SECONDS, provider, model)
+        _CallBudget(max_attempts, perf_counter() + CASE_TIMEOUT_SECONDS, provider, model)
     )
     try:
         yield
