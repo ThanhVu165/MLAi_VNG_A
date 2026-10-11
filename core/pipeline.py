@@ -45,7 +45,7 @@ from core.types import (
 )
 from corpus.api import get_corpus_version
 from infra.audit import log_event
-from infra.db import execute, fetch_one, now_iso, to_utc_iso
+from infra.db import execute, fetch_one, now_iso, to_utc_iso, transaction
 from infra.llm import case_call_budget
 from infra.settings import LLM_PROCESSING_MAX_ATTEMPTS
 
@@ -361,14 +361,22 @@ def _finalize(
     evidence: EvidenceResult | None = None,
     draft: DraftReply | None = None,
     card: EscalationCard | None = None,
+    *,
+    actor: str = "SYSTEM",
 ) -> PipelineResult:
     _fill_skipped_steps(latencies)
     _run_step("R14", lambda: None, latencies)
-    _save_latencies(intake, latencies)
     result = _result(
         intake, status, decision, latencies, started_at, extraction, evidence, draft, card
     )
-    save_result(result)
+    # Không công bố quyền gửi trước khi snapshot đã lưu thành công.
+    with transaction():
+        _save_latencies(intake, latencies)
+        save_result(result)
+        if status is CaseStatus.PENDING_SEND:
+            from core.dispatch import schedule_auto_reply
+
+            schedule_auto_reply(intake.case_id, decision=decision, actor=actor)
     return result
 
 
@@ -606,13 +614,38 @@ def _process_case(
             _save_draft(intake, draft)
             if grounded.decision is not None:
                 decision = grounded.decision
+                if (
+                    decision.decision is not Decision.ESCALATE
+                    or decision.escalation_type is not EscalationType.FACT_UNRESOLVED
+                    or decision.rule_id != "P04"
+                ):
+                    raise ValueError("Ground Guard trả quyết định không hợp lệ.")
                 _save_decision(intake, decision)
-                raise ValueError(
-                    "Bản nháp chưa vượt qua kiểm tra căn cứ: " + ", ".join(grounded.failed_checks)
+                card = EscalationCard(
+                    inp.subject,
+                    ["Bản nháp chưa đủ căn cứ để tự động trả lời; cần chuyên viên kiểm tra."],
+                    [(chunk.chunk_id, chunk.text) for chunk in evidence.chunks],
+                    "Chuyên viên có thể xác minh nội dung trả lời từ căn cứ hiện có hay cần bổ sung thông tin?",
+                    ["Xác minh từ căn cứ hiện có", "Cần bổ sung thông tin"],
+                    EscalationType.FACT_UNRESOLVED,
+                    None,
                 )
+                with transaction():
+                    status = _queue(intake, actor, decision, card)
+                    return _finalize(
+                        intake,
+                        status,
+                        decision,
+                        latencies,
+                        started_at,
+                        extraction,
+                        evidence,
+                        draft,
+                        card,
+                        actor=actor,
+                    )
             else:
                 from core.controls import is_automation_paused
-                from core.dispatch import schedule_auto_reply
 
                 if get_corpus_version() != intake.corpus_version:
                     raise RuntimeError("Quy định đã thay đổi trong khi soạn thư. Hãy chạy lại.")
@@ -631,11 +664,7 @@ def _process_case(
                     )
                     status = CaseStatus.PENDING_APPROVAL
                 else:
-                    _run_step(
-                        "R9",
-                        lambda: schedule_auto_reply(intake.case_id, decision=decision, actor=actor),
-                        latencies,
-                    )
+                    _run_step("R9", lambda: None, latencies)
                     status = CaseStatus.PENDING_SEND
         else:
             generated_card = _run_step(
@@ -667,7 +696,16 @@ def _process_case(
         for step in ("R10", "R11", "R12", "R13"):
             _run_step(step, lambda: None, latencies)
         return _finalize(
-            intake, status, decision, latencies, started_at, extraction, evidence, draft, card
+            intake,
+            status,
+            decision,
+            latencies,
+            started_at,
+            extraction,
+            evidence,
+            draft,
+            card,
+            actor=actor,
         )
     except Exception as error:
         logger.exception(
@@ -680,26 +718,27 @@ def _process_case(
         if intake is not None:
             try:
                 card = None
-                _save_decision(intake, decision)
-                _transition(
-                    intake,
-                    status=CaseStatus.ERROR,
-                    actor=actor,
-                    action="CASE_ERROR",
-                    rule_id=decision.rule_id,
-                    reason=decision.reason,
-                )
-                return _finalize(
-                    intake,
-                    CaseStatus.ERROR,
-                    decision,
-                    latencies,
-                    started_at,
-                    extraction,
-                    evidence,
-                    draft,
-                    card,
-                )
+                with transaction():
+                    _save_decision(intake, decision)
+                    _transition(
+                        intake,
+                        status=CaseStatus.ERROR,
+                        actor=actor,
+                        action="CASE_ERROR",
+                        rule_id=decision.rule_id,
+                        reason=decision.reason,
+                    )
+                    return _finalize(
+                        intake,
+                        CaseStatus.ERROR,
+                        decision,
+                        latencies,
+                        started_at,
+                        extraction,
+                        evidence,
+                        draft,
+                        card,
+                    )
             except Exception as persistence_error:
                 logger.exception("Không thể lưu trạng thái fail-safe: %s", persistence_error)
         _fill_skipped_steps(latencies)

@@ -1647,25 +1647,22 @@ def test_pending_send_dispatches_after_deadline_and_cannot_be_rescheduled(
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
     monkeypatch.setattr("core.dispatch.get_corpus_version", lambda: "cv_test")
     monkeypatch.setattr("core.dispatch.get_chunk", lambda chunk_id: _evidence_chunk())
-    _stored_case("case-send-due")
-    db.execute(
-        "INSERT INTO drafts(draft_id, case_id, kind, grounded, citations_json) VALUES (?, ?, ?, ?, ?)",
-        ("draft-send-due", "case-send-due", "auto", 1, '["chunk-1"]'),
-    )
-    schedule_auto_reply("case-send-due", decision=_auto_decision(), actor="SYSTEM")
+    _install_routine_pipeline(monkeypatch, Domain.COURSE_WITHDRAWAL)
+    result = pipeline.process_case(_input())
+    case_id = result.case_id
 
     assert dispatch_due(
-        "case-send-due",
+        case_id,
         now=datetime.now(timezone.utc) + timedelta(seconds=PENDING_SEND_SECONDS + 1),
     )
-    row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", ("case-send-due",))
+    row = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", (case_id,))
     assert row is not None and row["status"] == CaseStatus.SENT
-    before = dict(db.fetch_one("SELECT * FROM cases WHERE case_id = ?", ("case-send-due",)))
-    events_before = events_for_case("case-send-due")
+    before = dict(db.fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,)))
+    events_before = events_for_case(case_id)
     with pytest.raises(ValueError, match="Email không còn ở trạng thái có thể lên lịch gửi"):
-        schedule_auto_reply("case-send-due", decision=_auto_decision(), actor="SYSTEM")
-    assert dict(db.fetch_one("SELECT * FROM cases WHERE case_id = ?", ("case-send-due",))) == before
-    assert events_for_case("case-send-due") == events_before
+        schedule_auto_reply(case_id, decision=_auto_decision(), actor="SYSTEM")
+    assert dict(db.fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,))) == before
+    assert events_for_case(case_id) == events_before
 
 
 def test_pending_send_can_escalate_and_sent_case_creates_linked_correction(
@@ -1920,4 +1917,6 @@ def test_no_fail_open(monkeypatch, tmp_path) -> None:
             results.append(pipeline.process_case(_input()))
 
     assert all(result.decision.decision is not Decision.AUTO_REPLY for result in results)
-    assert all(result.status is CaseStatus.ERROR for result in results[:2] + results[3:])
+    assert all(result.status is CaseStatus.ERROR for result in results[:2] + results[4:])
+    assert results[3].status is CaseStatus.AWAITING_HUMAN
+    assert results[3].decision.rule_id == "P04"
