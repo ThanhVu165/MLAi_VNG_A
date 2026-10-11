@@ -1,0 +1,2 @@
+# Preserve the frozen final-byte SHA across platform checkout settings.
+/verify/cases_m2_combined_dev.json text eol=lf
