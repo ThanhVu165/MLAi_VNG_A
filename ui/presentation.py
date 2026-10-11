@@ -145,3 +145,506 @@ def reply_text(body: str, citations: list[str]) -> str:
     for index, citation in enumerate(citations, start=1):
         body = body.replace(f"[{citation}]", f"[{index}]")
     return body
+
+
+STOP_REASON_DESCRIPTIONS = {
+    "FACT_UNRESOLVED": "Thiếu dữ kiện cần thiết để đưa ra kết luận.",
+    "OUT_OF_POLICY": "Không tìm thấy quy định đang áp dụng cho yêu cầu này.",
+    "AUTHORITY_REQUIRED": "Trường hợp này cần người có thẩm quyền quyết định.",
+}
+
+DECISION_DESCRIPTIONS = {
+    "AUTO_REPLY": "Có đủ căn cứ để tự động phản hồi.",
+    "ESCALATE": "Cần chuyên viên xem xét trước khi tiếp tục.",
+    "INVALID_INPUT": "Cần bổ sung thông tin email.",
+    "ERROR": "Chưa xử lý được do sự cố kỹ thuật.",
+}
+
+
+def stop_reason_text(reason: str) -> str:
+    return STOP_REASON_DESCRIPTIONS.get(
+        reason, TYPE_LABELS.get(reason, "Cần chuyên viên xem xét.")
+    )
+
+
+def decision_desc(decision: str) -> str:
+    return DECISION_DESCRIPTIONS.get(decision, "Chưa xác định cách xử lý.")
+
+
+def inject_app_css() -> None:
+    """Áp dụng hệ thống giao diện Light Mode Enterprise SaaS tối giản, sạch sẽ."""
+    import streamlit as st
+
+    st.markdown(
+        """
+        <style>
+        /* Light mode enterprise clean style */
+        .stApp {
+            background-color: #F8FAFC;
+            color: #0F172A;
+        }
+        /* Top padding refinement */
+        .block-container {
+            padding-top: 1.5rem !important;
+            padding-bottom: 2rem !important;
+            max-width: 1400px;
+        }
+        /* Cards */
+        .ex-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+        }
+        .ex-card-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748B;
+            margin-bottom: 8px;
+        }
+        /* Badges */
+        .ex-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            line-height: 1.4;
+            white-space: nowrap;
+        }
+        .ex-badge-auto {
+            background: #ECFDF5;
+            color: #047857;
+            border: 1px solid #A7F3D0;
+        }
+        .ex-badge-escalate {
+            background: #FFFBEB;
+            color: #B45309;
+            border: 1px solid #FDE68A;
+        }
+        .ex-badge-info {
+            background: #EFF6FF;
+            color: #1D4ED8;
+            border: 1px solid #BFDBFE;
+        }
+        .ex-badge-neutral {
+            background: #F1F5F9;
+            color: #475569;
+            border: 1px solid #CBD5E1;
+        }
+        .ex-badge-danger {
+            background: #FEF2F2;
+            color: #B91C1C;
+            border: 1px solid #FECACA;
+        }
+        .ex-badge-purple {
+            background: #F5F3FF;
+            color: #6D28D9;
+            border: 1px solid #DDD6FE;
+        }
+        /* KPI Cards */
+        .ex-kpi-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 16px 18px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+            text-align: left;
+        }
+        .ex-kpi-val {
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin: 4px 0 2px 0;
+        }
+        .ex-kpi-label {
+            font-size: 13px;
+            color: #64748B;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ex-kpi-sub {
+            font-size: 12px;
+            color: #94A3B8;
+        }
+        /* Failure banner */
+        .ex-fail-banner {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            border-left: 4px solid #EF4444;
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin: 14px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        /* Stop reason card */
+        .ex-stop-card {
+            background: #FFFBEB;
+            border: 1px solid #FDE68A;
+            border-left: 4px solid #D97706;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin-bottom: 16px;
+        }
+        .ex-stop-header {
+            font-size: 14px;
+            font-weight: 700;
+            color: #92400E;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ex-stop-desc {
+            font-size: 13.5px;
+            color: #78350F;
+            margin: 0;
+            line-height: 1.45;
+        }
+        /* Evidence item */
+        .ex-evidence-box {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-left: 3px solid #2563EB;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+        }
+        .ex-evidence-breadcrumb {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1E40AF;
+            margin-bottom: 4px;
+        }
+        .ex-evidence-text {
+            font-size: 13px;
+            color: #334155;
+            line-height: 1.5;
+        }
+        /* Action preview callout */
+        .ex-action-preview {
+            background: #F8FAFC;
+            border: 1px dashed #94A3B8;
+            border-radius: 6px;
+            padding: 14px 16px;
+            margin: 14px 0;
+        }
+        .ex-action-preview-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #475569;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+        .ex-action-preview-item {
+            font-size: 13px;
+            color: #1E293B;
+            margin: 3px 0;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+        /* Timeline styles for Audit */
+        .ex-timeline {
+            position: relative;
+            padding-left: 28px;
+            margin: 16px 0;
+        }
+        .ex-timeline::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            bottom: 10px;
+            left: 9px;
+            width: 2px;
+            background: #E2E8F0;
+        }
+        .ex-timeline-item {
+            position: relative;
+            margin-bottom: 22px;
+        }
+        .ex-timeline-item:last-child {
+            margin-bottom: 6px;
+        }
+        .ex-timeline-dot {
+            position: absolute;
+            left: -28px;
+            top: 4px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 3px solid #2563EB;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ex-timeline-dot-admin {
+            border-color: #7C3AED;
+        }
+        .ex-timeline-dot-human {
+            border-color: #D97706;
+        }
+        .ex-timeline-dot-system {
+            border-color: #2563EB;
+        }
+        .ex-timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 4px;
+        }
+        .ex-timeline-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0F172A;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ex-timeline-time {
+            font-size: 12px;
+            color: #64748B;
+            font-family: monospace;
+        }
+        .ex-timeline-body {
+            font-size: 13px;
+            color: #334155;
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+        /* Stepper for Email Processing */
+        .ex-stepper {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            position: relative;
+            margin: 18px 0 22px 0;
+            padding: 0 10px;
+        }
+        .ex-stepper::before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 40px;
+            right: 40px;
+            height: 2px;
+            background: #E2E8F0;
+            z-index: 0;
+        }
+        .ex-step {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .ex-step-num {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 2px solid #CBD5E1;
+            color: #64748B;
+            font-size: 13.5px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 6px;
+        }
+        .ex-step-active .ex-step-num {
+            border-color: #2563EB;
+            background: #2563EB;
+            color: #FFFFFF;
+            box-shadow: 0 0 0 4px #DBEAFE;
+        }
+        .ex-step-done .ex-step-num {
+            border-color: #10B981;
+            background: #10B981;
+            color: #FFFFFF;
+        }
+        .ex-step-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 2px;
+        }
+        .ex-step-desc {
+            font-size: 11px;
+            color: #64748B;
+            max-width: 140px;
+            line-height: 1.3;
+        }
+
+        /* Quick sample card */
+        .ex-sample-card {
+            background: #FFFFFF;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 12px 14px;
+            text-align: left;
+            margin-bottom: 8px;
+        }
+        .ex-sample-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0F172A;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+        .ex-sample-sub {
+            font-size: 12px;
+            color: #64748B;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def badge_html(text: str, tone: str = "neutral") -> str:
+    """Tạo mã HTML cho badge trạng thái."""
+    tone_class = f"ex-badge-{tone}"
+    return f'<span class="ex-badge {tone_class}">{text}</span>'
+
+
+def decision_badge_html(decision: str) -> str:
+    if decision == "AUTO_REPLY":
+        return badge_html("AUTO_REPLY · Tự động", "auto")
+    if decision == "ESCALATE":
+        return badge_html("ESCALATE · Cần người", "escalate")
+    if decision == "ERROR":
+        return badge_html("ERROR · Sự cố", "danger")
+    return badge_html(decision, "neutral")
+
+
+def status_badge_html(status: str) -> str:
+    label = status_label(status)
+    tone_map = {
+        "AWAITING_HUMAN": "escalate",
+        "HUMAN_DECIDED": "purple",
+        "PENDING_APPROVAL": "escalate",
+        "PENDING_SEND": "info",
+        "SENT": "auto",
+        "RESOLVED": "auto",
+        "CANCELLED": "neutral",
+        "ERROR": "danger",
+        "INVALID_INPUT": "neutral",
+    }
+    return badge_html(label, tone_map.get(status, "neutral"))
+
+
+def stop_reason_badge_html(reason: str) -> str:
+    label = TYPE_LABELS.get(reason, reason)
+    return badge_html(label, "escalate")
+
+
+def pass_fail_badge_html(passed: bool) -> str:
+    """Tạo badge PASS (xanh) hoặc FAIL (đỏ)."""
+    if passed:
+        return badge_html("✓ PASS", "auto")
+    return badge_html("✕ FAIL", "danger")
+
+
+def actor_badge_html(actor: str) -> str:
+    """Tạo badge hiển thị chủ thể thực hiện hành động."""
+    if actor == "SYSTEM":
+        return badge_html("Hệ thống", "info")
+    if actor.startswith("ADMIN:"):
+        name = actor.removeprefix("ADMIN:").strip() or "local"
+        return badge_html(f"Quản trị ({name})", "purple")
+    if actor.startswith("HUMAN:"):
+        name = actor.removeprefix("HUMAN:").strip() or "local"
+        return badge_html(f"Chuyên viên ({name})", "escalate")
+    return badge_html(actor, "neutral")
+
+
+def action_badge_html(action: str) -> str:
+    """Tạo badge hiển thị hành động nghiệp vụ."""
+    label = ACTION_LABELS.get(action, action)
+    if any(k in action for k in ("OVERRIDE", "REJECT", "CANCEL", "ERROR")):
+        return badge_html(label, "danger")
+    if any(k in action for k in ("APPROVED", "DISPATCHED", "RESOLVED")):
+        return badge_html(label, "auto")
+    if any(k in action for k in ("QUEUED", "QUESTION", "ESCALATE")):
+        return badge_html(label, "escalate")
+    return badge_html(label, "info")
+
+
+def kpi_card_html(
+    label: str,
+    value: str,
+    subtext: str = "",
+    tone: str = "neutral",
+    icon: str = "",
+) -> str:
+    """Tạo mã HTML cho thẻ KPI card chuẩn Light Enterprise SaaS."""
+    border_color = {
+        "neutral": "#E2E8F0",
+        "primary": "#BFDBFE",
+        "success": "#A7F3D0",
+        "warning": "#FDE68A",
+        "danger": "#FECACA",
+        "purple": "#DDD6FE",
+    }.get(tone, "#E2E8F0")
+
+    val_color = {
+        "neutral": "#0F172A",
+        "primary": "#1D4ED8",
+        "success": "#047857",
+        "warning": "#B45309",
+        "danger": "#B91C1C",
+        "purple": "#6D28D9",
+    }.get(tone, "#0F172A")
+
+    icon_html = f'<span style="font-size: 16px; margin-right: 4px;">{icon}</span>' if icon else ""
+    sub_html = f'<div class="ex-kpi-sub" style="margin-top: 4px; font-size: 12px; color: #64748B;">{subtext}</div>' if subtext else ""
+
+    return (
+        f'<div class="ex-kpi-card" style="border: 1px solid {border_color}; border-radius: 8px; padding: 14px 16px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">'
+        f'<div class="ex-kpi-label" style="font-size: 13px; font-weight: 600; color: #64748B; display: flex; align-items: center; gap: 6px;">{icon_html}{label}</div>'
+        f'<div class="ex-kpi-val" style="color: {val_color}; font-size: 24px; font-weight: 700; margin: 4px 0 2px 0; line-height: 1.2;">{value}</div>'
+        f'{sub_html}'
+        f'</div>'
+    )
+
+
+def page_header_html(kicker: str, title: str, description: str) -> str:
+    """Tạo tiêu đề trang thống nhất cho toàn bộ hệ thống Exodia."""
+    return (
+        f'<div style="margin-bottom: 1rem;">'
+        f'<div style="font-size: 11.5px; font-weight: 700; color: #2563EB; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">{kicker}</div>'
+        f'<h1 style="margin: 2px 0 4px 0; font-size: 1.85rem; font-weight: 700; color: #0F172A; line-height: 1.25;">{title}</h1>'
+        f'<p style="margin: 0; color: #64748B; font-size: 14px; line-height: 1.5;">{description}</p>'
+        f'</div>'
+    )
+
+
+def empty_state_card_html(icon: str, title: str, description: str) -> str:
+    """Tạo thẻ trạng thái dữ liệu trống chuẩn Light Enterprise SaaS."""
+    return (
+        f'<div class="ex-card" style="text-align: center; padding: 36px 20px; background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 8px;">'
+        f'<div style="font-size: 32px; margin-bottom: 8px;">{icon}</div>'
+        f'<h3 style="margin: 0 0 6px 0; color: #0F172A; font-size: 16px; font-weight: 700;">{title}</h3>'
+        f'<p style="margin: 0; color: #64748B; font-size: 13.5px; line-height: 1.45; max-width: 500px; margin-left: auto; margin-right: auto;">{description}</p>'
+        f'</div>'
+    )

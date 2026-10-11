@@ -475,6 +475,13 @@ def test_ui_requires_save_before_human_approval_and_sends_once(runtime) -> None:
     page.button(key=f"approve_{draft_id}").click().run()
     assert not page.exception
     assert not page.error, [item.value for item in page.error]
+    assert _loaded(result.case_id).status is CaseStatus.PENDING_APPROVAL
+    assert not db.fetch_all(
+        "SELECT event_id FROM audit_events WHERE action = 'HUMAN_APPROVED_SEND'"
+    )
+    page.button(key=f"confirm_send_{draft_id}").click().run()
+    assert not page.exception
+    assert not page.error, [item.value for item in page.error]
     assert _loaded(result.case_id).status is CaseStatus.SENT, (
         [item.value for item in page.info], page.text_area(key=f"body_{draft_id}").value,
         [(item.label, item.disabled, item.value) for item in page.button],
