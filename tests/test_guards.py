@@ -777,9 +777,8 @@ def test_generate_reply_rejects_uncited_paragraph(monkeypatch) -> None:
 
 
 @pytest.mark.parametrize("timeout_stage", ["question", "repair"])
-@pytest.mark.parametrize("attempt_limit", [4, 5])
 def test_r7_retry_and_basis_repair_share_bounded_budget(
-    monkeypatch, tmp_path, timeout_stage, attempt_limit
+    monkeypatch, tmp_path, timeout_stage
 ) -> None:
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "app.db")
     monkeypatch.setenv("LLM_PROVIDER", "openai")
@@ -787,7 +786,6 @@ def test_r7_retry_and_basis_repair_share_bounded_budget(
     monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder")
     monkeypatch.setenv("LLM_MODE", "live")
     monkeypatch.setenv("LLM_CACHE", "0")
-    monkeypatch.setattr(llm, "LLM_MAX_ATTEMPTS", attempt_limit)
     monkeypatch.setattr(llm, "perf_counter", lambda: 100.0)
     monkeypatch.setattr(llm, "sleep", lambda _: None)
     monkeypatch.setattr(llm, "_store_cache", lambda _: None)
@@ -825,14 +823,10 @@ def test_r7_retry_and_basis_repair_share_bounded_budget(
             evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
             inp=_input(),
         )
-        if attempt_limit == 4:
-            with pytest.raises(ValueError):
-                generate_escalation_card(**kwargs)
-        else:
-            card = generate_escalation_card(**kwargs)
-            assert card.basis == [("Điều 1", "Căn cứ.")]
+        with pytest.raises(ValueError):
+            generate_escalation_card(**kwargs)
         assert llm._BUDGET.get().remaining == 0
-    assert len(seen) == attempt_limit
+    assert len(seen) == llm.LLM_MAX_ATTEMPTS
     assert all(timeout <= 30 for _, timeout in seen)
 
 

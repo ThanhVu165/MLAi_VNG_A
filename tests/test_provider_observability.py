@@ -364,7 +364,7 @@ def test_deadline_block_and_effective_timeout_are_unchanged(monkeypatch, caplog)
     assert all(event["event"] == "llm_provider_attempt_skipped" for event in skipped)
     assert all(event["retryable"] is False and event["will_retry"] is False for event in skipped)
     assert all(event["stop_reason"] == "case_budget_or_deadline" for event in skipped)
-    assert llm.LLM_MAX_ATTEMPTS == 5 and llm.CASE_TIMEOUT_SECONDS == 60
+    assert llm.LLM_MAX_ATTEMPTS == 4 and llm.CASE_TIMEOUT_SECONDS == 60
 
 
 def test_without_budget_and_distinct_calls_do_not_invent_context(monkeypatch, caplog):

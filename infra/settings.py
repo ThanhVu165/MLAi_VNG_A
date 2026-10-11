@@ -65,8 +65,10 @@ PENDING_STATUS_REFRESH_SECONDS: int = _read_int(
 LLM_TIMEOUT_S: int = _read_int("LLM_TIMEOUT_S", 30, _MINIMUM_POSITIVE)
 # Số lần thử lại LLM sau lần gọi đầu tiên.
 LLM_RETRIES: int = _read_int("LLM_RETRIES", 1)
-# R2 + R4 + R7 + một transport retry + một basis repair, vẫn chung deadline.
-LLM_MAX_ATTEMPTS: int = 5
+# Tối đa bốn provider attempts cho toàn bộ vòng đời case, kể cả retry và R11.
+LLM_MAX_ATTEMPTS: int = 4
+LLM_PROCESSING_MAX_ATTEMPTS: int = 3
+LLM_RESUME_MAX_ATTEMPTS: int = 1
 CASE_TIMEOUT_SECONDS: int = 60
 # Số chunk tối đa retrieval trả về cho pipeline.
 RETRIEVAL_TOP_K: int = _read_int("RETRIEVAL_TOP_K", 6, _MINIMUM_POSITIVE)

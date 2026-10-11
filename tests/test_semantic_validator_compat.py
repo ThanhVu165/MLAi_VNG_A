@@ -252,4 +252,4 @@ def test_repair_uses_real_public_wrapper_shared_budget(monkeypatch, caplog, limi
             assert all(e["attempts_remaining_after"] == budget.remaining for e in skipped)
             assert all(e["retryable"] is False and e["will_retry"] is False for e in skipped)
         assert llm._BUDGET.get() is budget
-    assert llm.LLM_MAX_ATTEMPTS == 5 and llm.CASE_TIMEOUT_SECONDS == 60
+    assert llm.LLM_MAX_ATTEMPTS == 4 and llm.CASE_TIMEOUT_SECONDS == 60

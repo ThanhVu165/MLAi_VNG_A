@@ -47,6 +47,7 @@ from corpus.api import get_corpus_version
 from infra.audit import log_event
 from infra.db import execute, fetch_one, now_iso, to_utc_iso
 from infra.llm import case_call_budget
+from infra.settings import LLM_PROCESSING_MAX_ATTEMPTS
 
 logger = logging.getLogger(__name__)
 
@@ -432,7 +433,7 @@ def process_case(
             existing = load_result(case_id)
             if existing is not None:
                 return existing
-        with case_call_budget():
+        with case_call_budget(LLM_PROCESSING_MAX_ATTEMPTS):
             return _process_case(inp, actor=actor, case_id=case_id)
     except Exception:
         logger.exception("Không thể đọc dữ liệu email để bắt đầu xử lý.")

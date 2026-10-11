@@ -5,6 +5,7 @@ import openai
 from openai._exceptions import httpx2 as httpx
 
 from infra import llm
+from infra.settings import LLM_PROCESSING_MAX_ATTEMPTS, LLM_RESUME_MAX_ATTEMPTS
 
 
 @pytest.fixture(autouse=True)
@@ -30,6 +31,35 @@ def test_budget_counts_retries_and_never_exceeds_configured_attempts(
             result = llm._call_live("test", {}, "hash", "model", 20, 10)
             assert not result.ok
     assert len(calls) == llm.LLM_MAX_ATTEMPTS
+
+
+def test_case_lifecycle_reserves_one_attempt_for_resume(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[int] = []
+
+    def available(*args: object) -> llm.LLMResult:
+        calls.append(1)
+        return llm._success({}, "hash", "model")
+
+    monkeypatch.setattr(llm, "_request_openai", available)
+    with llm.case_call_budget(LLM_PROCESSING_MAX_ATTEMPTS):
+        for _ in range(LLM_PROCESSING_MAX_ATTEMPTS + 1):
+            processing_result = llm._call_live("test", {}, "hash", "model", 20, 0)
+    assert len(calls) == LLM_PROCESSING_MAX_ATTEMPTS
+    assert not processing_result.ok
+
+    with llm.case_call_budget(LLM_RESUME_MAX_ATTEMPTS):
+        for _ in range(LLM_RESUME_MAX_ATTEMPTS + 1):
+            resume_result = llm._call_live("test", {}, "hash", "model", 20, 0)
+
+    assert LLM_PROCESSING_MAX_ATTEMPTS + LLM_RESUME_MAX_ATTEMPTS == 4
+    assert len(calls) == llm.LLM_MAX_ATTEMPTS
+    assert not resume_result.ok
+
+    with pytest.raises(ValueError):
+        with llm.case_call_budget(llm.LLM_MAX_ATTEMPTS + 1):
+            pass
 
 
 def test_permanent_error_is_not_retried(monkeypatch: pytest.MonkeyPatch) -> None:

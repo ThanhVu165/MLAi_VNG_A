@@ -309,7 +309,7 @@ def test_shared_budget_deadline_and_retry_cap(monkeypatch, caplog):
         assert not call().ok
         assert llm._BUDGET.get().remaining == llm.LLM_MAX_ATTEMPTS - 1
     assert len(seen) == 1
-    assert llm.LLM_MAX_ATTEMPTS == 5 and llm.CASE_TIMEOUT_SECONDS == 60
+    assert llm.LLM_MAX_ATTEMPTS == 4 and llm.CASE_TIMEOUT_SECONDS == 60
 
 
 def test_model_hash_isolates_cache_and_cassettes(monkeypatch, tmp_path):
