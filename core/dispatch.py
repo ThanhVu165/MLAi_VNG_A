@@ -14,7 +14,7 @@ from core.pipeline import _new_ulid
 from core.sanitize import mask_pii
 from core.types import CaseStatus, Decision, DraftReply, PolicyDecision
 from infra.audit import log_event
-from infra.db import execute, fetch_one, get_connection, now_iso, to_utc_iso
+from infra.db import execute, fetch_one, get_connection, now_iso, to_utc_iso, transaction
 from infra.settings import PENDING_SEND_SECONDS
 
 logger = logging.getLogger(__name__)
@@ -52,8 +52,7 @@ def schedule_auto_reply(case_id: str, *, decision: PolicyDecision, actor: str) -
     if decision.decision is not Decision.AUTO_REPLY:
         raise ValueError("Chỉ AUTO_REPLY mới được lên lịch gửi.")
     deadline = to_utc_iso(_utc_now() + timedelta(seconds=PENDING_SEND_SECONDS))
-    with closing(get_connection()) as connection, connection:
-        connection.execute("BEGIN IMMEDIATE")
+    with transaction() as connection:
         changed = connection.execute(
             """
             UPDATE cases SET status = ?, send_deadline = ?
@@ -119,17 +118,21 @@ def escalate_from_pending(case_id: str, *, actor: str, reason: str) -> None:
         if row is None or row["status"] != CaseStatus.PENDING_SEND:
             raise ValueError("Trạng thái email đã thay đổi, không thể chuyển chuyên viên.")
         _store_manual_decision(
-            connection, row, Decision.ESCALATE, actor, reason,
-            rule_id="HUMAN_REVIEW_REQUESTED", action="CASE_QUEUED",
+            connection,
+            row,
+            Decision.ESCALATE,
+            actor,
+            reason,
+            rule_id="HUMAN_REVIEW_REQUESTED",
+            action="CASE_QUEUED",
         )
     logger.info("Đã chuyển case %s cho người duyệt.", case_id)
 
 
 def dispatch_due(case_id: str, *, actor: str = "SYSTEM", now: datetime | None = None) -> bool:
     """Gửi mô phỏng khi mốc DB đã hết hạn, trả ``True`` nếu đã chuyển trạng thái."""
-    with closing(get_connection()) as connection, connection:
+    with transaction() as connection:
         # Chặn sửa nguồn/tạm dừng xen giữa kiểm tra cuối và chuyển trạng thái gửi.
-        connection.execute("BEGIN IMMEDIATE")
         row = connection.execute("SELECT * FROM cases WHERE case_id = ?", (case_id,)).fetchone()
         if row is None or row["status"] != CaseStatus.PENDING_SEND:
             return False
@@ -170,6 +173,8 @@ def _send_evidence_valid(case: Row, now: datetime) -> bool:
     )
     if draft is None or not draft["grounded"] or draft["kind"] != "auto":
         return False
+    if not _finalization_valid(case, draft):
+        return False
     citations = json.loads(draft["citations_json"] or "[]")
     if not isinstance(citations, list) or not citations:
         return False
@@ -182,6 +187,60 @@ def _send_evidence_valid(case: Row, now: datetime) -> bool:
         ):
             return False
     return True
+
+
+def _finalization_valid(case: Row, draft: Row) -> bool:
+    snapshot = fetch_one(
+        "SELECT payload_json FROM case_results WHERE case_id = ?", (case["case_id"],)
+    )
+    decision = fetch_one(
+        "SELECT * FROM decisions WHERE case_id = ? ORDER BY rowid DESC LIMIT 1",
+        (case["case_id"],),
+    )
+    sanitized = fetch_one(
+        "SELECT ts FROM audit_events WHERE case_id = ? AND action = 'CASE_SANITIZED' "
+        "ORDER BY rowid DESC LIMIT 1",
+        (case["case_id"],),
+    )
+    if snapshot is None or decision is None or sanitized is None:
+        return False
+    try:
+        data = json.loads(snapshot["payload_json"])
+        started = datetime.fromisoformat(data["started_at"])
+        finished = datetime.fromisoformat(data["finished_at"])
+        expected_decision = {
+            key: decision[key]
+            for key in ("decision", "escalation_type", "rule_id", "reason", "corpus_version")
+        }
+        expected_decision["evidence_ids"] = json.loads(decision["evidence_ids_json"])
+        expected_draft = {
+            "subject": draft["subject"],
+            "body": draft["body"],
+            "citations": json.loads(draft["citations_json"]),
+            "grounded": bool(draft["grounded"]),
+            "guard_failures": json.loads(draft["guard_failures_json"]),
+        }
+        snapshot_draft = data["draft"]
+        snapshot_draft["body"] = mask_pii(snapshot_draft["body"])
+        return (
+            data["case_id"] == case["case_id"]
+            and data["trace_id"] == case["trace_id"]
+            and data["corpus_version"] == case["corpus_version"]
+            and data["status"] == CaseStatus.PENDING_SEND
+            and decision["decision"] == Decision.AUTO_REPLY
+            and decision["escalation_type"] is None
+            and decision["corpus_version"] == case["corpus_version"]
+            and not expected_draft["guard_failures"]
+            and data["decision"] == expected_decision
+            and snapshot_draft == expected_draft
+            and all(
+                started <= datetime.fromisoformat(ts.replace("Z", "+00:00")) <= finished
+                for ts in (sanitized["ts"], decision["created_at"], draft["created_at"])
+            )
+        )
+    except (ValueError, TypeError, KeyError, AttributeError):
+        logger.warning("Bằng chứng hoàn tất case %s không hợp lệ.", case["case_id"])
+        return False
 
 
 def create_correction_email(parent_case_id: str, *, actor: str, draft: DraftReply) -> str:
