@@ -32,7 +32,6 @@ baseline và thay thế cho trạng thái card.
   artifact theo scope được giao; không tự mở rộng scope, gọi LIVE/API hoặc đổi gate.
 - **Independent Reviewer:** được chỉ định theo rủi ro, đặc biệt với routing, policy,
   approval, persistence, audit, safety và evaluation; không mặc định cần hai người.
-- **Project Coordinator:** chốt scope, acceptance, gate, disposition và merge.
 
 Mỗi thành viên mặc định chỉ giữ **một task `IN PROGRESS`**. Coordinator có thể cho
 phép ngoại lệ khi dependency hoặc deadline yêu cầu.
@@ -55,7 +54,9 @@ BACKLOG → READY → IN PROGRESS → IN REVIEW → DONE
 Quy trình implementation: **phân tích nhiệm vụ → giao task/authorization → triển khai →
 self-review → validation/evidence → review theo rủi ro → Coordinator acceptance → merge
 khi được phép**. Research/review có thể kết thúc ở báo cáo chuyên đề mà không tạo code.
-Commit hoặc PR không tự làm task thành `DONE`.
+ChatGPT phải chờ người thực hiện đồng ý với phương án trước khi chuyển bước và chỉ tạo
+prompt Codex khi người thực hiện yêu cầu hoặc cho phép. Commit hoặc PR không tự làm task
+thành `DONE`.
 
 ## Task Contract tối thiểu
 
@@ -105,6 +106,8 @@ nhận những artifact và kết quả họ thực sự kiểm tra.
 
 ## Git và giới hạn an toàn
 
+- Mặc định dùng **một repository và một branch riêng cho task**. Không tự tạo worktree,
+  clone hoặc backup repository phụ.
 - Tạo branch task từ verified `dev`; PR nhắm `dev`. Không merge vào `main` trong
   workflow Sprint 2 nếu không có authorization riêng.
 - Không force-push, rewrite history, reset/restore/clean/stash làm mất thay đổi,

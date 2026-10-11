@@ -51,17 +51,19 @@ nguy cơ mất dữ liệu hoặc không thể đạt AC.
 1. ChatGPT trình bày **PHÂN TÍCH NHIỆM VỤ**: mục tiêu, scope, dependencies, phương án,
    AC, tests và rủi ro; session research/review dùng **PHÂN TÍCH CHUYÊN ĐỀ** và không
    bị ép vào luồng triển khai.
-2. Owner kiểm tra Task Contract ở trạng thái `READY` trên Trello, hoặc authorization
+2. ChatGPT chờ người thực hiện đồng ý với phương án trước khi chuyển bước; chỉ tạo
+   prompt Codex khi người thực hiện yêu cầu hoặc cho phép.
+3. Owner kiểm tra Task Contract ở trạng thái `READY` trên Trello, hoặc authorization
    cardless của Coordinator; xác minh owner, dependency, baseline, acceptance criteria,
    validation và quyền LIVE/API.
-3. Đọc [TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md), mục liên quan trong
+4. Đọc [TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md), mục liên quan trong
    `PROJECT_SPEC.md` và evidence được Task Contract dẫn chiếu.
-4. Nếu có card, chuyển card sang `IN PROGRESS`; không sửa `TASKBOARD.md` để theo dõi
+5. Nếu có card, chuyển card sang `IN PROGRESS`; không sửa `TASKBOARD.md` để theo dõi
    Sprint 2. Không coi session research/review là task implementation.
-5. Viết test trước cho logic deterministic khi phù hợp, rồi triển khai đúng scope.
-6. Self-review toàn diff, chạy validation theo rủi ro và ghi evidence `.md` trong repo.
-7. Bàn giao evidence, commit/PR và giới hạn; nếu có card thì chuyển sang `IN REVIEW`.
-8. Chỉ Project Coordinator chấp nhận `DONE` và cho phép merge vào `dev`.
+6. Viết test trước cho logic deterministic khi phù hợp, rồi triển khai đúng scope.
+7. Self-review toàn diff, chạy validation theo rủi ro và ghi evidence `.md` trong repo.
+8. Bàn giao evidence, commit/PR và giới hạn; nếu có card thì chuyển sang `IN REVIEW`.
+9. Chỉ Project Coordinator chấp nhận `DONE` và cho phép merge vào `dev`.
 
 Mỗi thành viên mặc định chỉ giữ một task `IN PROGRESS`. Không cần commit WIP/DONE
 riêng và không cập nhật `STATUS.md` cho từng Trello card; chỉ cập nhật tài liệu chung
@@ -90,6 +92,8 @@ khẩn cấp riêng. Ưu tiên adapter cục bộ và công bố giới hạn.
 
 ## 4. Git
 
+- Mặc định dùng **một repository và một branch riêng cho task**. Không tự tạo worktree,
+  clone hoặc backup repository phụ.
 - Tạo branch task từ verified `dev`; Pull Request nhắm `dev`.
 - Project Coordinator sở hữu acceptance và merge. Không merge vào `main` khi chưa
   có authorization riêng.
