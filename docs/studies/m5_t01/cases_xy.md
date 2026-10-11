@@ -24,7 +24,7 @@ Moderator phát từng email của bộ đã phân bổ; không phát bộ còn 
 **Domain:** course_withdrawal — Rút học phần
 **Tiêu đề:** Hoàn học phí tuần 5
 
-> Em là sinh viên K50 và đã rút học phần ở tuần 5. Em thấy một quy định ghi hoàn 70%, một thông báo khác ghi 60%. Em được hoàn chính xác bao nhiêu và văn bản nào đang được áp dụng?
+> Em là sinh viên K50, học kỳ 1 năm học 2026–2027. Em muốn hỏi quy định chung về tỷ lệ hoàn học phí khi rút học phần đúng hạn ở tuần 5. Em thấy Quy chế rút học phần ghi 70%, nhưng Thông báo học phí ghi 60%. Nhà trường hiện áp dụng tỷ lệ nào và cần xác minh với đơn vị nào khi hai văn bản đang hiệu lực không thống nhất?
 
 ### X4
 
