@@ -81,11 +81,12 @@ Kết quả self-review trước commit:
 
 ## Git, PR và các lượt gọi LIVE/API
 
-- Commit: PENDING.
-- Draft PR nhắm `dev`: PENDING.
+- Commit chính: `a447f2082e98d190462860c1d84610c7e2961829`.
+- Draft PR nhắm `dev`: [#43](https://github.com/ThanhVu165/MLAi_VNG_A/pull/43).
 - Exodia runtime/provider/LLM/Gmail/email calls: **0**.
-- Lượt mạng Git/GitHub trước commit: 1 lần `git fetch origin dev --prune` và 1 lần
-  `gh pr list`; không có write tại thời điểm này.
+- Lượt mạng Git/GitHub đã xác nhận: 1 lần `git fetch origin dev --prune`, 1 lần
+  `gh pr list`, 1 lần push commit chính và 1 lần tạo Draft PR. Một lần push bổ sung
+  được dùng sau commit báo cáo này để đồng bộ evidence vào chính PR #43.
 - Trello sau chỉ dẫn bỏ qua: **0**. Trước đó có **1** search read-only hoàn tất và
   1 batch read-only bị hủy nên không xác minh được số nested call đã hoàn tất; write: **0**.
 
