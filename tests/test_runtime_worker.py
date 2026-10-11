@@ -730,6 +730,52 @@ def test_m3_t01_recipient_change_requires_new_preview(approval_case) -> None:
     assert not _approval_events(preview.case_id)
 
 
+@pytest.mark.parametrize("change", ["recipient", "corpus"])
+def test_m3_fix_01_change_after_validation_before_lock_rejected(
+    approval_case, monkeypatch, change
+) -> None:
+    page, preview = approval_case
+    namespace = page["_approve_send"].__globals__
+    connect = namespace["get_connection"]
+
+    def changed_connection(*args, **kwargs):
+        if change == "recipient":
+            db.execute(
+                "UPDATE cases SET sender = ? WHERE case_id = ?",
+                ("changed-recipient@example.test", preview.case_id),
+            )
+        else:
+            db.execute("UPDATE sources SET content_hash = 'synthetic-v2' WHERE doc_id = 'rule'")
+        return connect(*args, **kwargs)
+
+    monkeypatch.setitem(namespace, "get_connection", changed_connection)
+    with pytest.raises(ValueError, match="đã thay đổi"):
+        page["_approve_send"](preview)
+    assert _loaded(preview.case_id).status is CaseStatus.PENDING_APPROVAL
+    assert not _approval_events(preview.case_id)
+
+
+def test_m3_fix_01_fresh_preview_required_after_recipient_and_corpus_change(approval_case) -> None:
+    page, old = approval_case
+    db.execute(
+        "UPDATE cases SET sender = ? WHERE case_id = ?",
+        ("changed-recipient@example.test", old.case_id),
+    )
+    db.execute("UPDATE sources SET content_hash = 'synthetic-v2' WHERE doc_id = 'rule'")
+    with pytest.raises(ValueError, match="Người nhận đã thay đổi"):
+        page["_approve_send"](old)
+    assert not _approval_events(old.case_id)
+    fresh = next(p for p in page["_preview_drafts"]() if p.case_id == old.case_id)
+    assert old.recipient == "student@example.test"
+    assert fresh.recipient == "changed-recipient@example.test"
+    assert old.corpus_version != fresh.corpus_version == page["get_corpus_version"]()
+    page["_approve_send"](fresh)
+    assert _loaded(old.case_id).status is CaseStatus.SENT
+    events = _approval_events(old.case_id)
+    assert len(events) == 1
+    assert events[0]["corpus_version"] == fresh.corpus_version
+
+
 def test_restart_recovers_legacy_processing_case_without_job(runtime) -> None:
     case_id = submit_case(_email())
     db.execute("DELETE FROM case_jobs WHERE case_id = ?", (case_id,))

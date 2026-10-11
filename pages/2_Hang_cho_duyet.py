@@ -45,6 +45,7 @@ class QueueCase:
 class PreviewDraft:
     case_id: str
     draft_id: str
+    recipient: str
     corpus_version: str
     subject: str
     body: str
@@ -120,25 +121,29 @@ def _queue_cases() -> tuple[QueueCase, ...]:
 
 
 def _preview_drafts() -> tuple[PreviewDraft, ...]:
-    rows = fetch_all(
-        """
-        SELECT c.case_id, c.corpus_version, d.draft_id, d.subject, d.body,
-               d.citations_json, d.grounded, d.guard_failures_json
-        FROM cases AS c
-        JOIN drafts AS d ON d.case_id = c.case_id
-        WHERE c.status = ?
-          AND d.rowid = (
-              SELECT MAX(rowid) FROM drafts WHERE case_id = c.case_id
-          )
-        ORDER BY d.rowid DESC
-        """,
-        (CaseStatus.PENDING_APPROVAL,),
-    )
+    # Giữ người nhận, nội dung và phiên bản nguồn cùng một thời điểm đọc.
+    with transaction():
+        version = get_corpus_version()
+        rows = fetch_all(
+            """
+            SELECT c.case_id, c.sender, d.draft_id, d.subject, d.body,
+                   d.citations_json, d.grounded, d.guard_failures_json
+            FROM cases AS c
+            JOIN drafts AS d ON d.case_id = c.case_id
+            WHERE c.status = ?
+              AND d.rowid = (
+                  SELECT MAX(rowid) FROM drafts WHERE case_id = c.case_id
+              )
+            ORDER BY d.rowid DESC
+            """,
+            (CaseStatus.PENDING_APPROVAL,),
+        )
     return tuple(
         PreviewDraft(
             case_id=row["case_id"],
             draft_id=row["draft_id"],
-            corpus_version=row["corpus_version"],
+            recipient=row["sender"] or "",
+            corpus_version=version,
             subject=row["subject"] or "Không có tiêu đề",
             body=row["body"] or "",
             citations=_strings(row["citations_json"]),
@@ -273,6 +278,11 @@ def _approve_send(preview: PreviewDraft) -> None:
         raise ValueError("Phản hồi chưa vượt qua kiểm tra căn cứ. Hãy sửa và kiểm tra lại.")
     with closing(get_connection()) as connection, connection:
         connection.execute("BEGIN IMMEDIATE")
+        case = connection.execute(
+            "SELECT sender FROM cases WHERE case_id = ?", (preview.case_id,)
+        ).fetchone()
+        if case is None or (case["sender"] or "") != preview.recipient:
+            raise ValueError("Người nhận đã thay đổi. Hãy tải lại và đọc bản mới trước khi duyệt.")
         current = connection.execute(
             "SELECT * FROM drafts WHERE case_id = ? ORDER BY rowid DESC LIMIT 1", (preview.case_id,)
         ).fetchone()
@@ -284,7 +294,7 @@ def _approve_send(preview: PreviewDraft) -> None:
             or _strings(current["citations_json"]) != preview.citations
         ):
             raise ValueError("Nội dung đã thay đổi. Hãy tải lại và đọc bản mới trước khi duyệt.")
-        if get_corpus_version() != version:
+        if version != preview.corpus_version or get_corpus_version() != preview.corpus_version:
             raise ValueError(
                 "Quy định đã thay đổi trong lúc duyệt. Hãy đối chiếu lại trước khi gửi."
             )
@@ -405,6 +415,7 @@ def _render_decision_form(case: QueueCase, record: Row) -> None:
 
 def _render_preview(preview: PreviewDraft) -> None:
     st.subheader("Đọc và duyệt phản hồi")
+    st.caption(f"Người nhận: {preview.recipient}")
     if preview.grounded:
         st.caption("Nội dung đã được kiểm tra khi soạn và sẽ được đối chiếu lại khi bạn duyệt gửi.")
     else:
