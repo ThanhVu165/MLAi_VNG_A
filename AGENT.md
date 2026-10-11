@@ -4,7 +4,8 @@
 > Với Sprint 2, Task Contract được Coordinator duyệt quyết định scope và validation;
 > `PROJECT_SPEC.md` vẫn là nguồn technical contract, rồi đến
 > `docs/TEAM_WORKFLOW.md` và `AGENT.md`. Task Contract chỉ đổi technical contract khi
-> ghi rõ `CONTRACT-CHANGE` và tuân thủ Mục 3.
+> ghi rõ `CONTRACT-CHANGE` và tuân thủ Mục 3. Nếu Coordinator ủy quyền rõ một việc
+> cardless, evidence phải ghi nguyên văn phạm vi ủy quyền; không tự bịa Task ID.
 
 ---
 
@@ -20,10 +21,17 @@ Giám khảo có 8 phút và sẽ không cài đặt hoặc đọc mã nguồn t
 
 ## 1. Vai trò và ranh giới
 
-Bốn thành viên nhận task qua Trello; mỗi task có một **Task Owner** và phạm vi file
-trong Task Contract. Project Coordinator chốt scope, acceptance và tích hợp vào
-`dev`. ChatGPT/Codex hỗ trợ điều phối, triển khai và review nhưng không thay owner
-hiểu diff hoặc thay Coordinator phê duyệt cuối.
+Mỗi task có một **Task Owner** và phạm vi file trong Task Contract hoặc phạm vi được
+Coordinator ủy quyền rõ. Project Coordinator chốt scope, acceptance và tích hợp vào
+`dev`. Một Owner chịu trách nhiệm đến cùng, tự hiểu diff, hoàn tất AC và bàn giao
+evidence; không mặc định chia trách nhiệm cho hai người.
+
+ChatGPT Project MLAI là nơi nghiên cứu, phân tích, phản biện và điều phối. Các session
+phải ghi rõ vai trò (Coordinator, Owner, Research/Review, Architecture/Strategy hoặc
+Daily Checkpoint), mục tiêu, scope, đầu ra, quyền hạn và điều kiện chuyển bước.
+ChatGPT không tự sửa repository, commit, push, mở PR hoặc cập nhật Trello. Codex thực
+hiện phân tích sâu, thay đổi, validation, runtime smoke và lưu artifact trong scope đã
+được giao. Coordinator vẫn là người chấp nhận cuối và cho phép merge.
 
 Ranh giới kỹ thuật vẫn giữ: Runtime sở hữu `core/`/`policies/`; Corpus Admin sở hữu
 `corpus/`, seed và trang quản trị quy định; UI/Verify/Infra sở hữu `infra/`, UI và
@@ -31,22 +39,29 @@ Ranh giới kỹ thuật vẫn giữ: Runtime sở hữu `core/`/`policies/`; Co
 Contract. `core/types.py` chỉ sửa qua quy trình CONTRACT-CHANGE ở Mục 3.
 
 Phân công A/B/C và file ownership trong `TASKBOARD.md`/`SYNC_PLAN.md` là lịch sử
-Sprint 1, không phải nguồn giao việc Sprint 2. Không sửa ngoài Task Contract chỉ vì
-thay đổi đó nhỏ; báo blocker trên Trello cho Project Coordinator.
+Sprint 1, không phải nguồn giao việc Sprint 2. Không sửa ngoài scope đã duyệt chỉ vì
+thay đổi đó nhỏ. Chi tiết kỹ thuật thông thường trong scope phải được Owner chủ động
+xử lý; chỉ báo blocker khi có vượt quyền, đổi contract, ảnh hưởng safety, conflict,
+nguy cơ mất dữ liệu hoặc không thể đạt AC.
 
 ---
 
 ## 2. Vòng lặp làm việc Sprint 2
 
-1. Nhận Task Contract ở trạng thái `READY` trên Trello; kiểm owner, dependency,
-   baseline, acceptance criteria, validation và quyền LIVE/API.
-2. Đọc [TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md), mục liên quan trong
+1. ChatGPT trình bày **PHÂN TÍCH NHIỆM VỤ**: mục tiêu, scope, dependencies, phương án,
+   AC, tests và rủi ro; session research/review dùng **PHÂN TÍCH CHUYÊN ĐỀ** và không
+   bị ép vào luồng triển khai.
+2. Owner kiểm tra Task Contract ở trạng thái `READY` trên Trello, hoặc authorization
+   cardless của Coordinator; xác minh owner, dependency, baseline, acceptance criteria,
+   validation và quyền LIVE/API.
+3. Đọc [TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md), mục liên quan trong
    `PROJECT_SPEC.md` và evidence được Task Contract dẫn chiếu.
-3. Chuyển card sang `IN PROGRESS`; không sửa `TASKBOARD.md` để theo dõi Sprint 2.
-4. Viết test trước cho logic deterministic khi phù hợp, rồi triển khai đúng scope.
-5. Self-review toàn diff và chạy validation theo rủi ro của task.
-6. Bàn giao evidence, commit/PR và giới hạn; chuyển card sang `IN REVIEW`.
-7. Chỉ Project Coordinator chấp nhận `DONE` và cho phép merge vào `dev`.
+4. Nếu có card, chuyển card sang `IN PROGRESS`; không sửa `TASKBOARD.md` để theo dõi
+   Sprint 2. Không coi session research/review là task implementation.
+5. Viết test trước cho logic deterministic khi phù hợp, rồi triển khai đúng scope.
+6. Self-review toàn diff, chạy validation theo rủi ro và ghi evidence `.md` trong repo.
+7. Bàn giao evidence, commit/PR và giới hạn; nếu có card thì chuyển sang `IN REVIEW`.
+8. Chỉ Project Coordinator chấp nhận `DONE` và cho phép merge vào `dev`.
 
 Mỗi thành viên mặc định chỉ giữ một task `IN PROGRESS`. Không cần commit WIP/DONE
 riêng và không cập nhật `STATUS.md` cho từng Trello card; chỉ cập nhật tài liệu chung
@@ -61,7 +76,9 @@ Không bao giờ để repo ở trạng thái không chạy được quá 30 ph�
 Áp dụng cho: `core/types.py`, chữ ký hàm ở Mục 5.3 của spec, lược đồ SQLite, danh mục `action` audit.
 
 1. Task Contract phải ghi `CONTRACT-CHANGE`, mô tả thay đổi, lý do và blast radius.
-2. Project Coordinator chỉ định Task Owner và independent reviewer phù hợp rủi ro.
+2. Project Coordinator chỉ định một Task Owner; independent reviewer được thêm theo
+   mức rủi ro, đặc biệt với routing, policy, approval, persistence, audit, safety và
+   evaluation. Không mặc định cần hai người cho mọi task.
 3. Một người duy nhất sửa, cập nhật `PROJECT_SPEC.md` trong cùng task.
 4. Chạy regression cho mọi caller/consumer và bàn giao evidence review.
 5. Chỉ merge sau Coordinator acceptance; commit dùng prefix `contract:`.
@@ -78,7 +95,9 @@ khẩn cấp riêng. Ưu tiên adapter cục bộ và công bố giới hạn.
   có authorization riêng.
 - **CẤM `git rebase -i` để squash. CẤM `git push --force`.** Không viết lại lịch
   sử; lịch sử commit là evidence quá trình phát triển.
-- Dùng commit nhỏ, có ý nghĩa và chỉ chứa scope đã review.
+- Dùng commit nhỏ, có ý nghĩa và chỉ chứa scope đã review. Khi task có ID thì dùng ID
+  đó; với việc cardless được Coordinator ủy quyền, không tự bịa ID và ghi rõ ủy quyền
+  trong evidence.
 - Định dạng commit:
 
 ```
@@ -202,7 +221,9 @@ Mỗi chuyển trạng thái của case ghi đúng một event, dùng đúng `ac
 
 ## 13. Nhịp đồng bộ
 
-- Trello là nguồn trạng thái task; owner cập nhật card và evidence handoff.
+- Trello là nguồn trạng thái task khi task có card; owner cập nhật card và evidence
+  handoff. Với việc cardless được Coordinator ủy quyền, evidence trong repository là
+  bản ghi trạng thái thay thế và phải nêu rõ authorization.
 - Blocker ảnh hưởng dependency, safety hoặc deadline phải báo Project Coordinator
   ngay, không chờ một nhịp commit tài liệu.
 - `STATUS.md` chỉ phản ánh milestone/gate chung, không thay Trello.
@@ -220,7 +241,8 @@ Một task chỉ được đánh `DONE` khi:
    suite nếu Task Contract không yêu cầu.
 4. Audit, fail-safe và documentation được cập nhật nếu hành vi liên quan thay đổi.
 5. Không có file ngoài scope, secret, dữ liệu local hoặc evidence bị sửa trái phép.
-6. Evidence handoff và review cần thiết đã hoàn tất.
+6. Có báo cáo `.md` ghi baseline/SHA, phương pháp, file thay đổi, validation, evidence,
+   risks và PR/commit liên quan; evidence handoff và review cần thiết đã hoàn tất.
 7. Project Coordinator chấp nhận và cho phép tích hợp theo
    [TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md).
 
@@ -230,7 +252,8 @@ Một task chỉ được đánh `DONE` khi:
 
 Bạn hỗ trợ một đội bốn người dưới deadline cứng. Ba thói quen gây thiệt hại lớn nhất:
 
-- **Mở rộng phạm vi.** Làm đúng Task Contract; đề xuất phần khác trên Trello.
+- **Mở rộng phạm vi.** Làm đúng Task Contract hoặc authorization cardless; đề xuất phần
+  khác cho Project Coordinator.
 - **Nhận thay trách nhiệm owner.** Công cụ không thay con người hiểu và kiểm diff.
 - **Im lặng khi bế tắc.** Báo blocker và evidence cho Coordinator sớm.
 

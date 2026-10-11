@@ -14,20 +14,25 @@ nguồn phân công hoặc trạng thái công việc hiện hành.
 | Scope/gate/acceptance cuối cùng và merge vào `dev` | Project Coordinator |
 
 Trello nằm ngoài repository. Không sao chép toàn bộ board vào file Git; mỗi task
-chỉ cần liên kết đúng Task Contract và evidence liên quan.
+chỉ cần liên kết đúng Task Contract và evidence liên quan. Coordinator có thể ủy quyền
+một việc cardless; khi đó báo cáo `.md` trong repository phải ghi rõ authorization,
+baseline và thay thế cho trạng thái card.
 
 ## Vai trò và trách nhiệm
 
 - **Project Coordinator:** chốt scope, Task Contract, quyền LIVE/API, milestone
   disposition, acceptance và merge vào `dev`.
-- **Task Owner:** một trong bốn thành viên; chịu trách nhiệm hiểu yêu cầu, đọc và
-  kiểm tra mọi thay đổi do công cụ tạo, chạy validation phù hợp và bàn giao evidence.
-- **ChatGPT Task Coordinator:** hỗ trợ phân tích, chia việc và có thể đề xuất
-  `READY_FOR_REVIEW`; không tự chứng nhận evidence chưa đọc và không phê duyệt cuối.
-- **Codex:** trợ lý triển khai/review theo Task Contract; không tự mở rộng scope,
-  tự gọi LIVE/API hoặc tự thay đổi gate.
-- **Independent Reviewer:** được chỉ định theo rủi ro; đánh giá độc lập nhưng không
-  thay Project Coordinator chấp nhận task hoặc merge.
+- **Task Owner:** một người chịu trách nhiệm đến cùng; hiểu mọi thay đổi do mình và AI
+  tạo, hoàn tất AC/checklist, tự review, chạy validation và bàn giao evidence.
+- **ChatGPT Project MLAI:** nghiên cứu, phân tích, phản biện và điều phối. Session phải
+  ghi rõ vai trò (Coordinator, Owner, Research/Review, Architecture/Strategy hoặc Daily
+  Checkpoint), mục tiêu, scope, đầu ra, quyền hạn và điều kiện chuyển bước. ChatGPT không
+  tự sửa repository, commit, push, mở PR hoặc cập nhật Trello.
+- **Codex:** phân tích sâu repository, triển khai, validation, runtime smoke và lưu
+  artifact theo scope được giao; không tự mở rộng scope, gọi LIVE/API hoặc đổi gate.
+- **Independent Reviewer:** được chỉ định theo rủi ro, đặc biệt với routing, policy,
+  approval, persistence, audit, safety và evaluation; không mặc định cần hai người.
+- **Project Coordinator:** chốt scope, acceptance, gate, disposition và merge.
 
 Mỗi thành viên mặc định chỉ giữ **một task `IN PROGRESS`**. Coordinator có thể cho
 phép ngoại lệ khi dependency hoặc deadline yêu cầu.
@@ -47,13 +52,14 @@ BACKLOG → READY → IN PROGRESS → IN REVIEW → DONE
 - `CHANGES REQUESTED`: reviewer/Coordinator yêu cầu sửa có phạm vi cụ thể.
 - `DONE`: Project Coordinator đã chấp nhận evidence và trạng thái tích hợp yêu cầu.
 
-Quy trình: **giao task → triển khai → self-review → validation/evidence → review →
-Coordinator acceptance → merge khi được phép**. Commit hoặc PR không tự làm task
-thành `DONE`.
+Quy trình implementation: **phân tích nhiệm vụ → giao task/authorization → triển khai →
+self-review → validation/evidence → review theo rủi ro → Coordinator acceptance → merge
+khi được phép**. Research/review có thể kết thúc ở báo cáo chuyên đề mà không tạo code.
+Commit hoặc PR không tự làm task thành `DONE`.
 
 ## Task Contract tối thiểu
 
-Mỗi Trello card ở trạng thái `READY` cần nêu:
+Mỗi Trello card ở trạng thái `READY`, hoặc authorization cardless của Coordinator, cần nêu:
 
 1. Objective và phạm vi file/hành vi.
 2. Baseline branch/SHA và dependencies.
@@ -61,9 +67,12 @@ Mỗi Trello card ở trạng thái `READY` cần nêu:
 4. Validation bắt buộc và điều kiện dừng.
 5. Quyền LIVE/API, budget và data boundaries nếu áp dụng.
 6. Những nội dung cấm sửa, yêu cầu Git và reviewer cần thiết.
+7. Với việc cardless: người ủy quyền, phạm vi ủy quyền và cách ghi nhận thay cho card.
 
-Nếu contract thiếu thông tin làm thay đổi quyết định hoặc safety boundary, owner
-đưa task về `BACKLOG` hoặc báo Coordinator; không tự suy diễn quyền mở rộng.
+Nếu contract/authorization thiếu thông tin làm thay đổi quyết định hoặc safety boundary,
+owner đưa task về `BACKLOG` hoặc báo Coordinator; không tự suy diễn quyền mở rộng. Không
+được báo `BLOCKED` chỉ vì thiếu hướng dẫn cho một thao tác kỹ thuật thông thường nằm
+trong scope.
 
 ## Definition of Done và evidence handoff
 
@@ -73,6 +82,8 @@ Một task chỉ sẵn sàng để Coordinator chấp nhận khi:
 - Self-review không còn thay đổi ngoài scope hoặc dữ liệu nhạy cảm.
 - Validation đúng rủi ro đã PASS; failure/skip được ghi trung thực.
 - Evidence nêu baseline, commands/checks, kết quả, file thay đổi và giới hạn.
+- Có báo cáo `.md` trong repository ghi Task ID hoặc cardless authorization, Owner,
+  SHA, phương pháp, validation, evidence, risks và PR/commit liên quan.
 - Documentation/contract liên quan được cập nhật khi hành vi thực sự đổi.
 - PR nhắm `dev`, có thể review, không chứa file local hoặc thay đổi ngoài scope.
 - Reviewer yêu cầu đã hoàn tất; Coordinator đưa ra acceptance cuối.
@@ -106,6 +117,8 @@ nhận những artifact và kết quả họ thực sự kiểm tra.
   hạn và budget. Offline tests không tạo quyền LIVE.
 - Không tự hạ gate, đổi expected result hoặc rerun để chọn kết quả đẹp hơn.
 
-Blocker ảnh hưởng deadline, dependency, safety hoặc acceptance phải được ghi ngay
-trên Trello và báo Project Coordinator. Ưu tiên scope hữu hạn đủ đạt gate trước
+Blocker ảnh hưởng deadline, dependency, safety hoặc acceptance phải báo Project
+Coordinator. Nội dung tối thiểu: **Vấn đề → Ảnh hưởng → Giải pháp → Ai xử lý →
+Coordinator cần quyết định gì**. Nếu task có card thì owner ghi trên Trello; nếu
+cardless thì ghi trong evidence `.md`. Ưu tiên scope hữu hạn đủ đạt gate trước
 feature freeze **13/10/2026**.
