@@ -38,6 +38,14 @@ hoàn hảo n=3; phải báo sequence/condition order imbalance và giới hạn
 Nghỉ 5 phút giữa điều kiện; dự kiến mỗi session 45–60 phút, không ép case timeout
 để tạo kết quả đẹp. Nếu phải dừng vì lịch, ghi incomplete và lý do.
 
+
+## Correction sau independent review — X3, Gold và độ khó
+
+- X3 được làm rõ là **câu hỏi thông tin về quy định chung**, thuộc K50, học kỳ 1 năm học 2026–2027, rút đúng hạn tuần 5. Không yêu cầu phê duyệt hoàn tiền cho hồ sơ cụ thể. Hai nguồn ACTIVE: RH-2026-101 Điều 3 khoản 1 (70%) và HP-2026-1 Điều 3 khoản 1 (60%) cùng áp dụng, nên Gold **Owner đề xuất** là `ESCALATE / OUT_OF_POLICY / P02` vì `conflicting_sources`; không tự chọn tỷ lệ. Nếu reviewer thấy nội dung vẫn chạm phê duyệt hồ sơ cá nhân, đánh `GOLD_REVIEW_REQUIRED` và yêu cầu chỉnh thêm, không tự đổi Gold.
+- **Rule priority** trong `policies/policy.yaml`: P01 (`decision_lock=AUTHORITY_REQUIRED`) trước P02 (`conflicting_sources`/`no_authoritative_source`), trước P03 (`fact_missing`/`scope_mismatch`), rồi P04, P05. Với X3 mới, **không có xin ngoại lệ/duyệt hồ sơ**, đủ khóa và học kỳ, nên P01/P03 không được kích hoạt bởi nội dung email; P02 xử lý xung đột. Đây là reasoning của Owner, không phải reviewer sign-off.
+- X3 bản cũ trên Trello được giữ làm lịch sử, nhưng bản **participant cuối đề xuất** là `cases_xy.md` ở correction branch; không dùng bản cũ khi chạy study. Gold vẫn PENDING. Reviewer cần kiểm tra lại thay đổi này trước khóa case.
+- Phân tích khó và chênh lệch X/Y có tại [bảng đối chiếu X/Y](xy_equivalence_assessment.md). Hai bộ không được tuyên bố tương đương tuyệt đối chỉ dựa trên số lượng. Báo kết quả theo set/condition/sequence và thứ tự, nhất là khi n=3.
+
 ## Corpus và công bằng quyền truy cập
 
 B0/B2 pin cùng snapshot sáu JSON baseline, metadata và hash. Tập căn cứ dùng cho
