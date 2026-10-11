@@ -133,9 +133,14 @@ Coordinator chấp thuận và đối chiếu yêu cầu BTC trước tuyển. N
 | Ngày xóa riêng cho identity/role, consent/contact, raw results và bản sao | ____ |
 | Hạn rút/xóa trước anonymization; xử lý bản sao đã giao BTC | ____ |
 
-Đề xuất để Coordinator duyệt: lưu trên Google Drive PRIVATE, General access
-Restricted, quyền đích danh tối thiểu; Gold và identity/consent/results là các
-nhóm tách quyền. Raw evidence/contact/consent dự kiến xóa trong 90 ngày sau
+Gold matrix không dùng Google Drive: Coordinator đã duyệt local supervised
+read-only review, không upload hoặc chia sẻ Gold qua mạng. Quyết định này không
+chọn kho cho dữ liệu participant.
+
+Đối với participant evidence/consent, Google Drive PRIVATE với General access
+Restricted và quyền đích danh tối thiểu chỉ là phương án đề xuất, chưa được duyệt
+hoặc tạo. Identity/role evidence, consent/contact và results phải là các nhóm tách
+quyền. Raw evidence/contact/consent dự kiến xóa trong 90 ngày sau
 Coordinator closure, có ngày cụ thể trước thu; retention của BTC phải xác minh
 riêng, không hứa xóa bản sao ngoài quyền kiểm soát. Đây là đề xuất, chưa phải kho
 đã tạo hoặc retention đã được duyệt. Không điền đủ thì dừng recruitment/thu thập.

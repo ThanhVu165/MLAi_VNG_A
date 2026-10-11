@@ -61,8 +61,9 @@ không gọi là tám case lịch sử hoặc N01–N08 robustness. Không mở/
 Correction docs-only trên PR #32, baseline `dev@16f584fa`; không chỉnh policy/seed.
 Chú giải lời giải, locator và độ khó theo case đã đưa ra khỏi tài liệu public.
 Public equivalence chỉ giữ cấu trúc, phương pháp và giới hạn; assessment chi tiết
-đi cùng Gold matrix cục bộ ngoài Git, chưa upload. Consent tách các lựa chọn chia sẻ
-và có checklist role verification/storage. CR-01 chờ Coordinator xác nhận Google
-Drive PRIVATE và quyền truy cập; independent re-review CR-02/CR-03 còn PENDING.
-PR #30 merge trước verdict CHANGE REQUEST là workflow deviation chờ Coordinator
-xử lý; không coi merge là acceptance, không revert/rewrite. Không thực hiện study.
+đi cùng Gold matrix cục bộ ngoài Git, không upload. Coordinator đã cho phép local
+supervised read-only review và hủy phương án Drive cho Gold. Technical review được
+báo cáo 8/8 PASS; independent reviewer sign-off và Coordinator acceptance vẫn
+PENDING. Consent tách các lựa chọn chia sẻ và có checklist role verification/storage.
+Coordinator đã ghi nhận workflow deviation của PR #30; không coi merge là
+acceptance, không revert/rewrite. Không thực hiện study hoặc công bố Gold.

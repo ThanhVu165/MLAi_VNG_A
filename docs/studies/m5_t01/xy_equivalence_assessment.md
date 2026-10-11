@@ -1,7 +1,8 @@
 # M5-T01 — X/Y equivalence assessment
 
-**Status:** Structural comparison checked; difficulty/Gold independent review
-PENDING. Không có pilot hoặc participant results. Không tuyên bố equivalence.
+**Status:** Structural comparison checked. Local supervised Gold review đã được
+Coordinator cho phép; technical review được báo cáo hoàn tất, independent reviewer
+sign-off PENDING. Không có pilot hoặc participant results. Không tuyên bố equivalence.
 
 ## So sánh public không chứa lời giải
 
@@ -25,11 +26,12 @@ không tính thành request. Cùng số lượng không chứng minh cùng burde
 Owner chuẩn bị bảng 8 case gồm domain, decision type, rule/priority, số và locator
 nguồn cần đọc, thông tin thiếu, xung đột, rationale và độ phức tạp dự kiến.
 Các trường này có thể suy ra đáp án nên không công bố kể cả dưới nhãn RESTRICTED.
-Bảng dự thảo lưu cục bộ ngoài repository, chưa upload và chưa khóa Gold.
-Kho Google Drive PRIVATE mới là đề xuất, access proof và independent verdict
-chưa có: **PENDING COORDINATOR DECISION**. Reviewer đánh giá từng cặp vị trí
-1↔1, 2↔2, 3↔3, 4↔4 và toàn bộ hai set sau khi Gold được xác nhận;
-không dùng output B2 để xác lập Gold hoặc chỉnh bộ cho cân bằng.
+Bảng dự thảo lưu cục bộ ngoài repository và không được upload. Coordinator đã
+duyệt review tại chỗ, read-only, dưới giám sát trực tiếp của reviewer. Technical
+review báo cáo route/rule distribution cân bằng giữa hai bộ, nhưng domain
+distribution và source-reading burden vẫn khác nhau. Technical review đã đánh giá
+bốn cặp vị trí và toàn bộ hai set; independent sign-off vẫn **PENDING**. Không dùng
+output B2 để xác lập Gold hoặc chỉnh bộ cho cân bằng.
 
 ## Giới hạn và cách báo cáo
 
@@ -46,5 +48,6 @@ không dùng output B2 để xác lập Gold hoặc chỉnh bộ cho cân bằng
   được đọc. Xóa chú giải ở HEAD không xóa lịch sử Git. Không rewrite history;
   người đã thấy hoặc không chắc exposure cần Coordinator phân xử trước allocation.
 
-**CR-02:** public design correction hoàn tất Owner-side; assessment có lời giải
-và independent sign-off còn chờ kho restricted/Gold. Không đóng CR-02 thay reviewer.
+**CR-02:** **PASS — exploratory study design only** theo technical review được báo
+cáo. Kết quả không chứng minh difficulty equivalence, statistical significance
+hoặc causal effect. Independent reviewer sign-off vẫn PENDING.

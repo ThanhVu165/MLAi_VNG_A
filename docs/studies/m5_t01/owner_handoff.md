@@ -1,8 +1,9 @@
 # M5-T01 — Correction handoff / Owner self-review
 
-**Result:** PUBLIC DOCS READY FOR INDEPENDENT RE-REVIEW; CR-01/control-store
-handoff **PENDING COORDINATOR DECISION**. Independent verdict: **CHANGE REQUEST
-not yet closed**. Không DONE, không M5 PASS. Next Task Unlocked: **NONE**.
+**Result:** READY FOR INDEPENDENT DIFF REVIEW. Technical semantic review reports
+CR-01 8/8 PASS and CR-02 PASS for exploratory design only; independent reviewer
+sign-off and Coordinator acceptance remain PENDING. Không DONE, không M5 PASS.
+Next Task Unlocked: **NONE**.
 
 ## Baseline, scope và evidence
 
@@ -23,15 +24,15 @@ not yet closed**. Không DONE, không M5 PASS. Next Task Unlocked: **NONE**.
 
 | Request | Owner work / evidence | Remaining acceptance |
 |---|---|---|
-| CR-01 | Gold matrix DRAFT 8 case lưu local ngoài Git, có email hash, rule priority, source hash/locator, rationale và forbidden inference; không upload/commit | Restricted storage/access, Owner confirmation, Minh verification 8/8 và Coordinator approval PENDING |
-| CR-02 | [Public structural assessment](xy_equivalence_assessment.md); detailed source/decision/rule/missing-fact/conflict/difficulty comparison trong local draft riêng | Không claim equivalence; bàn giao chi tiết và independent verdict PENDING |
-| CR-03 | [Recruitment/consent](recruitment_consent.md): role verification log, exception gate, independent sharing choices, evidence storage/access/retention/deletion plan | Coordinator điền/duyệt kho, recipient/BTC requirements và dates trước recruitment; Minh re-review PENDING |
-| CR-04 | Correction continuation được Coordinator cho phép; không rewrite/revert/merge | Coordinator xác minh merge authorization và ghi deviation/acceptance; chưa đóng workflow finding |
+| CR-01 | Local supervised technical semantic assessment reported 8/8 PASS; Gold remains outside Git and unchanged | Independent reviewer sign-off and Coordinator acceptance PENDING |
+| CR-02 | [Public structural assessment](xy_equivalence_assessment.md); Gold-based route/rule distribution reviewed | PASS for exploratory design only; không chứng minh difficulty equivalence; reviewer sign-off PENDING |
+| CR-03 | [Recruitment/consent](recruitment_consent.md): role verification, separate consent and evidence controls | Documentation design PASS; participant thật và evidence storage thực tế chưa được chứng nhận |
+| CR-04 | Coordinator đã ghi nhận workflow deviation của PR #30 | Final acceptance vẫn thuộc Coordinator; không rewrite/revert/merge |
 
-Matrix là source-based candidate, không phải Gold đã ký; không lấy output B2
-hoặc cân bằng nhãn để chỉnh Gold. Nội dung Gold và chi tiết kho local không nằm
-trong PR. Google Drive PRIVATE chỉ là đề xuất, chưa tạo kho/cấp quyền/upload.
-Đây là blocker bàn giao, không giả định đã có reviewer access.
+Matrix không nằm trong PR và không lấy output B2 hoặc cân bằng nhãn để chỉnh Gold.
+Coordinator đã hủy phương án Google Drive cho Gold và duyệt local supervised
+read-only review. Technical PASS được báo cáo nhưng không thay independent reviewer
+sign-off hoặc Coordinator acceptance.
 
 Chú giải có thể suy ra đáp án theo case đã bỏ khỏi public protocol/equivalence/
 Gold workflow/handoff. Public chỉ giữ email synthetic, cấu trúc, quy trình và
@@ -43,10 +44,10 @@ Coordinator phân xử trước allocation. Participant không được phát re
 
 | AC | Owner deliverable | Status/gate |
 |---|---|---|
-| AC1 | Recruitment plan, eligibility, separate consent, evidence plan | Design corrected; independent review/storage approval pending; 0 participant confirmed |
-| AC2 | B0/B2 protocol, unchanged S1–S4, structural X/Y assessment, limitations | Detailed equivalence review pending with Gold; no equivalence claim |
+| AC1 | Recruitment plan, eligibility, separate consent, evidence plan | Documentation design PASS reported; participant storage approval pending; 0 participant confirmed |
+| AC2 | B0/B2 protocol, unchanged S1–S4, structural X/Y assessment, limitations | Technical CR-02 PASS for exploratory design only; reviewer sign-off pending; no equivalence claim |
 | AC3 | Existing measurement forms, n/N, missing/technical handling | Retained; không tạo results hoặc feedback |
-| AC4 | 8 synthetic emails + local Gold candidate matrix | PENDING controlled handoff and independent 8/8 sign-off |
+| AC4 | 8 synthetic emails + local Gold candidate matrix | Technical semantic assessment reports 8/8 PASS; independent reviewer sign-off pending |
 | AC5 | Study unlock checklist | Checklist retained; no runtime/isolation acceptance inferred |
 | AC6 | Correction docs + this evidence handoff | Independent verdict/Coordinator acceptance PENDING |
 
@@ -54,10 +55,9 @@ Coordinator phân xử trước allocation. Participant không được phát re
 
 Offline document validation, không import app/pipeline/Verify, không seed DB.
 [Reproducible checks và kết quả](validation_report.md) chứa kiểm tra link, UTF-8,
-case/sequence, corpus manifest, scope và diff. Private draft kiểm đủ 8 ID/hash/
-locator và PENDING signatures cục bộ; không đăng đáp án hoặc artifact riêng lên
-Trello/PR. Reviewer khác máy đọc được public evidence từ PR; private verification
-chỉ có thể tiếp tục sau access-approved handoff.
+case/sequence, corpus manifest, scope và diff. Technical semantic review local được
+báo cáo 8/8 PASS; không đăng đáp án, locator theo case hoặc artifact riêng lên
+Trello/PR. Independent reviewer vẫn phải kiểm correction diff và xác nhận sign-off.
 
 Runtime tests/full suite: **NOT RUN (docs-only)**. Study sessions: **0**.
 LIVE provider calls: **0**. GitHub metadata/Git operations chỉ phục vụ PR hiện có.
@@ -79,14 +79,15 @@ Manifest này không cấp quyền tra cứu nguồn SUPERSEDED cho participant.
 
 ## Blockers và review request
 
-1. Coordinator phê duyệt kho restricted/access trước khi bàn giao Gold cho Minh;
-   kiểm thử allowed/denied account, parent inheritance và retention. Chưa có
-   phương án bàn giao được kiểm chứng: **PENDING**, không Gold PASS.
-2. Minh independent re-review CR-01/02/03; không dùng self-review thay verdict.
-3. CR-04 workflow disposition và final acceptance thuộc Coordinator.
+1. Minh review correction diff và xác nhận independent sign-off; không dùng kết
+   quả Codex báo cáo thay chữ ký reviewer.
+2. Coordinator final acceptance sau reviewer sign-off; PR #32 vẫn Draft, chưa merge.
+3. Participant evidence storage, access, custodian, retention và deletion cần
+   Coordinator duyệt riêng trước recruitment.
 4. Study riêng cần runtime/isolation proof, revision/mode được duyệt, >=3 người
    thực sự phù hợp có identity/role evidence, lịch/consent và storage plan đầy đủ.
    Task này không xác minh các điều kiện đó hoặc mở khóa study.
 
 Public docs sẵn sàng để review, toàn M5-T01 vẫn chưa được nghiệm thu. Commit SHA
 và validation cuối được báo trực tiếp cùng PR, không đăng nhiều comment Trello.
+LIVE provider calls từ correction này: **0**. Study sessions: **0**.

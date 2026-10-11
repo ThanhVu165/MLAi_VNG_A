@@ -4,13 +4,13 @@
 Repository PUBLIC theo `gh repo view ThanhVu165/MLAi_VNG_A --json visibility,isPrivate`
 ngày 11/10/2026; do đó không tạo/commit `gold_labels.md` hoặc đáp án đầy đủ.
 
-## Phương án Coordinator cần quyết định
+## Quyết định truy cập hiện hành
 
-Đề xuất Google Drive PRIVATE với General access = Restricted, chỉ cấp đích danh
-Owner, Minh và Coordinator. Chưa tạo thư mục, upload hoặc xác nhận access control. Trước khi copy từ
-Trello, Coordinator xác minh quyền card/board hiện tại, tắt public-link access ở
-kho đích, kiểm thử tài khoản không được phép và ghi log quyền. Không xem Trello
-là restricted khi chưa có bằng chứng. Không đưa URL chia sẻ có token vào public Git.
+Coordinator đã hủy phương án bàn giao Gold qua Google Drive và cho phép review
+tại chỗ trong môi trường local được duyệt. Chỉ phiên Codex hỗ trợ independent
+reviewer, dưới sự giám sát trực tiếp của reviewer, được đọc Gold ở chế độ
+read-only. Không upload, di chuyển hoặc chia sẻ Gold qua mạng; không công khai
+vị trí private, Gold labels, rationale hoặc source locator theo case.
 
 Coordinator ghi trong kho riêng: storage ID/location, custodian, access list,
 version, hash, ngày khóa, retention/deletion date và reviewer verdict.
@@ -48,18 +48,22 @@ Một dòng mỗi case; restricted reviewer material. Bảng balance có route/r
 case và phân tích độ khó có lời giải cũng lưu riêng, không đưa vào participant pack.
 Chỉ khi Gold được xác nhận mới hậu kiểm metrics; nếu chưa xác nhận, ghi UNKNOWN,
 không tính nhãn pending thành sai/đúng. Việc tạo tài liệu quy trình này không đồng
-nghĩa kho Gold đã được lập hoặc quyền reviewer đã được cấp.
+nghĩa independent reviewer đã ký hoặc Coordinator đã nghiệm thu Gold.
 
 ## Correction workflow CR-01
 
 Bản dự thảo 8 case có email/corpus hash, rationale, rule priority và locator;
-chưa phải Gold được Owner/reviewer/Coordinator ký. Không upload, commit hoặc
-đăng nội dung matrix vào PR/Trello trước phê duyệt kho và kiểm chứng access.
-**PENDING COORDINATOR DECISION**; CR-01 chưa PASS, chấm correctness chưa được mở.
+không upload, commit hoặc đăng nội dung matrix vào PR/Trello. Technical semantic
+review được báo cáo **8/8 PASS** trong phiên local được duyệt. Independent reviewer
+sign-off và Coordinator acceptance vẫn **PENDING**; kết quả Codex báo cáo không
+thay chữ ký reviewer.
 
-Checklist trước upload: Coordinator xác nhận custodian, tài khoản Owner/Minh/
-Coordinator, quyền từng người, retention/deletion; kiểm tra thư mục cha và quyền
-kế thừa, General access Restricted, không domain-wide/anyone-link access. Xác minh
-Owner và reviewer mở được, tài khoản không được cấp quyền bị từ chối; lưu access
-proof không chứa Gold trong handoff phù hợp. Không tự tạo kho hoặc gửi invitation.
-Nếu chưa kiểm chứng được bất kỳ mục nào, giữ matrix cục bộ và không chia sẻ.
+Trạng thái lịch sử **PENDING COORDINATOR DECISION** về kênh truy cập đã được giải
+quyết bằng quyết định local supervised review; cụm này không còn là blocker.
+
+Checklist review local: xác nhận đúng reviewer, giám sát trực tiếp, môi trường
+được duyệt và read-only; không mở rộng quyền sang thư mục khác. Xác minh
+reviewer được phép đọc được artifact và phiên không mở rộng sang người hoặc thư
+mục khác; lưu access proof không chứa Gold trong handoff phù hợp. Không tự tạo kho,
+gửi invitation hoặc chia sẻ artifact. Nếu chưa kiểm chứng được bất kỳ mục nào,
+giữ matrix cục bộ và không chia sẻ.
