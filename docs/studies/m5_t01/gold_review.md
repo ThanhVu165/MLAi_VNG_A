@@ -6,8 +6,8 @@ ngày 11/10/2026; do đó không tạo/commit `gold_labels.md` hoặc đáp án 
 
 ## Phương án Coordinator cần quyết định
 
-Đề xuất lưu bảng Gold trong thư mục Drive hoặc repository PRIVATE chỉ có Owner,
-Minh và Coordinator. Chưa tạo kho hoặc xác nhận access control. Trước khi copy từ
+Đề xuất Google Drive PRIVATE với General access = Restricted, chỉ cấp đích danh
+Owner, Minh và Coordinator. Chưa tạo thư mục, upload hoặc xác nhận access control. Trước khi copy từ
 Trello, Coordinator xác minh quyền card/board hiện tại, tắt public-link access ở
 kho đích, kiểm thử tài khoản không được phép và ghi log quyền. Không xem Trello
 là restricted khi chưa có bằng chứng. Không đưa URL chia sẻ có token vào public Git.
@@ -18,8 +18,9 @@ Không lưu Gold trong participant pack, UI, Study export cho participant hay PR
 
 ## Quy trình độc lập
 
-1. Owner chuyển nguyên Gold Owner-side đã chốt trong FINAL OWNER SELF-REVIEW trên
-   card vào bảng riêng; bảo toàn tám email hiện hành, gồm X4 có K49. Không thay
+1. Owner chuẩn bị Gold matrix dự thảo cho tám email tại correction HEAD, lưu
+   cục bộ ngoài repository. Đối chiếu Owner-side lịch sử, không mặc định đã chốt
+   hoặc đã ký; mọi khác biệt phiên bản phải có rationale/reviewer verdict. Không thay
    Gold theo output AI hoặc để đáp án được sinh từ kết quả chạy hệ thống.
 2. Minh đọc [spec](../../../PROJECT_SPEC.md) §5.3–5.5,
    [policy](../../../policies/policy.yaml) và cả sáu văn bản seed ở baseline.
@@ -51,4 +52,14 @@ nghĩa kho Gold đã được lập hoặc quyền reviewer đã được cấp.
 
 ## Correction workflow CR-01
 
-Owner đã sửa wording X3 trong `cases_xy.md` để nói rõ học kỳ, khóa và câu hỏi quy định chung, không xin duyệt hoàn tiền cá nhân. Independent reviewer phải đối chiếu ưu tiên P01 (authority) trước P02 (nguồn mâu thuẫn) trước P03 (thiếu fact) trong `policies/policy.yaml`; không được mặc định xung đột nguồn luôn thắng yêu cầu phê duyệt. Bảng Gold 8 case và rationale/locator chỉ được bàn giao qua kho restricted được Coordinator duyệt; mapping/đáp án không đưa vào public Git. **Kho Gold và quyền truy cập chưa được thiết lập/xác minh; CR-01 chưa PASS.**
+Bản dự thảo 8 case có email/corpus hash, rationale, rule priority và locator;
+chưa phải Gold được Owner/reviewer/Coordinator ký. Không upload, commit hoặc
+đăng nội dung matrix vào PR/Trello trước phê duyệt kho và kiểm chứng access.
+**PENDING COORDINATOR DECISION**; CR-01 chưa PASS, chấm correctness chưa được mở.
+
+Checklist trước upload: Coordinator xác nhận custodian, tài khoản Owner/Minh/
+Coordinator, quyền từng người, retention/deletion; kiểm tra thư mục cha và quyền
+kế thừa, General access Restricted, không domain-wide/anyone-link access. Xác minh
+Owner và reviewer mở được, tài khoản không được cấp quyền bị từ chối; lưu access
+proof không chứa Gold trong handoff phù hợp. Không tự tạo kho hoặc gửi invitation.
+Nếu chưa kiểm chứng được bất kỳ mục nào, giữ matrix cục bộ và không chia sẻ.

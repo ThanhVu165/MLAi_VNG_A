@@ -1,22 +1,50 @@
-# M5-T01 — Đánh giá X/Y equivalence sau CHANGE REQUEST (Owner)
+# M5-T01 — X/Y equivalence assessment
 
-**Status:** Owner assessment, PENDING independent review. Không có pilot, không có kết quả participant. Chỉ dùng năm nguồn ACTIVE ở cả B0/B2; nguồn SUPERSEDED chỉ phục vụ reviewer hậu kiểm.
+**Status:** Structural comparison checked; difficulty/Gold independent review
+PENDING. Không có pilot hoặc participant results. Không tuyên bố equivalence.
 
-| Case | Domain | Reviewer-only decision classification | Requests | Căn cứ ACTIVE cần kiểm tra | Bẫy/thông tin cần xử lý | Độ khó dự kiến |
-|---|---|---|---:|---|---|---|
-| X1 | conduct_score | RESTRICTED | 2 | RL-2026-3150 Điều 3–4 | Điểm giả định 85, không xác nhận hồ sơ cá nhân | Thấp–trung bình |
-| X2 | grade_appeal | RESTRICTED | 2 | PK-2026-204 Điều 3; QDPQ-2026-01 Điều 3 | Xin chấp thuận phúc khảo quá hạn; authority | Trung bình |
-| X3 **đã sửa** | course_withdrawal | RESTRICTED | 2 | RH-2026-101 Điều 3; HP-2026-1 Điều 3 | K50, HK1 2026–2027; yêu cầu quy định chung; xung đột ACTIVE 70/60 | Cao |
-| X4 | conduct_score | RESTRICTED | 1 | RL-2026-3150 mở đầu + Điều 2 | K49, đã bảo lưu/quay lại, thiếu thời điểm | Trung bình |
-| Y1 | grade_appeal | RESTRICTED | 2 | PK-2026-204 Điều 1–2 | Phí và mẫu, không duyệt hồ sơ | Thấp |
-| Y2 | course_withdrawal | RESTRICTED | 2 | RH-2026-101 Điều 4; QDPQ-2026-01 Điều 2 | Ngoại lệ quá hạn; authority | Trung bình |
-| Y3 | conduct_score | RESTRICTED | 2 | RL-2026-3150 Điều 3; kiểm trạng thái RL-2025-2363 | ACTIVE không có ngưỡng Khá; không dùng SUPERSEDED làm luật | Cao |
-| Y4 | grade_appeal | RESTRICTED | 1 | PK-2026-204 mở đầu + Điều 2 | Thiếu ngày/thông báo công bố MA101 | Trung bình |
+## So sánh public không chứa lời giải
 
-**Đếm cấu trúc:** X=4 case, Y=4; mỗi bộ 7 yêu cầu và 3 case đa ý định. Phân bố Gold theo rule/route đã được Owner kiểm trong tài liệu restricted; không công khai mapping hoặc nhãn tại đây. X domain: 2 conduct/1 grade/1 withdrawal; Y: 1 conduct/2 grade/1 withdrawal. Loại thao tác nguồn **không đồng nhất**: X3 hai nguồn ACTIVE xung đột; Y3 kiểm ACTIVE thiếu ngưỡng và loại trừ bản SUPERSEDED; X4/y4 khác domain và điều kiện cần để áp dụng.
+| Tiêu chí | X | Y | Ý nghĩa |
+|---|---|---|---|
+| Email | 4 | 4 | Cùng số tác vụ |
+| Yêu cầu theo email 1→4 | 2 / 2 / 2 / 1 | 2 / 2 / 2 / 1 | 7 yêu cầu, 3 email đa ý định mỗi bộ |
+| conduct_score | 2 | 1 | Lệch domain |
+| grade_appeal | 1 | 2 | Lệch domain |
+| course_withdrawal | 1 | 1 | Cùng số email, không suy ra cùng độ khó |
+| Nguồn được phép tra cứu | Cùng 5 ACTIVE | Cùng 5 ACTIVE | Cùng toàn văn/metadata, không gợi ý đoạn theo case |
+| Email lặp giữa B0/B2 trong một session | 0 | 0 | Giảm học thuộc, không tạo cặp cùng email |
 
-**Giới hạn:** Cùng số case, nhãn và nguồn tra cứu không chứng minh độ khó bằng nhau. X1 đọc hai điều, Y1 đọc hai điều; X3 cần so hai nguồn, Y3 cần phát hiện thiếu nguồn chính thức; burden/latency có thể lệch. Không gán điểm độ khó định lượng khi chưa có reviewer/pilot. Mẫu n=3 không cân bằng hoàn hảo giữa bốn sequence; giữ phân bổ trước nghiên cứu, báo số lượng/route/time theo set × condition × sequence và n/N. Không tuyên bố causal superiority hoặc significance. Nếu reviewer thấy X3 vẫn còn yêu cầu phê duyệt quyền lợi cá nhân, giữ GOLD_REVIEW_REQUIRED và sửa wording với Coordinator trước khi khóa Gold, không sửa nhãn để ép cân bằng.
+Số request đếm mục tiêu trả lời/ra quyết định trong email; thông tin bối cảnh
+không tính thành request. Cùng số lượng không chứng minh cùng burden tìm nguồn,
+đọc hiểu, quyết định hoặc thời gian. Không báo số nguồn *cần* đọc như số tài liệu
+đã đọc thực tế; chỉ số thực tế phải ghi nhận trong session.
 
-**Kiểm soát contamination:** case public có thể lộ qua GitHub; hỏi exposure khi tuyển. Gold Owner-side từ Trello phải chuyển vào kho restricted do Coordinator duyệt; không để participant thấy ma trận Gold hoặc các chú giải review này. Bản X3 cũ trên Trello là lịch sử; khi review dùng bản X3 đã sửa ở participant pack branch này.
+## Assessment chi tiết — chỉ lưu ngoài public Git
 
-**Reviewer checklist:** xác minh mới rule priority và justification của X3 trong Gold restricted; xem nguồn/căn cứ từng case, so difficulty từng pair trên corpus ACTIVE-only, ghi PASS/CHANGE REQUEST/GOLD_REVIEW_REQUIRED, không suy diễn Gold từ output AI.
+Owner chuẩn bị bảng 8 case gồm domain, decision type, rule/priority, số và locator
+nguồn cần đọc, thông tin thiếu, xung đột, rationale và độ phức tạp dự kiến.
+Các trường này có thể suy ra đáp án nên không công bố kể cả dưới nhãn RESTRICTED.
+Bảng dự thảo lưu cục bộ ngoài repository, chưa upload và chưa khóa Gold.
+Kho Google Drive PRIVATE mới là đề xuất, access proof và independent verdict
+chưa có: **PENDING COORDINATOR DECISION**. Reviewer đánh giá từng cặp vị trí
+1↔1, 2↔2, 3↔3, 4↔4 và toàn bộ hai set sau khi Gold được xác nhận;
+không dùng output B2 để xác lập Gold hoặc chỉnh bộ cho cân bằng.
+
+## Giới hạn và cách báo cáo
+
+- Chênh lệch domain và thao tác đọc/đối chiếu nguồn có thể gây lệch độ khó.
+  Nhận định độ khó là giả thuyết Owner, chưa phải pilot hoặc reviewer verdict.
+- Giữ nguyên S1–S4 và quy tắc phân bổ trong [protocol](study_protocol.md),
+  không thay allocation theo kết quả. Với n=3 không cân bằng đủ bốn sequence.
+- Báo completion, time, final human decision, AI action và raw n/N theo
+  set × condition × sequence; giữ missing/interruption/exclusion và paired n.
+  Không gọi chênh lệch B0/B2 là tác động nhân quả hoặc có ý nghĩa thống kê.
+- Nếu không chứng minh được equivalence, vẫn nêu giới hạn và phân tầng như trên;
+  Coordinator quyết định protocol có đủ cơ sở GO, không tự gán equivalence PASS.
+- Screening exposure bắt buộc: case và các chú giải đã từng public có thể đã
+  được đọc. Xóa chú giải ở HEAD không xóa lịch sử Git. Không rewrite history;
+  người đã thấy hoặc không chắc exposure cần Coordinator phân xử trước allocation.
+
+**CR-02:** public design correction hoàn tất Owner-side; assessment có lời giải
+và independent sign-off còn chờ kho restricted/Gold. Không đóng CR-02 thay reviewer.

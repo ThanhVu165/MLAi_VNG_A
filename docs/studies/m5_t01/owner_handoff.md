@@ -1,89 +1,67 @@
-# M5-T01 — Owner Handoff
+# M5-T01 — Correction handoff / Owner self-review
 
-**Result:** READY_FOR_INDEPENDENT_REVIEW. **Independent Review:** PENDING.
-Không phải DONE hoặc M5 PASS. **Next Task Unlocked:** NONE.
+**Result:** PUBLIC DOCS READY FOR INDEPENDENT RE-REVIEW; CR-01/control-store
+handoff **PENDING COORDINATOR DECISION**. Independent verdict: **CHANGE REQUEST
+not yet closed**. Không DONE, không M5 PASS. Next Task Unlocked: **NONE**.
 
-## Task, scope và verified baseline
+## Baseline, scope và evidence
 
-Objective: đóng gói deliverables chuẩn bị B0/B2 từ
-[card M5-T01](https://trello.com/c/nSzHYb2a) thành artifact Git có version, để Minh
-review độc lập. Coordinator đã cho phép branch/PR riêng và scope
-`docs/studies/m5_t01/` trong chỉ thị hoàn thiện GitHub; đây là phần tiếp tục task
-hiện hành, không tạo task mới. Owner cuối và approver do Coordinator xác nhận;
-card ghi Coordinator, comment phân công đề xuất Thư; reviewer đề xuất Minh.
+- Repository: ThanhVu165/MLAi_VNG_A (PUBLIC).
+- Verified remote dev: `16f584fa213416db30b247a431b92fffb94be075`.
+- Existing branch: `sprint/m5-t01-review-corrections`;
+  [existing Draft PR #32](https://github.com/ThanhVu165/MLAi_VNG_A/pull/32).
+- Inherited correction HEAD: `debe7c33686f9dce2ff8180a68f653cc4c97621a`.
+  Các commit correction trước đó là bản nháp đã đọc lại, không mặc định đúng.
+- Coordinator cho phép continuation trong worktree riêng trên cùng máy local;
+  không sửa workspace UI đang dirty, không tạo task/remote branch/PR mới.
+- Scope: `docs/studies/m5_t01/` only. No production/policy/corpus changes.
+- [Task Contract và Independent Review](https://trello.com/c/nSzHYb2a#comment-6acb507ae1bdd51c41d186e4).
+  Baseline chuẩn bị lịch sử `282c73b7dbf4ac7bf027d5710cce6ed673ab80d1` thuộc PR #30;
+  không dùng kết quả kiểm tra cũ để chứng nhận correction hiện tại.
 
-Ngày 11/10/2026, fetch `origin --prune` xác minh:
+## Correction disposition
 
-- dev SHA: `282c73b7dbf4ac7bf027d5710cce6ed673ab80d1`.
-- Original workspace HEAD: `0c581ef2c0be97c4fcb943a45d3d6bc6f41a051c`, branch
-  `task/ui-human-review-workspace`; có thay đổi UI/test/bytecode và evidence local
-  không thuộc task. Không checkout/reset/clean/rebase/ghi đè tại đó.
-- Không có open PR ở thời điểm kiểm baseline; latest dev là merge PR #29 về LLM
-  budget, không làm thay policy/corpus hoặc scope chuẩn bị đã bàn giao.
-- Branch mới `sprint/m5-t01-study-preparation` tạo từ verified remote dev trong
-  worktree riêng; không có artifact M5 hiện hữu tại đích, không có file overlap.
-- Repository PUBLIC; không commit Gold. [Gold review/storage](gold_review.md)
-  thay cho `gold_labels.md`; kho có kiểm soát còn chờ Coordinator quyết định.
+| Request | Owner work / evidence | Remaining acceptance |
+|---|---|---|
+| CR-01 | Gold matrix DRAFT 8 case lưu local ngoài Git, có email hash, rule priority, source hash/locator, rationale và forbidden inference; không upload/commit | Restricted storage/access, Owner confirmation, Minh verification 8/8 và Coordinator approval PENDING |
+| CR-02 | [Public structural assessment](xy_equivalence_assessment.md); detailed source/decision/rule/missing-fact/conflict/difficulty comparison trong local draft riêng | Không claim equivalence; bàn giao chi tiết và independent verdict PENDING |
+| CR-03 | [Recruitment/consent](recruitment_consent.md): role verification log, exception gate, independent sharing choices, evidence storage/access/retention/deletion plan | Coordinator điền/duyệt kho, recipient/BTC requirements và dates trước recruitment; Minh re-review PENDING |
+| CR-04 | Correction continuation được Coordinator cho phép; không rewrite/revert/merge | Coordinator xác minh merge authorization và ghi deviation/acceptance; chưa đóng workflow finding |
 
-Đã đọc current AGENT, TEAM_WORKFLOW, PROJECT_SPEC, SPRINT_ROADMAP (M5), STATUS,
-policy và sáu seed docs; đọc Task Contract cùng toàn bộ 5 comment (pagination
-không còn trang sau), đặc biệt FINAL OWNER SELF-REVIEW. Technical contract hiện
-hành ở spec được giữ; không sửa policy/runtime hoặc dùng lỗi kỹ thuật làm P03.
+Matrix là source-based candidate, không phải Gold đã ký; không lấy output B2
+hoặc cân bằng nhãn để chỉnh Gold. Nội dung Gold và chi tiết kho local không nằm
+trong PR. Google Drive PRIVATE chỉ là đề xuất, chưa tạo kho/cấp quyền/upload.
+Đây là blocker bàn giao, không giả định đã có reviewer access.
 
-## Changes và artifact paths
+Chú giải có thể suy ra đáp án theo case đã bỏ khỏi public protocol/equivalence/
+Gold workflow/handoff. Public chỉ giữ email synthetic, cấu trúc, quy trình và
+mẫu trống. Git history từng chứa chú giải nên residual exposure còn tồn tại;
+không tuyên bố xóa HEAD đã bảo mật lịch sử. Screening exposure bắt buộc và
+Coordinator phân xử trước allocation. Participant không được phát reviewer pack.
 
-| Artifact | Nội dung |
-|---|---|
-| [README.md](README.md) | Baseline, audience, nguồn và blockers |
-| [study_protocol.md](study_protocol.md) | Crossover, bốn sequence, fairness, timer, errors, unlock |
-| [cases_xy.md](cases_xy.md) | Đúng tám email cuối Trello, X4 có K49, không đáp án |
-| [gold_review.md](gold_review.md) | Restricted-storage proposal và independent review workflow |
-| [recruitment_consent.md](recruitment_consent.md) | >=3 người, lịch dự kiến, consent và storage plan |
-| [measurement_forms.md](measurement_forms.md) | Sáu nhóm form, metrics, raw n/N và trace cải tiến |
-| [owner_handoff.md](owner_handoff.md) | AC evidence, validation, manifest và pending review |
+## AC status sau correction
 
-Khác biệt có chủ đích so với draft Trello: corpus kiểm kê vẫn sáu nguồn nhưng B0
-và B2 chỉ được dùng năm ACTIVE; nguồn SUPERSEDED dành cho reviewer archive.
-Làm rõ pause marker không đổi primary wall-clock, denominator từng metric,
-technical outcomes và AI action overlap. Không đổi email hoặc Gold Owner-side;
-không công bố bảng đáp án/balance nhãn theo case vào public Git.
+| AC | Owner deliverable | Status/gate |
+|---|---|---|
+| AC1 | Recruitment plan, eligibility, separate consent, evidence plan | Design corrected; independent review/storage approval pending; 0 participant confirmed |
+| AC2 | B0/B2 protocol, unchanged S1–S4, structural X/Y assessment, limitations | Detailed equivalence review pending with Gold; no equivalence claim |
+| AC3 | Existing measurement forms, n/N, missing/technical handling | Retained; không tạo results hoặc feedback |
+| AC4 | 8 synthetic emails + local Gold candidate matrix | PENDING controlled handoff and independent 8/8 sign-off |
+| AC5 | Study unlock checklist | Checklist retained; no runtime/isolation acceptance inferred |
+| AC6 | Correction docs + this evidence handoff | Independent verdict/Coordinator acceptance PENDING |
 
-## AC1–AC6 evidence matrix
+## Validation trên correction cuối
 
-| AC | Checklist Trello đã đọc | Owner evidence | Phần còn chờ |
-|---|---|---|---|
-| AC1 | COMPLETE | recruitment_consent: tiêu chí, tiếp cận >=3, lịch/backup, consent | Tuyển/lịch/consent thật trước study |
-| AC2 | COMPLETE | study_protocol: crossover, sequence, cùng corpus ACTIVE, timer/errors | Minh review, Coordinator approval |
-| AC3 | COMPLETE | measurement_forms: observation, condition/session feedback, minimization, n/N | Independent review |
-| AC4 | COMPLETE Owner-side | cases_xy: đủ 8 email, X4 mới; policy/sáu corpus đối chiếu; Gold giữ trên Trello | Gold/equivalence sign-off; restricted storage |
-| AC5 | COMPLETE về checklist điều kiện | study_protocol: unlock revision, isolation, access, runtime, consent/lịch | Runtime proof M3-T03 và actual unlock chưa xác nhận |
-| AC6 | INCOMPLETE | measurement_forms: aggregation/trace; Handoff này và Trello đầy đủ phần Owner | Minh independent verdict + Coordinator acceptance |
+Offline document validation, không import app/pipeline/Verify, không seed DB.
+[Reproducible checks và kết quả](validation_report.md) chứa kiểm tra link, UTF-8,
+case/sequence, corpus manifest, scope và diff. Private draft kiểm đủ 8 ID/hash/
+locator và PENDING signatures cục bộ; không đăng đáp án hoặc artifact riêng lên
+Trello/PR. Reviewer khác máy đọc được public evidence từ PR; private verification
+chỉ có thể tiếp tục sau access-approved handoff.
 
-Không tự tick AC6; không chuyển card DONE. AC1–AC5 COMPLETE là trạng thái checklist
-chuẩn bị Owner-side đã đọc, không chứng minh đã có người tham gia hoặc study GO.
-
-## Validation và self-review
-
-Validation tài liệu offline, không import/chạy app, pipeline, seed hoặc Verify.
-Commit/PR URL và final SHA được đăng trong comment handoff mới trên card
-(không tự chèn hash của commit vào chính nó).
-
-| Lệnh/check thực tế | Kết quả |
-|---|---|
-| `git fetch origin --prune`; `git rev-parse HEAD origin/dev` | Baseline như trên; fetch thành công |
-| `gh repo view ThanhVu165/MLAi_VNG_A --json visibility,isPrivate` | PUBLIC, isPrivate=false |
-| `gh pr list --repo ThanhVu165/MLAi_VNG_A --state open --json number,title,headRefName,baseRefName` | 0 PR tại baseline check |
-| `python -X utf8 -` với assertions file/link/case/secret patterns | 7 Markdown; 32 link tương đối tồn tại; đủ ID X1–X4/Y1–Y4; không Gold trong case pack; không gold_labels; scoped sensitive patterns PASS |
-| So sánh tám email trích từ comment Trello với tám blockquote Git | 8/8 exact match, X4 có K49 |
-| `git show origin/dev:data/seed_docs/<ID>.json` + SHA-256/JSON assertions | 6 nguồn synthetic; 5 ACTIVE, 1 SUPERSEDED; manifest bên dưới |
-| `git diff --cached --check` | PASS sau bỏ 8 Markdown hard-break trailing spaces |
-| `git diff --cached --name-only` và full diff self-review | Chỉ 7 file trong scope; không production code, PII thật, đáp án Gold hoặc Set A/Set B |
-
-Lần validation đầu gặp lỗi console encoding cp1252 khi in tiếng Việt; đã chạy lại
-bằng UTF-8/JSON escaped output và hoàn tất assertions. Secret scan là heuristic
-trên artifact mới cộng manual review, không phải audit toàn lịch sử repository.
-Không chạy runtime tests/full suite vì thay đổi chỉ là tài liệu; không tạo LIVE
-evidence hoặc khẳng định environment đã được kiểm chứng từ validation này.
+Runtime tests/full suite: **NOT RUN (docs-only)**. Study sessions: **0**.
+LIVE provider calls: **0**. GitHub metadata/Git operations chỉ phục vụ PR hiện có.
+Không gửi email, không liên hệ participant, không mở Set A/Set B, không merge.
 
 ## Corpus manifest
 
@@ -99,34 +77,16 @@ Manifest này không cấp quyền tra cứu nguồn SUPERSEDED cho participant.
 | RL-2025-2363.json | SUPERSEDED | `7b0f41bc63dc9558b95a3573b681d79f3ff7af255b49d51c6051cd6381995012` |
 | RL-2026-3150.json | ACTIVE | `fcfe0098e313bbf9a5c25e71bfdd08dae14e6ca27b0e4c27f77ae43dcca685f6` |
 
-## Remaining risks và review request
+## Blockers và review request
 
-- Gold Owner-side và equivalence chưa được Minh xác nhận. Chưa có Gold storage
-  access proof; Coordinator chọn kho riêng và kiểm tra quyền Trello có Gold.
-- Cases đã public trong Git; screening exposure là bắt buộc, vẫn có residual
-  contamination risk. Participant không nhận lời giải hoặc toàn bộ reviewer pack.
-- Environment M3-T03 trong handoff Trello trước ghi BLOCKED; chưa có runtime proof
-  mới được xác nhận ở task này. Không coi DB setting/static audit là isolation PASS.
-- Không có participant/recruitment/consent/session thật trong task; lịch chỉ dự kiến.
-  Storage retention, owner/due, product/runtime revision và allocation cần chốt.
-- N nhỏ, X/Y khác nội dung/domain và n=3 không cân bằng hết thứ tự. ACTIVE-only
-  cần reviewer đánh giá lại độ khó; không claim đã có reviewer difficulty score.
-- B2 runtime/human control cần kiểm chứng trên revision dùng thực tế trước study;
-  tài liệu không khẳng định mọi chức năng đã VERIFIED_LIVE.
+1. Coordinator phê duyệt kho restricted/access trước khi bàn giao Gold cho Minh;
+   kiểm thử allowed/denied account, parent inheritance và retention. Chưa có
+   phương án bàn giao được kiểm chứng: **PENDING**, không Gold PASS.
+2. Minh independent re-review CR-01/02/03; không dùng self-review thay verdict.
+3. CR-04 workflow disposition và final acceptance thuộc Coordinator.
+4. Study riêng cần runtime/isolation proof, revision/mode được duyệt, >=3 người
+   thực sự phù hợp có identity/role evidence, lịch/consent và storage plan đầy đủ.
+   Task này không xác minh các điều kiện đó hoặc mở khóa study.
 
-Minh review diff và Gold ở kho được cấp quyền, gửi **PASS** hoặc **CHANGE REQUEST**
-có căn cứ. Coordinator quyết định acceptance/merge và GO study sau đủ unlock.
-Production code/policy/schema/UI changes: **0**. Study sessions: **0**.
-LIVE LLM/API calls: **0** (GitHub/Trello metadata/document operations không phải
-provider execution). Không gửi email, không mở Set A/Set B, không merge.
-
-## Correction after independent CHANGE REQUEST — 11/10/2026
-
-Reviewer comment: https://trello.com/c/nSzHYb2a#comment-6acb507ae1bdd51c41d186e4. Đây là vòng sửa Owner, chưa có verdict review lại.
-
-- **CR-01 (P0) — PARTIAL / PENDING:** X3 sửa thành câu hỏi quy định chung K50, HK1 2026–2027, tuần 5 đúng hạn; `study_protocol.md` giải thích rule priority. Gold theo case và reviewer rationale giữ ngoài public repo; restricted store, access proof và independent verification 8/8 vẫn cần Coordinator/reviewer. Không tuyên bố Gold PASS.
-- **CR-02 (P1) — OWNER COMPLETED / PENDING REVIEW:** Thêm `xy_equivalence_assessment.md` với domain, số request, số văn bản, fact/authority/conflict, độ khó tương đối và bias của crossover n=3. Không công khai Gold mapping. Không claim hai bộ đồng khó.
-- **CR-03 (P1) — OWNER COMPLETED / PENDING REVIEW:** `recruitment_consent.md` bổ sung eligibility/role verification và separate opt-in chia sẻ danh tính/chức danh/feedback với BTC, storage/access/retention cần Coordinator điền trước tuyển. Không thu hoặc chia sẻ PII thật.
-- **CR-04 (workflow) — PENDING COORDINATOR:** PR #30 merge lúc 15:32 +07 ngày 11/10 (merge commit `72fc188525bd2164f2df47c6372d1bfd18b70109`) trước reviewer verdict lúc 16:01. Không revert/rewrite; Coordinator xác minh authorization và ghi deviation/biện pháp correction. Merge trước review không tương đương DONE.
-
-**Verified correction baseline:** `dev@16f584fa213416db30b247a431b92fffb94be075`, includes PR #30 and #31. Branch `sprint/m5-t01-review-corrections`, PR correction linked from Trello after creation. Validation: source-level comparison against current `dev`, focused doc links/PII/Gold-content audit + reviewed GitHub diff; runtime study/tests NOT RUN; LIVE LLM/API = 0. **Result: READY_FOR_REVIEW for correction docs, with CR-01 restricted Gold/storage blocker and CR-04 Coordinator decision still pending.**
+Public docs sẵn sàng để review, toàn M5-T01 vẫn chưa được nghiệm thu. Commit SHA
+và validation cuối được báo trực tiếp cùng PR, không đăng nhiều comment Trello.
