@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import re
+import runpy
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import Barrier, Event
 
 import pytest
 from streamlit.testing.v1 import AppTest
@@ -483,6 +486,248 @@ def test_ui_requires_save_before_human_approval_and_sends_once(runtime) -> None:
         len(db.fetch_all("SELECT event_id FROM audit_events WHERE action = 'HUMAN_APPROVED_SEND'"))
         == 1
     )
+
+
+@pytest.fixture
+def approval_case(runtime):
+    # Nạp handler thật khi DB chưa có case; main() không tạo dữ liệu review.
+    page = runpy.run_path(str(Path(__file__).parents[1] / "pages/2_Hang_cho_duyet.py"))
+    pause_automation("ADMIN:test", "Kiểm thử approval offline với dữ liệu synthetic.")
+    result = process_case(_email())
+    assert result.status is CaseStatus.PENDING_APPROVAL
+    preview = next(p for p in page["_preview_drafts"]() if p.case_id == result.case_id)
+    return page, preview
+
+
+def _approval_events(case_id):
+    return db.fetch_all(
+        "SELECT * FROM audit_events WHERE case_id = ? AND action = 'HUMAN_APPROVED_SEND'",
+        (case_id,),
+    )
+
+
+@pytest.mark.parametrize("field", ["subject", "body", "citations_json", "draft_id"])
+def test_m3_t01_stale_preview_rejected(approval_case, field) -> None:
+    page, preview = approval_case
+    values = {
+        "subject": preview.subject + " — bản mới",
+        "body": preview.body + " Nội dung đã được cập nhật.",
+        "citations_json": "[]",
+        "draft_id": "synthetic-new-draft",
+    }
+    db.execute(
+        f"UPDATE drafts SET {field} = ? WHERE draft_id = ?", (values[field], preview.draft_id)
+    )
+    with pytest.raises(ValueError, match="Nội dung đã thay đổi"):
+        page["_approve_send"](preview)
+    assert _loaded(preview.case_id).status is CaseStatus.PENDING_APPROVAL
+    assert not _approval_events(preview.case_id)
+
+
+def test_m3_t01_approval_retry_is_rejected_and_audit_matches(approval_case) -> None:
+    page, preview = approval_case
+    before = datetime.now(timezone.utc)
+    page["_approve_send"](preview)
+    for _ in range(2):
+        with pytest.raises(ValueError, match="không còn chờ duyệt"):
+            page["_approve_send"](preview)
+    after = datetime.now(timezone.utc)
+    row = db.fetch_one("SELECT * FROM cases WHERE case_id = ?", (preview.case_id,))
+    draft = db.fetch_one("SELECT * FROM drafts WHERE draft_id = ?", (preview.draft_id,))
+    events = _approval_events(preview.case_id)
+    assert row["status"] == CaseStatus.SENT and row["send_deadline"] is None
+    assert (draft["subject"], draft["body"], json.loads(draft["citations_json"])) == (
+        preview.subject,
+        preview.body,
+        list(preview.citations),
+    )
+    assert len(events) == 1
+    assert events[0]["actor"] == "HUMAN:local"
+    assert before <= datetime.fromisoformat(events[0]["ts"].replace("Z", "+00:00")) <= after
+    assert json.loads(events[0]["sources_json"]) == list(preview.citations)
+    assert events[0]["corpus_version"] == page["get_corpus_version"]()
+    assert dispatch_due(preview.case_id) is False
+    assert len(_approval_events(preview.case_id)) == 1
+    assert not db.fetch_all(
+        "SELECT event_id FROM audit_events WHERE case_id = ? AND action = 'SEND_DISPATCHED'",
+        (preview.case_id,),
+    )
+
+
+def test_m3_t01_two_sessions_concurrent_approval(approval_case, monkeypatch) -> None:
+    page, first = approval_case
+    second = next(p for p in page["_preview_drafts"]() if p.case_id == first.case_id)
+    barrier = Barrier(2, timeout=10)
+    namespace = page["_approve_send"].__globals__
+    validate = namespace["validate_human_draft"]
+
+    def synchronized_validate(*args):
+        draft = validate(*args)
+        barrier.wait()
+        return draft
+
+    monkeypatch.setitem(namespace, "validate_human_draft", synchronized_validate)
+
+    def approve(preview):
+        try:
+            page["_approve_send"](preview)
+        except ValueError as error:
+            return str(error)
+        return "approved"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(approve, p) for p in (first, second)]
+        outcomes = [future.result(timeout=15) for future in futures]
+    assert outcomes.count("approved") == 1
+    assert sum("không còn chờ duyệt" in outcome for outcome in outcomes) == 1
+    assert _loaded(first.case_id).status is CaseStatus.SENT
+    assert len(_approval_events(first.case_id)) == 1
+
+
+def test_m3_t01_edit_during_approval_validation(approval_case, monkeypatch) -> None:
+    page, preview = approval_case
+    validated, edited = Event(), Event()
+    namespace = page["_approve_send"].__globals__
+    validate = namespace["validate_human_draft"]
+
+    def wait_for_edit(*args):
+        draft = validate(*args)
+        validated.set()
+        assert edited.wait(10), "Session sửa bản nháp không hoàn tất"
+        return draft
+
+    monkeypatch.setitem(namespace, "validate_human_draft", wait_for_edit)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(page["_approve_send"], preview)
+        try:
+            assert validated.wait(10), "Approval chưa tới điểm đồng bộ"
+            db.execute(
+                "UPDATE drafts SET subject = ? WHERE draft_id = ?",
+                (preview.subject + " — session B", preview.draft_id),
+            )
+        finally:
+            edited.set()
+        with pytest.raises(ValueError, match="Nội dung đã thay đổi"):
+            future.result(timeout=15)
+    assert _loaded(preview.case_id).status is CaseStatus.PENDING_APPROVAL
+    assert not _approval_events(preview.case_id)
+
+
+@pytest.mark.parametrize("winner", ["approve", "return"])
+def test_m3_t01_approval_competes_with_return(approval_case, monkeypatch, winner) -> None:
+    page, preview = approval_case
+    entered, release = Event(), Event()
+    handler = page["_approve_send"] if winner == "return" else page["_return_to_queue"]
+    namespace = handler.__globals__
+    connect = namespace["get_connection"] if winner == "return" else db.get_connection
+
+    def waiting_connection(*args, **kwargs):
+        entered.set()
+        assert release.wait(10), "Thao tác cạnh tranh không hoàn tất"
+        return connect(*args, **kwargs)
+
+    target = namespace if winner == "return" else db.__dict__
+    with monkeypatch.context() as patch:
+        patch.setitem(target, "get_connection", waiting_connection)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(handler, preview)
+            try:
+                assert entered.wait(10)
+                patch.setitem(target, "get_connection", connect)
+                winning_handler = (
+                    page["_return_to_queue"] if winner == "return" else page["_approve_send"]
+                )
+                winning_handler(preview)
+            finally:
+                release.set()
+            with pytest.raises(ValueError, match="không còn chờ duyệt"):
+                future.result(timeout=15)
+    expected = CaseStatus.SENT if winner == "approve" else CaseStatus.AWAITING_HUMAN
+    assert _loaded(preview.case_id).status is expected
+    assert len(_approval_events(preview.case_id)) == (winner == "approve")
+
+
+def test_m3_t01_audit_failure_rolls_back_approval(approval_case, monkeypatch) -> None:
+    page, preview = approval_case
+
+    def failed_audit(**kwargs):
+        raise RuntimeError("synthetic audit failure")
+
+    monkeypatch.setitem(page["_approve_send"].__globals__, "log_event", failed_audit)
+    with pytest.raises(RuntimeError, match="synthetic audit failure"):
+        page["_approve_send"](preview)
+    assert _loaded(preview.case_id).status is CaseStatus.PENDING_APPROVAL
+    assert not _approval_events(preview.case_id)
+
+
+def test_m3_t01_saved_draft_requires_fresh_preview(approval_case) -> None:
+    page, preview = approval_case
+    page["_save_draft"](preview, preview.subject + " — cập nhật", preview.body)
+    with pytest.raises(ValueError, match="Nội dung đã thay đổi"):
+        page["_approve_send"](preview)
+    assert not _approval_events(preview.case_id)
+    fresh = next(p for p in page["_preview_drafts"]() if p.case_id == preview.case_id)
+    page["_approve_send"](fresh)
+    assert _loaded(preview.case_id).status is CaseStatus.SENT
+    assert len(_approval_events(preview.case_id)) == 1
+
+
+def test_m3_t01_corpus_change_during_validation_rejected(approval_case, monkeypatch) -> None:
+    page, preview = approval_case
+    namespace = page["_approve_send"].__globals__
+    validate = namespace["validate_human_draft"]
+
+    def change_corpus(*args):
+        draft = validate(*args)
+        db.execute("UPDATE sources SET content_hash = 'synthetic-v2' WHERE doc_id = 'rule'")
+        return draft
+
+    monkeypatch.setitem(namespace, "validate_human_draft", change_corpus)
+    with pytest.raises(ValueError, match="Quy định đã thay đổi"):
+        page["_approve_send"](preview)
+    assert _loaded(preview.case_id).status is CaseStatus.PENDING_APPROVAL
+    assert not _approval_events(preview.case_id)
+
+
+def test_m3_t01_corpus_change_after_preview_requires_new_preview(approval_case) -> None:
+    page, preview = approval_case
+    db.execute("UPDATE sources SET content_hash = 'synthetic-v2' WHERE doc_id = 'rule'")
+    assert page["get_corpus_version"]() != preview.corpus_version
+    rejected = False
+    try:
+        page["_approve_send"](preview)
+    except ValueError:
+        rejected = True
+    assert rejected, {
+        "status": _loaded(preview.case_id).status,
+        "successful_approval_events": len(_approval_events(preview.case_id)),
+        "preview_corpus_version": preview.corpus_version,
+        "current_corpus_version": page["get_corpus_version"](),
+    }
+    assert _loaded(preview.case_id).status is CaseStatus.PENDING_APPROVAL
+    assert not _approval_events(preview.case_id)
+
+
+def test_m3_t01_recipient_change_requires_new_preview(approval_case) -> None:
+    page, preview = approval_case
+    db.execute(
+        "UPDATE cases SET sender = ? WHERE case_id = ?",
+        ("changed-recipient@example.test", preview.case_id),
+    )
+    rejected = False
+    try:
+        page["_approve_send"](preview)
+    except ValueError:
+        rejected = True
+    assert rejected, {
+        "status": _loaded(preview.case_id).status,
+        "successful_approval_events": len(_approval_events(preview.case_id)),
+        "recipient": db.fetch_one("SELECT sender FROM cases WHERE case_id = ?", (preview.case_id,))[
+            "sender"
+        ],
+    }
+    assert _loaded(preview.case_id).status is CaseStatus.PENDING_APPROVAL
+    assert not _approval_events(preview.case_id)
 
 
 def test_restart_recovers_legacy_processing_case_without_job(runtime) -> None:
