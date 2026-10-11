@@ -14,6 +14,7 @@ from infra.telemetry import snapshot
 from verify.harness import VerifyResult
 from ui.presentation import (
     decision_badge_html,
+    escape_html,
     inject_app_css,
     kpi_card_html,
     local_time,
@@ -42,9 +43,9 @@ STEP_DESCRIPTIONS: dict[str, str] = {
 
 RULE_DESCRIPTIONS: dict[str, str] = {
     "P01": "Vượt thẩm quyền phân cấp (Cần cấp quản lý quyết định)",
-    "P02": "Ngoài quy định hiện hành / Chưa đủ căn cứ quy chế",
+    "P02": "Ngoài quy định, không có nguồn phù hợp hoặc căn cứ mâu thuẫn",
     "P03": "Thiếu dữ kiện cần thiết từ người gửi",
-    "P04": "Có mâu thuẫn giữa các quy định áp dụng",
+    "P04": "Kiểm tra an toàn hoặc căn cứ không đạt",
     "P05": "Đủ căn cứ quy định hợp lệ — Tự động soạn phản hồi",
 }
 
@@ -82,7 +83,7 @@ def _get_deterministic_fixtures(fixture_type: str) -> tuple[tuple[VerifyResult, 
 
     items = (
         VerifyResult("V01", "Quy trình và thang điểm rèn luyện", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1200, "09:00:00 ngày 21/09/2026", "cv_seed_001", "ref_v01", "P05"),
-        VerifyResult("V02", "Course withdrawal deadline", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1400, "09:01:00 ngày 21/09/2026", "cv_seed_001", "ref_v02", "P05"),
+        VerifyResult("V02", "Hạn rút học phần", None, Decision.AUTO_REPLY, None, Decision.AUTO_REPLY, None, "P05", True, 1400, "09:01:00 ngày 21/09/2026", "cv_seed_001", "ref_v02", "P05"),
         VerifyResult("V03", "Xin nộp phúc khảo muộn vì nhập viện", "Trường hợp nộp phúc khảo ngoài thời hạn do nhập viện, anh/chị có đồng ý tiếp nhận không?", Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, Decision.ESCALATE, EscalationType.AUTHORITY_REQUIRED, "P01", True, 1600, "09:02:00 ngày 21/09/2026", "cv_seed_001", "ref_v03", "P01"),
         VerifyResult("V04", "Đăng ký ký túc xá", "Vấn đề đăng ký ký túc xá không thuộc phạm vi xử lý đào tạo, anh/chị có chuyển đơn vị quản lý KTX không?", Decision.ESCALATE, EscalationType.OUT_OF_POLICY, Decision.ESCALATE, EscalationType.OUT_OF_POLICY, "P02", True, 1500, "09:03:00 ngày 21/09/2026", "cv_seed_001", "ref_v04", "P02"),
     )
@@ -94,7 +95,7 @@ def _get_evaluation_metrics() -> dict[str, Any] | None:
     # 1. Kiểm tra session state từ trang Verify
     if "verification_result" in st.session_state:
         results, elapsed, case_set = st.session_state["verification_result"]
-        return _parse_verify_results(results, elapsed, case_set, source="Session Verify")
+        return _parse_verify_results(results, elapsed, case_set, source="Phiên kiểm thử", synthetic=False)
 
     # 2. Kiểm tra query param fixture (cho visual review / demo)
     fixture_param = st.query_params.get("fixture")
@@ -105,13 +106,13 @@ def _get_evaluation_metrics() -> dict[str, Any] | None:
             if fixture_param == "with_fail"
             else "Bộ kiểm thử 4 ca (Sơ khảo)"
         )
-        return _parse_verify_results(results, elapsed, case_set, source=source_label)
+        return _parse_verify_results(results, elapsed, case_set, source=source_label, synthetic=True)
 
     return None
 
 
 def _parse_verify_results(
-    results: tuple[Any, ...], elapsed: float, case_set: str, source: str
+    results: tuple[Any, ...], elapsed: float, case_set: str, source: str, *, synthetic: bool
 ) -> dict[str, Any]:
     total = len(results)
     passed = sum(1 for r in results if getattr(r, "passed", False))
@@ -144,6 +145,7 @@ def _parse_verify_results(
         "elapsed": elapsed,
         "case_set": case_set,
         "source": source,
+        "synthetic": synthetic,
     }
 
 
@@ -153,7 +155,7 @@ def main() -> None:
     # 1. Header & Data Provenance
     st.markdown(
         page_header_html(
-            "METRICS & EVALUATION",
+            "ĐO LƯỜNG & ĐÁNH GIÁ",
             "Đo lường",
             "Theo dõi mức độ tuân thủ ranh giới an toàn, tỷ lệ tự động hóa và hiệu năng hệ thống từ dữ liệu thực tế.",
         ),
@@ -220,7 +222,7 @@ def main() -> None:
             """<div class="ex-card" style="border-left: 4px solid #F59E0B; margin-bottom: 20px;">
 <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: #B45309;">Chưa có đủ dữ liệu vận hành</h3>
 <p style="margin: 0; font-size: 14px; color: #64748B; line-height: 1.5;">
-Hệ thống chưa ghi nhận ca xử lý nào trong cơ sở dữ liệu. Bạn có thể gửi email kiểm thử tại trang <strong>Xử lý email</strong> hoặc thực thi bộ ca mẫu tại trang <strong>Verify (Kiểm thử)</strong> để xem số liệu đo lường.
+Hệ thống chưa ghi nhận ca xử lý nào trong cơ sở dữ liệu. Bạn có thể gửi email kiểm thử tại trang <strong>Xử lý email</strong> hoặc thực thi bộ ca mẫu tại trang <strong>Kiểm thử</strong> để xem số liệu đo lường.
 </p>
 </div>""",
             unsafe_allow_html=True,
@@ -298,6 +300,11 @@ Các chỉ số cho biết hệ thống có bỏ sót hoặc chuyển người k
     )
 
     eval_data = _get_evaluation_metrics()
+    if eval_data and eval_data["synthetic"]:
+        st.warning(
+            "DỮ LIỆU MÔ PHỎNG — Các chỉ số kiểm thử bên dưới chỉ dùng để xem giao diện, "
+            "không phải bằng chứng chạy pipeline hay số liệu nghiệm thu."
+        )
     groundedness_fail_rate = metrics.get("groundedness_fail_rate")
     override_rate = metrics.get("override_rate")
 
@@ -360,7 +367,7 @@ Các chỉ số cho biết hệ thống có bỏ sót hoặc chuyển người k
         g_tone = "danger" if (isinstance(groundedness_fail_rate, (int, float)) and groundedness_fail_rate > 0) else "success"
         st.markdown(
             kpi_card_html(
-                label="Thiếu căn cứ (Ground Fail)",
+                label="Phản hồi chưa đủ căn cứ",
                 value=_percent(groundedness_fail_rate),
                 subtext="R8a Ground Guard fail / số bản nháp",
                 tone=g_tone,
@@ -389,14 +396,14 @@ Các chỉ số cho biết hệ thống có bỏ sót hoặc chuyển người k
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
 <div>
 <div style="font-weight: 700; color: #065F46; font-size: 14px;">
-✓ Kết quả kiểm thử tự động ({eval_data['source']}): {eval_data['passed']}/{eval_data['total']} ca đạt ({eval_data['pass_rate']:.1%})
+✓ Kết quả kiểm thử tự động ({escape_html(eval_data['source'])}): {eval_data['passed']}/{eval_data['total']} ca đạt ({eval_data['pass_rate']:.1%})
 </div>
 <div style="font-size: 13px; color: #047857; margin-top: 2px;">
 Thời gian thực thi: {eval_data['elapsed']:.1f} giây · Không ghi nhận trường hợp vi phạm quy định ngoài dự kiến.
 </div>
 </div>
 <div>
-<a href="/Verify" target="_self" style="background: #10B981; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;">Xem chi tiết Verify →</a>
+<a href="/Verify" target="_self" style="background: #10B981; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;">Xem chi tiết kiểm thử →</a>
 </div>
 </div>
 </div>""",
@@ -408,14 +415,14 @@ Thời gian thực thi: {eval_data['elapsed']:.1f} giây · Không ghi nhận tr
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
 <div>
 <div style="font-weight: 700; color: #1E3A8A; font-size: 14px;">
-Đánh giá mức độ an toàn qua bộ kiểm thử (Verify Harness)
+Đánh giá mức độ an toàn qua bộ kiểm thử
 </div>
 <div style="font-size: 13px; color: #475569; margin-top: 2px;">
-Chưa chạy bộ kiểm thử trong phiên này. Chỉ số Bỏ sót (Missed Escalation) và Chuyển người thừa (Unnecessary Escalation) cần đối chiếu với ground truth của bộ ca Verify.
+Chưa chạy bộ kiểm thử trong phiên này. Chỉ số bỏ sót chuyển chuyên viên và chuyển chuyên viên không cần thiết cần đối chiếu với kết quả kỳ vọng của bộ ca kiểm thử.
 </div>
 </div>
 <div>
-<a href="/Verify" target="_self" style="background: #2563EB; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;">Chạy kiểm thử Verify →</a>
+<a href="/Verify" target="_self" style="background: #2563EB; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;">Chạy kiểm thử →</a>
 </div>
 </div>
 </div>""",
@@ -431,7 +438,7 @@ Chưa chạy bộ kiểm thử trong phiên này. Chỉ số Bỏ sót (Missed E
         """<div style="margin-bottom: 14px;">
 <div style="display: flex; align-items: center; gap: 8px;">
 <span style="font-size: 18px;">⚡</span>
-<h2 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #0F172A;">2. Mức độ tự động hóa & Phân bổ quyết định (Autonomy)</h2>
+<h2 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #0F172A;">2. Mức độ tự động hóa & phân bổ quyết định</h2>
 </div>
 <p style="margin: 4px 0 0 0; font-size: 13.5px; color: #64748B;">
 Tỷ lệ case được tự xử lý và chuyển chuyên viên.
@@ -478,7 +485,7 @@ Tỷ lệ case được tự xử lý và chuyển chuyên viên.
 
         # Phân bổ theo Quy tắc áp dụng (Rules)
         st.markdown(
-            """<div class="ex-card-title" style="margin-top: 16px;">Phân bổ theo Quy tắc áp dụng (Policy Rules)</div>""",
+            """<div class="ex-card-title" style="margin-top: 16px;">Phân bổ theo quy tắc áp dụng</div>""",
             unsafe_allow_html=True,
         )
         rule_counts: dict[str, int] = {}
@@ -493,8 +500,8 @@ Tỷ lệ case được tự xử lý và chuyển chuyên viên.
             rule_items.append(
                 f"""<div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #F1F5F9; font-size: 13px;">
 <div>
-<strong style="color: #1E293B; font-family: monospace;">{rid}</strong>
-<span style="color: #64748B; margin-left: 6px;">— {r_desc}</span>
+<strong style="color: #1E293B; font-family: monospace;">{escape_html(rid)}</strong>
+<span style="color: #64748B; margin-left: 6px;">— {escape_html(r_desc)}</span>
 </div>
 <div style="font-weight: 600; color: #0F172A;">{count} ca <span style="font-size: 12px; color: #64748B; font-weight: normal;">({pct:.1f}%)</span></div>
 </div>"""
@@ -509,7 +516,7 @@ Tỷ lệ case được tự xử lý và chuyển chuyên viên.
     # Cột phải: Lý do dừng chuyển chuyên viên (Stop Reasons)
     with autonomy_cols[1]:
         st.markdown(
-            """<div class="ex-card-title">Lý do dừng chuyển chuyên viên (Stop Reasons Breakdown)</div>""",
+            """<div class="ex-card-title">Phân bổ lý do dừng và chuyển chuyên viên</div>""",
             unsafe_allow_html=True,
         )
 
@@ -545,7 +552,7 @@ Tỷ lệ case được tự xử lý và chuyển chuyên viên.
         """<div style="margin-bottom: 14px;">
 <div style="display: flex; align-items: center; gap: 8px;">
 <span style="font-size: 18px;">⚙️</span>
-<h2 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #0F172A;">3. Hiệu năng vận hành (Operations)</h2>
+<h2 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #0F172A;">3. Hiệu năng vận hành</h2>
 </div>
 <p style="margin: 4px 0 0 0; font-size: 13.5px; color: #64748B;">
 Độ trễ và chi phí xử lý từ dữ liệu thực tế.

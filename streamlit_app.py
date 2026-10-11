@@ -43,7 +43,7 @@ def main() -> None:
                 icon="📋",
                 url_path="Nhat_ky_kiem_toan",
             ),
-            st.Page("pages/5_Verify.py", title="Verify", icon="🛡️", url_path="Verify"),
+            st.Page("pages/5_Verify.py", title="Kiểm thử", icon="🛡️", url_path="Verify"),
             st.Page("pages/6_Do_luong.py", title="Đo lường", icon="📊", url_path="Do_luong"),
         ]
     )

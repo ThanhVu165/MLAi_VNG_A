@@ -18,6 +18,7 @@ from infra.db import fetch_all
 from ui.presentation import (
     badge_html,
     decision_badge_html,
+    escape_html,
     inject_app_css,
     kpi_card_html,
     local_time,
@@ -460,11 +461,11 @@ with browse_tab:
                     f"""
                     <div style="border: {card_border}; background: {card_bg}; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-size: 13px; font-weight: 700; color: #1E293B;">📄 {s.doc_id}</span>
+                            <span style="font-size: 13px; font-weight: 700; color: #1E293B;">📄 {escape_html(s.doc_id)}</span>
                             <div>{status_pill}</div>
                         </div>
                         <div style="font-size: 13.5px; font-weight: 600; color: #0F172A; margin-bottom: 6px; line-height: 1.35;">
-                            {s.title or 'Chưa có tên tài liệu'}
+                            {escape_html(s.title or 'Chưa có tên tài liệu')}
                         </div>
                         <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
                             {domains_pills}
@@ -473,7 +474,7 @@ with browse_tab:
                             </span>
                         </div>
                         <div style="font-size: 11.5px; color: #64748B;">
-                            {s.issuer or 'Chưa rõ đơn vị'} · Hiệu lực từ: {_date_text(s.effective_from)}
+                            {escape_html(s.issuer or 'Chưa rõ đơn vị')} · Hiệu lực từ: {escape_html(_date_text(s.effective_from))}
                         </div>
                     </div>
                     """,
@@ -489,14 +490,14 @@ with browse_tab:
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div>
                             <div style="font-size: 12px; font-weight: 700; color: #2563EB; margin-bottom: 2px;">
-                                MÃ VĂN BẢN: {selected_source.doc_id}
+                                MÃ VĂN BẢN: {escape_html(selected_source.doc_id)}
                             </div>
                             <h3 style="margin: 0 0 6px 0; font-size: 17px; font-weight: 700; color: #0F172A;">
-                                {selected_source.title or 'Tài liệu chưa có tiêu đề'}
+                                {escape_html(selected_source.title or 'Tài liệu chưa có tiêu đề')}
                             </h3>
                             <div style="font-size: 12.5px; color: #64748B;">
-                                🏢 {selected_source.issuer or 'Chưa rõ đơn vị ban hành'} &nbsp;·&nbsp;
-                                📅 Hiệu lực: {_date_text(selected_source.effective_from)} → {_date_text(selected_source.effective_to)}
+                                🏢 {escape_html(selected_source.issuer or 'Chưa rõ đơn vị ban hành')} &nbsp;·&nbsp;
+                                📅 Hiệu lực: {escape_html(_date_text(selected_source.effective_from))} → {escape_html(_date_text(selected_source.effective_to))}
                             </div>
                         </div>
                         <div style="text-align: right;">
@@ -566,16 +567,16 @@ with browse_tab:
                         if is_hit
                         else "border-left: 3px solid #2563EB; background: #F8FAFC;"
                     )
-                    safe_chunk_text = chunk.text.strip().replace("\n", "<br/>")
+                    safe_chunk_text = escape_html(chunk.text.strip()).replace("\n", "<br/>")
                     st.markdown(
                         f"""
                         <div class="ex-evidence-box" style="{border_style} margin-bottom: 12px; border-radius: 6px; padding: 12px 14px;">
                             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
                                 <span class="ex-evidence-breadcrumb" style="font-weight: 700; color: #1E40AF; font-size: 12.5px;">
-                                    📌 {chunk.breadcrumb}
+                                    📌 {escape_html(chunk.breadcrumb)}
                                 </span>
                                 <span style="font-size: 11px; font-family: monospace; color: #64748B;">
-                                    {chunk.chunk_id}
+                                    {escape_html(chunk.chunk_id)}
                                 </span>
                             </div>
                             <div class="ex-evidence-text" style="font-size: 13.5px; line-height: 1.55; color: #1E293B; background: #FFFFFF; padding: 10px 12px; border-radius: 4px; border: 1px solid #E2E8F0;">
@@ -653,16 +654,16 @@ with browse_tab:
                         f"Tìm thấy {len(cases_cited)} ca xử lý đã trích dẫn {selected_source.doc_id} làm căn cứ pháp lý:"
                     )
                     for c in cases_cited:
-                        safe_reason = readable_text(c["reason"] or "").strip().replace("\n", "<br/>")
+                        safe_reason = escape_html(readable_text(c["reason"] or "").strip()).replace("\n", "<br/>")
                         st.markdown(
                             f"""
                             <div class="ex-card" style="margin-bottom: 8px; padding: 10px 14px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                    <span style="font-weight: 700; font-size: 13px;">📩 {c['case_id']} · {c['subject'] or 'Không có tiêu đề'}</span>
+                                    <span style="font-weight: 700; font-size: 13px;">📩 {escape_html(c['case_id'])} · {escape_html(c['subject'] or 'Không có tiêu đề')}</span>
                                     <div>{decision_badge_html(c['decision'])}</div>
                                 </div>
                                 <div style="font-size: 12px; color: #64748B; margin-bottom: 4px;">
-                                    Sinh viên: {c['sender'] or 'Ẩn'} · Thời điểm: {local_time(c['timestamp'])}
+                                    Sinh viên: {escape_html(c['sender'] or 'Ẩn')} · Thời điểm: {escape_html(local_time(c['timestamp']))}
                                 </div>
                                 <div style="font-size: 12.5px; color: #334155; background: #F8FAFC; padding: 6px 10px; border-radius: 4px; border: 1px solid #E2E8F0;">
                                     <b>Căn cứ đã áp dụng:</b> {safe_reason}
