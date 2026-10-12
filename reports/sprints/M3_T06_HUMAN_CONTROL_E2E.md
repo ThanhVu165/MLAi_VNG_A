@@ -25,7 +25,10 @@ Không tuyên bố M3-T06 DONE, M3 Gate PASS hoặc downstream GO.
 
 Branch: `sprint/m3-t06-human-control-e2e`. Production/source tested SHA:
 `1251c3c116a302d519dd71d6c31c3191874d785b`, cộng test mới trong working tree.
-Commit/PR checkpoint và fingerprint final được bổ sung tại Mục 20 trước bàn giao.
+Validated test checkpoint: `ec75eb4f0bb272b5ef14cd9119a1f36458aac38d`;
+post-commit classification chạy đúng SHA này (Mục 20).
+Full 116 cases chạy trước commit trên source/test content giống checkpoint, có fingerprint đối chiếu.
+Thay đổi sau checkpoint chỉ cập nhật metadata evidence trong report; test/production không đổi.
 Không gọi SHA baseline là commit chứa test/report mới; report không thể tự chứa SHA của chính nó.
 
 ## 4. Source, ownership và lịch sử
@@ -179,7 +182,7 @@ Dispositions dưới đây đánh giá completeness của **audit checkpoint**, 
 | AC4 Persistence/audit | HC05–06,11–17, A/F/W suites | PASS defect evidence; **product audit FAIL** | Duplicate CASE_ERROR cần remediation; hardware failure chưa test |
 | AC5 Error classification | HC15–17, 3 preserved failing IDs, DB/UI props | PASS classification/evidence | State đúng/audit sai; không đồng nhất thành UI mismatch hoặc unsafe send |
 | AC6 Runtime | Mục 8–9 | **NOT VERIFIED** | Valid replay pack và successful complete chain thiếu |
-| AC7 Delivery | Commands/env/SHA/report/tests | PARTIAL đến khi commit/PR hoàn tất | Owner sign-off/final review không được AI xác nhận |
+| AC7 Delivery | Commands/env/SHA/report/tests + Draft PR46 | PASS checkpoint delivery | Chưa phải final task handoff; Owner/final reviewer sign-off pending |
 
 ## 11. PASS/FAIL/NOT VERIFIED breakdown
 
@@ -321,7 +324,13 @@ AI support không thay các checkbox human sign-off.
 
 ## 20. Checkpoint commit/PR và actual calls
 
-Checkpoint commit/PR và final validation summary: bổ sung sau validation trước bàn giao.
+Test/report checkpoint: [`ec75eb4f0bb272b5ef14cd9119a1f36458aac38d`](https://github.com/ThanhVu165/MLAi_VNG_A/commit/ec75eb4f0bb272b5ef14cd9119a1f36458aac38d).
+Delivery: [Draft PR #46](https://github.com/ThanhVu165/MLAi_VNG_A/pull/46), base `dev`.
+Post-commit validation trên exact `ec75eb4...`: **2 PASS / 3 FAIL / 11 deselected**, 26.68s, exit 1,
+cùng ba failed IDs. Không thay thế hay cộng rerun này vào 116 distinct cases.
+Command: lệnh classification ở Mục 12, đổi XML output thành `data/validation/m3-t06/post-commit.xml`;
+stdout/stderr `post-commit.log`, wrapper giữ đúng pytest exit 1.
+Draft PR chỉ dành cho Phase 1 checkpoint, không tự chuyển ready hoặc merge.
 Final test file SHA-256:
 `ee51d4c691464f7f1884f74d7c11cd92f3a26324646cab97480df2fb5ebaad7b`.
 Local raw artifact SHA-256:
