@@ -166,6 +166,7 @@ git diff --name-only origin/dev
 | First audit with sandbox OS temp | FAIL environment | SQLite could not open sandbox virtual temp; retry used workspace TEMP, no production DB touched |
 | First pytest under sandbox | FAIL environment | `TEST_DATABASE_ISOLATION: cannot create safe test database`; Windows denies `resolve(strict=True)` even on temporary child |
 | Targeted pytest with offline guards, local TEMP, approved shell escalation | PASS | **11 passed in 4.59s** after final tool refactor; one subprocess deliberately inherits live/cache=1 and existing DB sentinel, tool forces replay and preserves sentinel |
+| Post-commit `python -m scripts.audit_runtime_replay --output-dir data/validation/m6-t05-postcommit` | PASS audit / FAIL replay (exit 2) | Tested SHA `18291419971680cd71941668d49dafe1d950532b`: 8 misses, LIVE=0; same exact prompt hashes; original committed evidence preserved |
 | Black / Ruff, changed Python only | PASS | Files formatted; lint clean |
 | Scope/diff/secret/PII/Gold scan | PASS checkpoint self-check | Only tool/test/report/manifest/evidence added; synthetic original prompts only; source/corpus files unchanged |
 | Cassette schema/provenance validation | NOT VERIFIED | No cassette files; no vacuous integrity PASS |
@@ -184,7 +185,7 @@ Network guard violations raise outside normal product catches, aborting the audi
 
 Changed files: this report, `M6_T05_REPLAY_MANIFEST.json`, `M6_T05_REPLAY_EVIDENCE.json`, `scripts/audit_runtime_replay.py`, `tests/test_runtime_replay_audit.py`. No production/corpus/policy/Verify/cassette/expected changes. Agent self-check completed; **Minh's human self-review confirmation remains required**.
 
-Git handoff: commit format `test(m6-t05): add offline runtime replay gap evidence`; Draft PR targets `dev`. Exact commit/PR references are available in branch history/PR and the final handoff message. No merge/force-push/rewrite/DONE/gate update authorized.
+Git handoff: [implementation/evidence commit `18291419971680cd71941668d49dafe1d950532b`](https://github.com/ThanhVu165/MLAi_VNG_A/commit/18291419971680cd71941668d49dafe1d950532b), `test(m6-t05): add offline runtime replay gap evidence`; [Draft PR #44](https://github.com/ThanhVu165/MLAi_VNG_A/pull/44) targets `dev`. This report-link follow-up changes documentation only; final branch head is the exact review SHA shown in PR. No merge/force-push/rewrite/DONE/gate update authorized.
 
 Prepared text for **Minh to post**, not posted by agent:
 
