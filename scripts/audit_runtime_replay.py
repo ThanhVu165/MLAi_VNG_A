@@ -33,6 +33,15 @@ CONFIG = {
     "OPENAI_MODEL": MODEL,
     "OPENAI_REASONING_EFFORT": "none",
     "LLM_CACHE": "0",
+    "LLM_TIMEOUT_S": "30",
+    "LLM_RETRIES": "1",
+    "SIMILARITY_THRESHOLD": "0.35",
+    "CITATION_RATIO_MIN": "0.6",
+    "RETRIEVAL_TOP_K": "6",
+    "QUESTION_WORDS_MIN": "8",
+    "QUESTION_WORDS_MAX": "45",
+    "PENDING_SEND_SECONDS": "60",
+    "PENDING_STATUS_REFRESH_SECONDS": "1",
 }
 DEV_INPUTS = (
     (
@@ -126,7 +135,9 @@ def inventory(directory: Path, schemas: dict[str, dict]) -> list[dict]:
     return entries
 
 
-def observe_runtime(cassette_directory: Path) -> tuple[list[dict], list[dict], dict]:
+def observe_runtime(
+    cassette_directory: Path, include_cited: bool = False
+) -> tuple[list[dict], list[dict], dict]:
     """Only observe real responses; never supply an extraction, draft or policy result."""
     from core import extract, generate, question_gen, resume, retrieval
     from core.pipeline import process_case
@@ -174,6 +185,8 @@ def observe_runtime(cassette_directory: Path) -> tuple[list[dict], list[dict], d
         outcomes.extend(observe_pipeline_cases(process_case, active_flow))
         active_flow[0] = "DEV_HUMAN_R11"
         outcomes.append(observe_human_resume(process_case, db))
+        if include_cited:
+            outcomes.extend(observe_cited_resumes(outcomes, active_flow, db))
     schemas = {
         "R2_extract": extract.EXTRACTION_SCHEMA,
         "R4_select": retrieval.SELECT_SCHEMA,
@@ -251,6 +264,63 @@ def observe_human_resume(process_case: Callable, db: ModuleType) -> dict:
     }
 
 
+def observe_cited_resumes(
+    outcomes: list[dict], active_flow: list[str], db: ModuleType
+) -> list[dict]:
+    """Use upstream product cases and real page/worker; never fabricate missing context."""
+    from core.worker import worker_tick
+    from scripts.runtime_recording_readiness import proposed_cases, record_plan
+    from streamlit.testing.v1 import AppTest
+
+    observed = []
+    for item in record_plan(proposed_cases())["r11_supplemental_proposal"]:
+        upstream = item["upstream_flow"]
+        result = next(row["result"] for row in outcomes if row["flow"] == upstream)
+        case_id = result["case_id"]
+        active_flow[0] = upstream + "_CITED_R11"
+        status = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", (case_id,))[0]
+        if status != "AWAITING_HUMAN":
+            observed.append(
+                {
+                    "flow": active_flow[0],
+                    "status": "NOT_RUN",
+                    "case_ref": case_id,
+                    "reason": "Upstream product case is not AWAITING_HUMAN",
+                }
+            )
+            continue
+        page = AppTest.from_file(str(ROOT / "pages/2_Hang_cho_duyet.py")).run(timeout=20)
+        assert not page.exception
+        page.radio(key=f"choice_{case_id}").set_value(item["choice"])
+        page.text_area(key=f"reason_{case_id}").set_value(item["reason"])
+        page.run(timeout=20)
+        page.button(key=f"decide_{case_id}").click().run(timeout=20)
+        assert not page.exception
+        worker_tick()
+        observed.append(
+            {
+                "flow": active_flow[0],
+                "case_ref": case_id,
+                "final_case": dict(
+                    db.fetch_one("SELECT status FROM cases WHERE case_id = ?", (case_id,))
+                ),
+                "human_decision": dict(
+                    db.fetch_one(
+                        "SELECT choice, reason FROM human_decisions WHERE case_id = ? AND decided_at IS NOT NULL",
+                        (case_id,),
+                    )
+                ),
+                "job": dict(
+                    db.fetch_one("SELECT state FROM case_jobs WHERE case_id = ?", (case_id,))
+                ),
+                "draft_count": db.fetch_one(
+                    "SELECT COUNT(*) FROM drafts WHERE case_id = ?", (case_id,)
+                )[0],
+            }
+        )
+    return observed
+
+
 def source_fingerprints() -> dict[str, str]:
     source_hashes = {
         name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in SOURCE_FILES
@@ -263,9 +333,13 @@ def source_fingerprints() -> dict[str, str]:
             for path in sorted((ROOT / "data/seed_docs").glob("*.json"))
         }
     )
-    source_hashes["scripts/audit_runtime_replay.py"] = hashlib.sha256(
-        Path(__file__).read_bytes()
-    ).hexdigest()
+    for name in (
+        "scripts/audit_runtime_replay.py",
+        "scripts/runtime_recording_readiness.py",
+        "scripts/guarded_runtime_recording.py",
+        "scripts/validate_recorded_replay_pack.py",
+    ):
+        source_hashes[name] = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
     return source_hashes
 
 
@@ -333,6 +407,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=Path("reports/readiness"))
     parser.add_argument("--cassette-dir", type=Path, default=Path("tests/cassettes"))
+    parser.add_argument("--include-cited-r11", action="store_true")
     options = parser.parse_args()
     if Path.cwd().resolve() != ROOT:
         parser.error("Run from the repository root")
@@ -351,7 +426,7 @@ def main() -> int:
             guards.enter_context(patch.object(socket.socket, name, forbidden))
         guards.enter_context(patch.object(socket, "create_connection", forbidden))
         guards.enter_context(patch.object(socket, "getaddrinfo", forbidden))
-        calls, outcomes, schemas = observe_runtime(options.cassette_dir)
+        calls, outcomes, schemas = observe_runtime(options.cassette_dir, options.include_cited_r11)
         entries = inventory(options.cassette_dir, schemas)
         observed = {call["prompt_hash"] for call in calls}
         for entry in entries:

@@ -108,3 +108,28 @@ def test_audit_refuses_to_overwrite_historical_evidence(tmp_path) -> None:
     )
     assert result.returncode == 2 and "Evidence already exists" in result.stderr
     assert artifact.read_bytes() == b"immutable observation"
+
+
+def test_cited_r11_does_not_invent_missing_upstream_context(tmp_path) -> None:
+    output = tmp_path / "cited-evidence"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "scripts.audit_runtime_replay",
+            "--output-dir",
+            str(output),
+            "--cassette-dir",
+            str(tmp_path / "empty-pack"),
+            "--include-cited-r11",
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+    )
+    assert result.returncode == 2, result.stderr
+    evidence = json.loads((output / "M6_T05_REPLAY_EVIDENCE.json").read_text(encoding="utf-8"))
+    assert len(evidence["calls"]) == 8 and evidence["live_provider_calls"] == 0
+    cited = [row for row in evidence["outcomes"] if row["flow"].endswith("_CITED_R11")]
+    assert len(cited) == 2 and all(row["status"] == "NOT_RUN" for row in cited)
