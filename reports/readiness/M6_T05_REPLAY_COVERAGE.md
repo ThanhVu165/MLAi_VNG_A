@@ -1,9 +1,62 @@
 # M6-T05 — Product Runtime Replay Coverage
 
-**Result: PARTIAL ONLY — Phase 1 evidence checkpoint; replay recovery FAIL.**
+**Result: PARTIAL ONLY — Phase 2A/2B offline checkpoint; replay recovery FAIL, recording BLOCKED.**
 Owner: Minh — Logic/Evaluation. Final reviewer: Nam. Approver: Project Coordinator.
 Ngày: 12/10/2026, Asia/Saigon. [Task Contract](https://trello.com/c/7nEZN4bu).
-Phase 2: **NOT AUTHORIZED**. Provider/LLM/email LIVE calls: **0**.
+Phase 2A/2B offline: **AUTHORIZED**; Phase 2C LIVE/record: **NOT AUTHORIZED**. Provider/LLM/email LIVE calls: **0**.
+
+## Phase 2 checkpoint — latest handoff
+
+Remote `dev` đã cập nhật thành `1251c3c116a302d519dd71d6c31c3191874d785b` (`docs(m2): add offline artifact handoff`). Đã fetch/pull theo yêu cầu rồi merge `origin/dev` vào cùng branch T05, không rewrite lịch sử: checkpoint trước implementation là `c5d8a1d72bacb48f8cc7b088d6ecf8238887848b`. Commit mới chỉ thêm handoff M2; production/corpus/config fingerprints vẫn trùng Phase 1 baseline `ffb7f79...`. Phần baseline/preflight bên dưới là lịch sử Phase 1.
+
+**Correction:** Coordinator và [M2 artifact handoff](../M2_OFFLINE_ARTIFACT_HANDOFF_20261012.md) xác nhận **116 là số test offline PASS, không phải số cassette**. Không có bộ “116 cassette” cần tìm. Hai JSON Phase 1 giữ nguyên bytes để bảo toàn lịch sử; trường `reported_historical_count=116` trong manifest cũ là claim của brief đã được đính chính tại đây, không phải inventory. Tool mới xuất historical count=null và clarification.
+
+Handoff có 9 tên capture/case, observation/trace ID và SHA-256 được công bố. Đã đọc cục bộ handoff và báo cáo provenance M2. Cả 9 `data/validation/m2_dev_live_probe_01…09/cases/<case>/capture.json` cùng các `live_manifest.json` hiện chưa có trong checkout này. Git bỏ qua `data/validation/`; pull chỉ đưa handoff vào checkout. Checksum được công bố là attestation; chưa đối chiếu được bytes của capture. Không kết luận artifacts ở workspace nguồn bị mất.
+
+Capture M2 là output/telemetry, thiếu đầy đủ response trung gian keyed theo prompt identity. Coordinator yêu cầu việc dựng/chuyển đổi cassette phải có **task riêng, review và kiểm tra provenance**. Không copy/re-key/convert capture; conversion=0; recovered valid cassette=0. Phase 2A chưa có nguồn hợp lệ để khôi phục approved pack.
+
+Quyền tiếp tục offline: [Coordinator comment](https://trello.com/c/7nEZN4bu#comment-6accb8f4b731380929f71f9a) và chỉ dẫn người dùng trong phiên. PR #44 giữ Draft, T05 giữ IN PROGRESS. Chưa có Minh human self-review/Nam final review được xác minh; không ký thay, không chuyển gate.
+
+### Phase 2B implementation và giới hạn
+
+- [`runtime_recording_readiness.py`](../../scripts/runtime_recording_readiness.py) tạo [`M6_T05_RECORDING_READINESS.json`](M6_T05_RECORDING_READINESS.json): frozen synthetic inputs/input hashes, source/corpus fingerprints, bảng 9 capture cùng published checksum/availability, GO requirements và cost blockers. Script chỉ dùng stdlib, không có đường thực thi provider.
+- Ledger offline đặt trước verified upper cost, chặn per-flow/global caps và cost vượt giới hạn trước khi tăng counter; failed/unknown-usage attempt giữ nguyên reservation, không vay quota. Đây là **OFFLINE_UNIT_TESTED_ONLY**, chưa tích hợp actual SDK attempt observer hoặc runner. Các boolean evidence statements chỉ kiểm completeness, không tự cấp GO hoặc xác minh quyết định người có thẩm quyền.
+- Sidecar lưu `<hash>.attempt-001.json`, append riêng từng attempt, exclusive create; ghi lại cùng index bị từ chối. Metadata unit fixture không có response và luôn NOT_VERIFIED về provider origin. Chưa có original response để kiểm schema/domain parser/provenance; không chứng nhận pack bằng unit tests.
+- Audit nhận thư mục cassette thật qua `--cassette-dir`, luôn replay/cache=0, fresh DB, network/provider/cache traps. Không ghi đè evidence cũ. Isolation test được tách khỏi business failure; missing-pack regression dùng thư mục rỗng riêng nên vẫn có ý nghĩa khi repo có pack sau này.
+
+Base proposal giữ **21 nominal / <=22 provider attempts**, gồm Routine/Authority/Fact, V01–V04 và standalone no-evidence R11. Sáu flow có 3 steps/cap 3 không có headroom cho retry/repair; spare của V04 không được chuyển. Timeout 30s; mọi transport retry/R7 repair/regeneration đều tính attempts. Không bảo đảm 22 attempts sẽ hoàn thành pack.
+
+Supplemental cited R11 cần Coordinator duyệt riêng: dùng đúng frozen `DEV_AUTHORITY`/`DEV_FACT` trong readiness JSON; choice=`Quyết định khác`; Authority reason=`Chuyển đề nghị phúc khảo trễ đến cấp có thẩm quyền; chưa chấp thuận ngoại lệ.`; Fact reason=`Yêu cầu bổ sung khóa học và học kỳ trước khi xác định văn bản áp dụng.`. Mỗi context tối đa 1 resume attempt trên upstream case đã có; citations/evidence IDs/prompt hash chỉ ghi sau genuine upstream, hiện NOT VERIFIED. Nếu duyệt cả hai, đó là **đề xuất mới 23 nominal / <=24 attempts**, chưa thay cap 22 hoặc mở multi-intent.
+
+Theo [official model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna), kiểm ngày 12/10/2026, standard short-context input=$0.10/million, cache-write=$0.125/million, output=$0.50/million. Dùng mức input bảo thủ $0.125 và giả định 8,000 input + 1,000 output mỗi attempt: 21 nominal≈$0.0315; 22≈$0.033. Giá/tier/account access thực tế **NOT VERIFIED**, approved USD cap=null. Long-context/Fast/regional pricing có thể khác; đây là estimate, không phải dollar cap hoặc thay thế giá account.
+
+Adapter hiện không đặt `max_completion_tokens` hay service tier. Vì vậy giả định 1,000 output không phải output bound có thể cưỡng chế; chưa có verified per-request upper cost và cost guard integrated. Không dùng post-request M2 telemetry như pre-attempt enforcement, không dùng runner/quota M2 cho T05. Recording vẫn **BLOCKED** ngay cả khi biết public list price.
+
+**Stop trước LIVE:** thiếu GO có exact source/config/input hashes/global+per-flow caps/USD cap/account rate+access/data+provenance/stop conditions; output-cost bound chưa kiểm chứng; source/corpus drift; cache hit; thất bại provider/schema/semantic; unexpected branch/quota; PII/secret; production change ngoài scope. Không probe model availability. Coordinator cần chốt cách enforce bound trong scope hoặc giao Owner infra task riêng nếu phải đổi adapter.
+
+### Phase 2D và validation checkpoint
+
+Không thực hiện Phase 2C. Audit offline mới chạy pipeline/Verify/trang approval/worker thật với cùng config và 8 hash Phase 1: 7 R2 + 1 R11 miss, 0 provider attempts. Layer A coverage FAIL; downstream R4/R7/cited R11 NOT VERIFIED. Layer B: 3 DEV và V01–V04 TECHNICAL_ERROR; R11 giữ human decision/HUMAN_DECIDED nhưng job failed, drafts=0. Draft/grounding/approval/send success chưa được chứng minh. Không có pack để thực hiện acceptance Phase 2D.
+
+[`M6_T05_PHASE2_VALIDATION.json`](M6_T05_PHASE2_VALIDATION.json) giữ actual calls/outcomes/config/source fingerprints và checksum của full raw audit tại thư mục validation bỏ qua bởi Git; prompt/schema bytes/hash đối chiếu với raw Phase 1 committed evidence. Tested SHA là checkpoint `c5d8a1d...` cộng tool/test working tree đã fingerprint, không giả final commit chứa chính report. Exact final tested handoff SHA nằm trong PR sau post-commit validation.
+
+```powershell
+# Same isolated TEMP and Python environment as the Phase 1 commands below.
+& .venv/Scripts/python.exe -m scripts.runtime_recording_readiness --output data/validation/readiness-new.json
+# exit 2 = recording blocked; never a LIVE runner
+& .venv/Scripts/python.exe -m scripts.audit_runtime_replay --output-dir data/validation/replay-new
+# exit 2 = actual replay misses / no provenance certification; choose unused paths
+& .venv/Scripts/python.exe -m pytest -q tests/test_runtime_replay_audit.py tests/test_runtime_recording_readiness.py tests/test_openai_provider.py::test_model_hash_isolates_cache_and_cassettes tests/test_offline_isolation.py
+& .venv/Scripts/python.exe -m black --check --line-length 100 scripts/audit_runtime_replay.py scripts/runtime_recording_readiness.py tests/test_runtime_replay_audit.py tests/test_runtime_recording_readiness.py
+& .venv/Scripts/python.exe -m ruff check scripts/audit_runtime_replay.py scripts/runtime_recording_readiness.py tests/test_runtime_replay_audit.py tests/test_runtime_recording_readiness.py
+git diff --check
+```
+
+AC1 NOT VERIFIED; AC2 FAIL; AC3 NOT VERIFIED; AC4 FAIL; AC5 FAIL; AC6 PASS offline; AC7 PASS for reproducible checkpoint only. Minh phải đọc diff/evidence và xác nhận self-review trên exact PR head; Nam independent review; Coordinator quyết định acceptance. LIVE/provider attempts/tokens/cost actual=0/0/$0, cassette conversion=0. Không claim T05 DONE hoặc gate PASS.
+
+Phase 2 changes chỉ audit/readiness scripts/tests, report và hai checkpoint JSON mới; Phase 1 JSON giữ nguyên. Không production/corpus/policy/Verify/expected/Docker changes. Owner cần đưa capture/manifest tới đường dẫn được phép đọc nếu muốn kiểm bytes; conversion vẫn task riêng. Không chờ artifacts để thực hiện các safeguards offline độc lập.
+
+Validation trên checkpoint `c5d8a1d...` cùng tool/test working tree đã fingerprint: **25 passed in 5.15s**, Black/Ruff PASS; audit ghi 8 misses/LIVE=0. Tests xác minh quota/cost reservations, append-only metadata, thiếu capture không thành checksum PASS, isolation/human decision và bảo toàn evidence cũ. Chúng không chứng nhận replay pack hoặc provider origin.
 
 ## Baseline và preflight
 
@@ -40,12 +93,12 @@ Ba synthetic DEV cases chạy `process_case`; V01–V04 chạy `verify.harness.r
 | Available cassette có provenance hợp lệ | 0 |
 | Available cassette không đọc được / incompatible | 0 / 0; không có artifact để kiểm |
 | Available cassette thiếu provenance / không được run tham chiếu | 0 / 0; không kết luận về artifact ở máy khác |
-| 116 cassette được báo | NOT VERIFIED: chưa được cung cấp; không phân loại 116 file tưởng tượng |
+| 116 cassette được báo trong brief Phase 1 | CORRECTED: 116 offline tests PASS; không có bộ cassette này |
 | Provider responses tái sử dụng được | Không có nguồn đáp ứng exact prompt/config/provenance được tìm thấy trong phạm vi đã kiểm |
 
 Inventory tool kiểm JSON object, filename 64 hex, checksum file, model và matching current schemas. Matching schema chỉ là compatibility candidate; không chứng minh schema gốc, prompt identity, provider origin hoặc file chưa bị sửa kể từ record. Trạng thái “không được observed run tham chiếu” cũng không tự có nghĩa “không còn sử dụng” toàn repo.
 
-M1 evidence có kết quả Verify và provider-attempt metadata; không có original response pack cùng full current prompt identity. `prompt_hash12` trong telemetry là SHA của **prompt text**, khác cassette key SHA của identity đầy đủ. R2 prompt ở log lịch sử khoảng 1.450 ký tự, hiện khoảng 4.300–4.400; không re-key/diễn giải decisions lịch sử thành response mới. Không dùng cache local không có provenance. Coordinator/Owner cần lấy 116 artifact gốc, authorization, SHA/config/request provenance từ môi trường đã record nếu muốn salvage offline.
+M1 evidence có kết quả Verify và provider-attempt metadata; không có original response pack cùng full current prompt identity. `prompt_hash12` trong telemetry là SHA của **prompt text**, khác cassette key SHA của identity đầy đủ. R2 prompt ở log lịch sử khoảng 1.450 ký tự, hiện khoảng 4.300–4.400; không re-key/diễn giải decisions lịch sử thành response mới. Không dùng cache local không có provenance. Phase 2 đã xác nhận không có bộ 116 cassette; M2 capture cần task riêng nếu chuyển đổi.
 
 Manifest hiện có `cassettes=[]`, `pack_status=NOT_APPROVED`, authorization=null. Tám `required_observed_calls` là **missing requests**, không phải recorded cassette. Không tạo, sửa hay hợp thức hóa phản hồi LLM viết tay.
 
@@ -149,7 +202,7 @@ New-Item -ItemType Directory -Force data/validation/m6-t05-temp | Out-Null
 $env:TEMP=(Resolve-Path data/validation/m6-t05-temp).Path
 $env:TMP=$env:TEMP
 $env:PYTHONIOENCODING='utf-8'
-& .venv/Scripts/python.exe -m scripts.audit_runtime_replay
+& .venv/Scripts/python.exe -m scripts.audit_runtime_replay --output-dir data/validation/phase1-reproduction-new
 # Expected exit 2: audit captured failures; no pack provenance/recovery certification.
 & .venv/Scripts/python.exe -m pytest -q tests/test_runtime_replay_audit.py tests/test_openai_provider.py::test_model_hash_isolates_cache_and_cassettes tests/test_offline_isolation.py
 & .venv/Scripts/python.exe -m black --check --line-length 100 scripts/audit_runtime_replay.py tests/test_runtime_replay_audit.py
@@ -177,7 +230,7 @@ Network guard violations raise outside normal product catches, aborting the audi
 
 ## Risks, decisions and handoff
 
-1. **P0 missing original cassette pack/provenance:** M6-T03 cannot claim miss=0. Coordinator supplies original 116 artifacts with source evidence or approves bounded recording. Minh owns validation; Nam consumes only accepted SHA/pack.
+1. **P0 missing valid replay pack/provenance:** M6-T03 cannot claim miss=0. Không có bộ 116 cassette. Coordinator quyết định task riêng để kiểm nguồn/chuyển đổi M2 hoặc recording có bounds hợp lệ; Minh owns validation, Nam consumes only accepted SHA/pack.
 2. **R4/R7 and cited R11 contexts unknown:** exact hashes cannot be completed without genuine extraction/selection. Coordinator chooses finite pack contexts; Vũ handles any runtime/business defect outside T05.
 3. **Adapter identity/validation limits:** reasoning effort omitted from key; replay model/schema not enforced; record may read cache. Manifest must protect pack config and source. No adapter/schema changes in this checkpoint.
 4. **Cost/model verification absent:** no default LIVE entitlement, model/pricing/22-attempt plan remain proposals. A GO must name approved calls, budget, synthetic data, source SHA and stop conditions; don't reuse M2 remaining quota as authorization.
@@ -187,7 +240,7 @@ Changed files: this report, `M6_T05_REPLAY_MANIFEST.json`, `M6_T05_REPLAY_EVIDEN
 
 Git handoff: [implementation/evidence commit `18291419971680cd71941668d49dafe1d950532b`](https://github.com/ThanhVu165/MLAi_VNG_A/commit/18291419971680cd71941668d49dafe1d950532b), `test(m6-t05): add offline runtime replay gap evidence`; [Draft PR #44](https://github.com/ThanhVu165/MLAi_VNG_A/pull/44) targets `dev`. This report-link follow-up changes documentation only; final branch head is the exact review SHA shown in PR. No merge/force-push/rewrite/DONE/gate update authorized.
 
-Prepared text for **Minh to post**, not posted by agent:
+Historical Phase 1 prepared text for **Minh to post**, not posted by agent; superseded by Phase 2 checkpoint above (including the 116-count correction):
 
 ```text
 [M6-T05] PHASE 1 OWNER HANDOFF / BLOCKER

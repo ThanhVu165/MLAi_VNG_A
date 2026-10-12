@@ -6,6 +6,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+import pytest
+
 from scripts.audit_runtime_replay import MODEL, inventory
 
 
@@ -37,13 +39,23 @@ def test_readable_response_is_not_provider_provenance(tmp_path) -> None:
     assert entry["recorded_sha"] is entry["authorization"] is None
 
 
-def test_audit_isolates_live_environment_and_existing_database(tmp_path) -> None:
+@pytest.fixture(scope="module")
+def missing_run(tmp_path_factory) -> tuple[dict, Path]:
+    tmp_path = tmp_path_factory.mktemp("missing-replay")
     sentinel = tmp_path / "existing.db"
     sentinel.write_bytes(b"preserve-existing-database")
     environment = dict(os.environ, LLM_MODE="live", LLM_CACHE="1", DATABASE_PATH=str(sentinel))
     output = tmp_path / "evidence"
     result = subprocess.run(
-        [sys.executable, "-m", "scripts.audit_runtime_replay", "--output-dir", str(output)],
+        [
+            sys.executable,
+            "-m",
+            "scripts.audit_runtime_replay",
+            "--output-dir",
+            str(output),
+            "--cassette-dir",
+            str(tmp_path / "empty-cassettes"),
+        ],
         cwd=Path(__file__).resolve().parents[1],
         env=environment,
         capture_output=True,
@@ -52,8 +64,13 @@ def test_audit_isolates_live_environment_and_existing_database(tmp_path) -> None
         timeout=60,
     )
     assert result.returncode == 2, result.stderr
-    assert sentinel.read_bytes() == b"preserve-existing-database"
     evidence = json.loads((output / "M6_T05_REPLAY_EVIDENCE.json").read_text(encoding="utf-8"))
+    return evidence, sentinel
+
+
+def test_audit_isolates_live_environment_and_existing_database(missing_run) -> None:
+    evidence, sentinel = missing_run
+    assert sentinel.read_bytes() == b"preserve-existing-database"
     assert evidence["config"]["LLM_MODE"] == "replay"
     assert evidence["live_provider_calls"] == 0
     assert {call["flow"] for call in evidence["calls"]} >= {
@@ -67,7 +84,27 @@ def test_audit_isolates_live_environment_and_existing_database(tmp_path) -> None
         "DEV_HUMAN_R11",
     }
     assert any(call["step"] == "R11_resume" for call in evidence["calls"])
+
+
+def test_missing_pack_preserves_human_decision(missing_run) -> None:
+    evidence, _ = missing_run
+    assert len(evidence["calls"]) == 8
+    assert all(not call["replay_ok"] for call in evidence["calls"])
     human = next(item for item in evidence["outcomes"] if item["flow"] == "DEV_HUMAN_R11")
     assert human["human_decision"]["choice"] == "Yêu cầu bản dịch"
     assert human["final_case"]["status"] == "HUMAN_DECIDED"
     assert human["job"]["state"] == "failed" and human["draft_count"] == 0
+
+
+def test_audit_refuses_to_overwrite_historical_evidence(tmp_path) -> None:
+    artifact = tmp_path / "M6_T05_REPLAY_EVIDENCE.json"
+    artifact.write_bytes(b"immutable observation")
+    result = subprocess.run(
+        [sys.executable, "-m", "scripts.audit_runtime_replay", "--output-dir", str(tmp_path)],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 2 and "Evidence already exists" in result.stderr
+    assert artifact.read_bytes() == b"immutable observation"

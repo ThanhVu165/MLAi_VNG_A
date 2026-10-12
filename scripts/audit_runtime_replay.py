@@ -126,7 +126,7 @@ def inventory(directory: Path, schemas: dict[str, dict]) -> list[dict]:
     return entries
 
 
-def observe_runtime() -> tuple[list[dict], list[dict], dict]:
+def observe_runtime(cassette_directory: Path) -> tuple[list[dict], list[dict], dict]:
     """Only observe real responses; never supply an extraction, draft or policy result."""
     from core import extract, generate, question_gen, resume, retrieval
     from core.pipeline import process_case
@@ -156,7 +156,7 @@ def observe_runtime() -> tuple[list[dict], list[dict], dict]:
                 "reasoning_effort": "none",
                 "timeout_s": timeout_s,
                 "retries": retries,
-                "cassette_source": f"tests/cassettes/{prompt_hash}.json",
+                "cassette_source": str(cassette_directory / f"{prompt_hash}.json"),
                 "replay_ok": result.ok,
                 "error": result.error,
                 "data": result.data,
@@ -168,7 +168,9 @@ def observe_runtime() -> tuple[list[dict], list[dict], dict]:
     active_flow = [""]
     with patch.object(llm, "_run_mode", observe), patch.object(
         llm, "_call_live", forbidden
-    ), patch.object(llm, "_load_cache", forbidden):
+    ), patch.object(llm, "_load_cache", forbidden), patch.object(
+        llm, "CASSETTE_DIRECTORY", cassette_directory
+    ):
         outcomes.extend(observe_pipeline_cases(process_case, active_flow))
         active_flow[0] = "DEV_HUMAN_R11"
         outcomes.append(observe_human_resume(process_case, db))
@@ -268,7 +270,12 @@ def source_fingerprints() -> dict[str, str]:
 
 
 def write_artifacts(
-    output_dir: Path, sha: str, calls: list[dict], outcomes: list[dict], entries: list[dict]
+    output_dir: Path,
+    sha: str,
+    calls: list[dict],
+    outcomes: list[dict],
+    entries: list[dict],
+    cassette_directory: Path,
 ) -> None:
     evidence = {
         "schema_version": 1,
@@ -288,8 +295,10 @@ def write_artifacts(
         "tested_sha": sha,
         "pack_status": "NOT_APPROVED",
         "record_authorization": None,
-        "cassette_directory_exists": (ROOT / "tests/cassettes").is_dir(),
-        "reported_historical_count": 116,
+        "cassette_directory": str(cassette_directory),
+        "cassette_directory_exists": cassette_directory.is_dir(),
+        "reported_historical_count": None,
+        "historical_count_clarification": "Coordinator: 116 offline tests PASS, not cassette count",
         "historical_artifacts_available": False,
         "cassette_count": len(entries),
         "cassettes": entries,
@@ -316,19 +325,24 @@ def write_artifacts(
     }
     output_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in (("EVIDENCE", evidence), ("MANIFEST", manifest)):
-        (output_dir / f"M6_T05_REPLAY_{name}.json").write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8"
-        )
+        with (output_dir / f"M6_T05_REPLAY_{name}.json").open("x", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=Path("reports/readiness"))
+    parser.add_argument("--cassette-dir", type=Path, default=Path("tests/cassettes"))
     options = parser.parse_args()
     if Path.cwd().resolve() != ROOT:
         parser.error("Run from the repository root")
     if "infra.db" in sys.modules:
         parser.error("Database already imported; use a fresh interpreter")
+    if any(
+        (options.output_dir / f"M6_T05_REPLAY_{name}.json").exists()
+        for name in ("EVIDENCE", "MANIFEST")
+    ):
+        parser.error("Evidence already exists; choose a fresh --output-dir")
     sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     with tempfile.TemporaryDirectory(prefix="m6-t05-offline-") as directory, ExitStack() as guards:
         os.environ.update(CONFIG)
@@ -337,12 +351,12 @@ def main() -> int:
             guards.enter_context(patch.object(socket.socket, name, forbidden))
         guards.enter_context(patch.object(socket, "create_connection", forbidden))
         guards.enter_context(patch.object(socket, "getaddrinfo", forbidden))
-        calls, outcomes, schemas = observe_runtime()
-        entries = inventory(ROOT / "tests/cassettes", schemas)
+        calls, outcomes, schemas = observe_runtime(options.cassette_dir)
+        entries = inventory(options.cassette_dir, schemas)
         observed = {call["prompt_hash"] for call in calls}
         for entry in entries:
             entry["referenced_by_observed_run"] = Path(entry["file"]).stem in observed
-    write_artifacts(options.output_dir, sha, calls, outcomes, entries)
+    write_artifacts(options.output_dir, sha, calls, outcomes, entries, options.cassette_dir)
     LOGGER.warning(
         "Audit complete: %s cassettes; %s calls; %s replay failures; LIVE=0",
         len(entries),
