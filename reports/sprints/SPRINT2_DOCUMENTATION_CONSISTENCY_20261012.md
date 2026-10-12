@@ -3,9 +3,13 @@
 ## Nhiệm vụ và ủy quyền
 
 - Vai trò phiên: Task Owner — Documentation Maintenance.
-- Ủy quyền: cardless, do người dùng xác nhận ngày 12/10/2026 bằng chỉ dẫn
-  “bỏ qua việc check trello, làm thẳng”. Không tạo Task ID hoặc cập nhật Trello.
-- Owner: người thực hiện phiên bảo trì tài liệu; tên cá nhân không được cung cấp.
+- Nguồn ủy quyền cardless: người dùng trong cuộc trò chuyện Codex ngày 12/10/2026
+  chỉ dẫn “bỏ qua việc check trello, làm thẳng” và, với micro-fix PR #43, “bỏ qua
+  phần check trello, cho làm thẳng”. Danh tính và thẩm quyền Coordinator của người
+  ủy quyền chưa được xác minh: `PENDING COORDINATOR CONFIRMATION`.
+- Owner: `PENDING COORDINATOR CONFIRMATION`. GitHub xác nhận PR author là
+  `AIVIETNAM-AIO-MinhThuw` và hai commit đã review ghi author Minh Thư; thông tin này
+  chỉ xác định người tạo PR/commit, không được dùng để suy ra Task Owner hoặc Coordinator.
 - Approver: Project Coordinator; chỉ Coordinator xác nhận `DONE` và cho phép merge.
 - Phạm vi: `AGENT.md`, `docs/TEAM_HANDOFF.md`, `docs/SPRINT_ROADMAP.md` và báo cáo này.
 
@@ -71,10 +75,18 @@ Kết quả self-review trước commit:
 - Full pytest: `NOT RUN` — docs-only task; không dùng để claim runtime PASS.
 - Runtime/LIVE/user study: `NOT RUN` / `NOT VERIFIED`.
 
+Micro-fix trước nghiệm thu PR #43 được đối chiếu từ head đã review
+`c63a06403f72f2d6521f93633cce3f2c75ef143e`: tách technical `ERROR` khỏi hàng chờ
+con người và ghi Owner/authorization theo evidence thực có. Commit chứa micro-fix là
+PR head sau push; SHA được ghi trong handoff review. Kiểm tra riêng cho micro-fix:
+`git diff --check`, cấu trúc/định dạng Markdown, liên kết cục bộ, phạm vi hai file,
+ERROR/P04/escalation và ngôn ngữ đều `PASS`. Full pytest, runtime và LIVE vẫn
+`NOT RUN`.
+
 ## Rủi ro và giới hạn
 
-- Trello bị bỏ qua theo ủy quyền cardless của người dùng; không xác minh quyết
-  định Trello mới hơn hoặc danh tính Owner/Coordinator.
+- Trello bị bỏ qua theo chỉ dẫn cardless của người dùng; chưa xác minh quyết định
+  Trello mới hơn, danh tính Owner hoặc thẩm quyền Coordinator của người ủy quyền.
 - Đây là cập nhật tính nhất quán, không chứng nhận WAL, Docker, deployment, stale approval,
   adaptation, official evaluation hoặc real-user study đã PASS.
 - Evidence lịch sử giữ nguyên; không suy rộng kết quả từ checkpoint cũ sang HEAD.

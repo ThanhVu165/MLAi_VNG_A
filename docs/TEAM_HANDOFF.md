@@ -23,8 +23,13 @@ Streamlit/local input
   → pipeline R0–R14
   → OpenAI qua infra.llm.call_json() để trích xuất/chọn căn cứ/diễn đạt
   → mã deterministic kiểm input, evidence, policy và groundedness
-  → AUTO_REPLY/P05, ESCALATE/P01–P03, dừng do content guard/P04 hoặc technical ERROR
-  → hàng chờ con người, duyệt và gửi mô phỏng
+  → AUTO_REPLY/P05
+    → chờ gửi → worker gửi mô phỏng
+  → ESCALATE/P01–P03 hoặc dừng do content guard/P04
+    → hàng chờ con người → quyết định/duyệt theo contract
+    → gửi mô phỏng khi đủ điều kiện
+  → technical ERROR
+    → ghi trạng thái và lỗi → xử lý lại theo contract → không tự gửi
 ```
 
 Các contract và ranh giới module nằm trong [PROJECT_SPEC.md](../PROJECT_SPEC.md).
