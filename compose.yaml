@@ -1,0 +1,51 @@
+x-app: &app
+  build:
+    context: .
+  image: exodia:m6-t02
+  environment:
+    DATABASE_PATH: /runtime/app.db
+    LLM_MODE: replay
+    LLM_CACHE: "0"
+  healthcheck:
+    test:
+      ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8511/_stcore/health', timeout=3).read()"]
+    interval: 5s
+    timeout: 3s
+    retries: 12
+    start_period: 20s
+  networks:
+    - runtime
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  dev:
+    <<: *app
+    ports:
+      - "127.0.0.1:8511:8511"
+    volumes:
+      - dev_data:/runtime
+
+  study:
+    <<: *app
+    profiles: [study]
+    ports:
+      - "127.0.0.1:8512:8511"
+    volumes:
+      - study_data:/runtime
+
+  demo:
+    <<: *app
+    profiles: [demo]
+    ports:
+      - "127.0.0.1:8513:8511"
+    volumes:
+      - demo_data:/runtime
+
+networks:
+  runtime: {}
+
+volumes:
+  dev_data:
+  study_data:
+  demo_data:
