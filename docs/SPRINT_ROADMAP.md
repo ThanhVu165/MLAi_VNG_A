@@ -80,6 +80,19 @@ study/evaluation/LIVE khi chưa đủ dependency và authorization.
 Parallel prep không được giả định sprint trước PASS, tune core bằng future
 evaluation results, hoặc implement future core logic trước dependency.
 
+Các task độc lập có thể chạy song song khi `READY`; một Owner mặc định chỉ giữ một
+task `IN PROGRESS`. Task có dependency phải chờ đúng điều kiện đã duyệt, nhưng một
+task `FAIL`/`IN REVIEW` không tự chặn mọi việc độc lập hoặc buộc cả nhóm chờ một lượt
+tổng hợp. Lỗi safety/integration có ảnh hưởng liên task phải báo Coordinator để
+quyết phạm vi tạm dừng, ưu tiên và cách xử lý; không tự đổi dependency của card.
+
+Với lượt chạy chính thức phụ thuộc runtime, Task Contract phải chỉ rõ revision và môi
+trường tích hợp đã được kiểm chứng cùng việc chạy lại runtime (runtime replay) và
+validation cần thiết. Phần chuẩn bị độc lập vẫn có thể tiếp tục; replay chuẩn bị không
+phải evaluation chính thức, evidence chỉ từ unit test không chứng minh M3 runtime
+acceptance, và Docker build hoặc một replay PASS không tự mở study/evaluation chính
+thức. Đây là nguyên tắc evidence, không tạo checkpoint/gate mới.
+
 Lịch dưới đây là baseline lập trước coordination update 10/10; giữ nguyên để bảo
 toàn lịch sử quyết định. Lịch hiện hành nằm ở bảng phía trên.
 
@@ -111,7 +124,8 @@ Mỗi mini-sprint dùng Trello và [TEAM_WORKFLOW.md](TEAM_WORKFLOW.md):
 2. Phân tích sprint hiện tại.
 3. Chia khoảng 3–7 micro-task theo dependency.
 4. Chỉ thực hiện micro-task hiện tại.
-5. Sau mỗi micro-task: thu evidence, coordinator review, cập nhật living sprint report.
+5. Sau mỗi micro-task: thu evidence, self-review và bàn giao theo Task Contract;
+   Coordinator review/acceptance ở điểm được yêu cầu.
 6. Cuối sprint: thu validation và evidence phù hợp; independent review theo rủi ro
    và thành phần bị ảnh hưởng; Project Coordinator chấp nhận Gate cuối.
 7. Chỉ chuyển sprint khi Gate PASS hoặc khi Coordinator ghi rõ một disposition
@@ -131,9 +145,11 @@ Sau mỗi micro-task:
 1. Chạy validation đúng phạm vi task.
 2. Thu evidence.
 3. Không tự suy diễn DONE nếu validation chưa pass.
-4. Coordinator/reviewer phải review evidence trước khi mở task tiếp theo.
+4. Owner phải hiểu diff, self-review và bàn giao evidence; independent review áp dụng
+   theo rủi ro hoặc yêu cầu cụ thể của Task Contract/Gate.
 5. Nếu task fail:
-   - Không mở task kế tiếp.
+   - Không mở task phụ thuộc cho tới khi đạt điều kiện hoặc Coordinator disposition.
+   - Task độc lập đã `READY` vẫn có thể tiếp tục.
    - Triage nguyên nhân.
    - Sửa hoặc diagnostic bổ sung.
    - Validate lại.
@@ -148,9 +164,9 @@ Sprint Gate Review phải gồm tối thiểu:
 
 - Tests/evaluation phù hợp với sprint.
 - Regression check.
-- Code Review.
-- Review Agent.
-- Anti/independent review khi phù hợp.
+- Owner self-review và validation phù hợp.
+- Independent review theo rủi ro; bắt buộc phù hợp cho routing, policy, approval,
+  persistence, audit, safety, provider và evaluation, hoặc khi Task Contract/Gate yêu cầu.
 - Evidence summary.
 - Kết luận PASS / FAIL.
 
@@ -183,6 +199,26 @@ Root cause classification tối thiểu:
 - UNKNOWN.
 
 Không rerun mù chỉ để tìm PASS.
+Gate FAIL chặn chuyển milestone phụ thuộc, không mặc định đóng băng mọi task chuẩn bị
+độc lập. Coordinator quyết định phạm vi tạm dừng nếu lỗi safety/integration lan rộng.
+
+### C1. Nghiệm thu dựa trên evidence
+
+| Evidence | Chứng minh trong phạm vi |
+|---|---|
+| Unit/integration tests offline | Hành vi trong điều kiện kiểm thử đã mô tả |
+| Replay/cassette | Khả năng tái lập trong điều kiện đã ghi nhận |
+| Runtime smoke | Ứng dụng/luồng tương ứng có thể chạy |
+| LIVE provider observation | Hành vi provider tại lượt chạy được phép |
+| Independent Set A/B | Kết quả theo protocol, dataset và revision tương ứng |
+| Real-user study | Quan sát trong mẫu và điều kiện nghiên cứu |
+| Live URL/Verify | Khả năng truy cập/thực thi theo điều kiện kiểm chứng |
+
+Một loại evidence không tự thay thế loại khác. Test PASS không đồng nghĩa product,
+runtime, LIVE, study hoặc milestone PASS; không đổi `SKIP`/`NOT RUN` thành PASS và
+không báo tỷ lệ thiếu mẫu số. Ưu tiên correctness, safety, runtime readiness và
+submission trước cleanup thẩm mỹ. Các số test ở checkpoint lịch sử chỉ mô tả đúng
+checkpoint đó, không tự chứng nhận revision hay milestone hiện tại.
 
 ### D. Dynamic micro-task rule
 
@@ -399,6 +435,12 @@ giả hoặc coi thay thời gian chờ gửi là thay ngưỡng escalation.
 - **STOP:** ghi rõ lý do/giới hạn, báo Coordinator quyết định hướng tiếp theo;
   không tự triển khai, hạ gate hoặc miễn nghĩa vụ automatic adaptation.
 
+M3-T02 đã đưa khuyến nghị **STOP trên baseline khảo sát**: evidence được chọn đều
+`score=1.0`, nên threshold hiện hành chưa cho thấy routing boundary có ý nghĩa. Đây
+không phải GO, implementation PASS hay M3 PASS, và cũng không chứng minh adaptation
+vĩnh viễn bất khả thi. Nghiệm thu task nghiên cứu (nếu có) phải tách khỏi technical
+STOP và khỏi Exit Gate adaptation chưa được chứng minh.
+
 Human-approved policy revision chỉ có thể bổ sung, không tự tương đương automatic
 feedback-driven adaptation. DOC-T01 không chọn thuật toán hoặc đổi technical contract.
 
@@ -549,10 +591,17 @@ depth beyond minimal compliant version.
 
 Mọi ChatGPT/Codex/reviewer task sau phải:
 
-1. Đọc `docs/TEAM_WORKFLOW.md` và Task Contract trên Trello.
-2. Đọc `docs/SPRINT_ROADMAP.md` và `STATUS.md`.
-3. Đọc evidence/living report liên quan task.
-4. Chỉ đọc raw evidence report khi cần kiểm chứng claim.
+1. Đọc `AGENT.md`.
+2. Đọc `docs/TEAM_WORKFLOW.md`.
+3. Đọc `PROJECT_SPEC.md` phần liên quan.
+4. Đọc Task Contract trên Trello hoặc authorization cardless.
+5. Đọc `STATUS.md`, phần roadmap và evidence thực sự liên quan.
+6. Đọc `docs/RUNBOOK.md` khi cần setup/runtime/replay/Verify.
+
+Không nạp toàn bộ Markdown nếu không phục vụ task. `TASKBOARD.md` và `SYNC_PLAN.md`
+chỉ là lịch sử Sprint 1, không phải nguồn phân công hiện hành. Trello quản lý task;
+GitHub quản lý code/evidence; `STATUS.md` quản lý milestone/gate; roadmap quản lý kế
+hoạch/Exit Gate; Coordinator quyết định cuối. Số task `DONE` không tự đổi milestone.
 
 Mọi agent trước khi làm task phải kiểm tra:
 
@@ -562,7 +611,11 @@ Mọi agent trước khi làm task phải kiểm tra:
 - Previous sprint gate status.
 - Current task có được phép theo Sprint Gate Enforcement Rules hay không.
 
-Repo files là source of truth cho project state.
+Nguồn trạng thái phải dùng theo phạm vi ở trên; báo cáo/nghiên cứu lịch sử chỉ có
+giá trị tại checkpoint của chúng. Kết luận nghiên cứu không vượt dữ liệu nghiên cứu;
+bản tóm tắt AI hay đồng thuận giữa nhiều công cụ không thay paper/source độc lập; thiết kế
+ứng viên không thành yêu cầu implementation nếu chưa được duyệt; số liệu nghiên
+cứu ngoài không được dùng như metric Exodia.
 
 Agent không được:
 
