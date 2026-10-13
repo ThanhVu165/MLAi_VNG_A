@@ -1,0 +1,345 @@
+{
+  "task": "M6-T05",
+  "date_local": "2026-10-13",
+  "timezone": "Asia/Saigon",
+  "decision": "NOT_AUTHORIZED",
+  "readiness": "NOT_READY_FOR_BASE22_WITH_CURRENT_BOUND",
+  "directive_source": "Direct Coordinator message in this Codex chat: [M6-T05] COORDINATOR DIRECTIVE — COMPLETE TASK, NOT CHECKPOINT",
+  "scope_decision": {
+    "scope": "BASE_PACK_V1",
+    "scope_approved": true,
+    "total_cap": 22,
+    "per_flow_caps_approved": true,
+    "quota_transfer_allowed": false,
+    "supplemental_cited_r11_recording_approved": false,
+    "priority": "M6-T05 first; M4-T01 implementation paused by Coordinator; preserve evidence; no agent Trello changes"
+  },
+  "prepared_on_sha": "cee0f067660feeeb1f626582818607fe7334d472",
+  "source_sha": null,
+  "source_sha_instruction": "Final GO must name the final PR44 HEAD after this documentation commit; prepared_on_sha is not automatically authorized.",
+  "baseline_dev": "1251c3c116a302d519dd71d6c31c3191874d785b",
+  "source_fingerprints": {
+    "infra/llm.py": "09db7dca677ccc05cc4270d49604e38afd92a7a7a0953c99b23a0d5fbf65c324",
+    "infra/settings.py": "00873244fbd7b6f8dd870606c90475933497165add40bb03627aef9e8ee5a194",
+    "infra/db.py": "6d9c60f3af3ea0b44217cface47b1981a4a0ad943662fad44fce4103d172e03e",
+    "core/pipeline.py": "664d775e072656a5317cdbddebdf6c5f1fc7581b6eb2051b9aeae9fde54bfd90",
+    "core/extract.py": "ab52cc0203c08fa8439ef4fcf0313bc3177e0f5a3cdd01f5b69373fe5c01e0d2",
+    "core/retrieval.py": "02ea482a4d2ac9bff84b169b3c96f2918896b26f01b5040984b1d3cdec8b34bc",
+    "core/generate.py": "cce4fbbaf370a7da0a2710f30abe651a9ac006c1d602e9ea616ed0f31a2fde0d",
+    "core/question_gen.py": "adeaa9ceab7485329987284a63a778eabe1ad0a89cd255e42fffc62d71f52dbb",
+    "core/question_guard.py": "8e501c7ac3d51dc678683e6007705cab4538adb33006502347e9425531bb8948",
+    "core/resume.py": "67b28b529a7cadd052bb2df765f6a887346564d885ad385c7ada18f9269b1235",
+    "core/worker.py": "224cdca639536d2e57b7f1ceb4be669833ae81a4b060cf648362f265b087d847",
+    "pages/2_Hang_cho_duyet.py": "51267752c1818b5da87e05f333f8c12f1f84dcb72df8f6d223b051739e3f6604",
+    "verify/harness.py": "29ad1d51cba978d3bb5d1e900cafa585ae1e2cd2ee7246b7aa1df51ccf3665af",
+    "verify/cases_verify4.json": "3ec0e98499d682cf778791c1d9f1ea4b1614b4da9bab882edb741e9e819494a6",
+    "policies/policy.yaml": "805349a02bbd804f5b690e822f4098f3f394d9caaeddb94a9d7f4b950f422430",
+    "data/seed_docs/HP-2026-1.json": "693c1068ea5a53f4ffea60cca0dae1176da0a64acbeca2e166f769364803791c",
+    "data/seed_docs/PK-2026-204.json": "cc2cb0613ea4cfdad38a665e4375bafea3ae5f149e20af4825c9c8bb4ba18d3c",
+    "data/seed_docs/QDPQ-2026-01.json": "b9cfeccebe3e59b199a775c035bb82dc35e84d9f9ba061c95347a0b9f48c9c75",
+    "data/seed_docs/RH-2026-101.json": "05bef922f4c9c9eb77e667636772b6e7d7915d628a77c203fd5cb68adbbe0734",
+    "data/seed_docs/RL-2025-2363.json": "fa657f2c1ffcdd0be59486d8166b2b87e867451829614d9dff12adfc7acb4dff",
+    "data/seed_docs/RL-2026-3150.json": "e9d5649628751b1ff6843dab9fc7e17f44f198c44391aeb1e53d72d229937bd4",
+    "scripts/audit_runtime_replay.py": "70799a8008eb499750f3fa884fddff6de3952f42c9c5c448ac6825a08e63ad87",
+    "scripts/runtime_recording_readiness.py": "25ed7d4718a4bae3f57765c0d0f239322b3d42f6e1039b73011a0b81bee2c202",
+    "scripts/guarded_runtime_recording.py": "a21f48075333ab95af9a876140367b413fcf1894fa02aedfb91a321e28b37272",
+    "scripts/validate_recorded_replay_pack.py": "f2abda7c59cca0394f5ae5de398d66e2b2a91cfbd383bbbabe41cd5f10562b96"
+  },
+  "config": {
+    "LLM_MODE": "record",
+    "LLM_PROVIDER": "openai",
+    "OPENAI_MODEL": "gpt-6-luna",
+    "OPENAI_REASONING_EFFORT": "none",
+    "LLM_CACHE": "0",
+    "LLM_TIMEOUT_S": "30",
+    "LLM_RETRIES": "1",
+    "SIMILARITY_THRESHOLD": "0.35",
+    "CITATION_RATIO_MIN": "0.6",
+    "RETRIEVAL_TOP_K": "6",
+    "QUESTION_WORDS_MIN": "8",
+    "QUESTION_WORDS_MAX": "45",
+    "PENDING_SEND_SECONDS": "60",
+    "PENDING_STATUS_REFRESH_SECONDS": "1"
+  },
+  "scope": "BASE_PACK_V1",
+  "flow_caps": {
+    "DEV_ROUTINE": 3,
+    "DEV_AUTHORITY": 3,
+    "DEV_FACT": 3,
+    "V01": 3,
+    "V02": 3,
+    "V03": 3,
+    "V04": 3,
+    "DEV_HUMAN_R11": 1
+  },
+  "input_hashes": {
+    "DEV_ROUTINE": "90cb79a96ad872b2346f467ee259086ce7d42b35e598896f0c0c4211ec607118",
+    "DEV_AUTHORITY": "1ce4b0abd119a6a770bb1dd6b0b8ebab197adb540f606a39bb06e6254c347005",
+    "DEV_FACT": "453277535935e7b1c412d9afe171ed5431f128ef01d4741c56848816b61acb4c",
+    "V01": "6d6b9b491177ac25f00411b59b531987721f2aef856431b5bbbd5ca4b5b26306",
+    "V02": "cf61ce6833d4fa0c668483972cc0ec29f2a58f89d0d8e67ce31f995e722096a4",
+    "V03": "d27403f8e5675ec55a65f14aae68c1e284dc2223898661502dc485c9dd69a357",
+    "V04": "2bf3c24a6748a7186d4544f19447ec1f2952a583e16fa649a897219b2b4d65a3",
+    "DEV_HUMAN_R11": "8848bcb623b826d14939ce230be1cac0c3da27074d25b8333eb1ab5a57a4b927"
+  },
+  "authorized_senders": [
+    "alex.k49@example.edu.vn",
+    "hoa.k48@example.edu.vn",
+    "lan.k50@example.edu.vn",
+    "minh.k49@example.edu.vn",
+    "synthetic@example.invalid"
+  ],
+  "total_cap": 22,
+  "nominal_calls": 21,
+  "frozen_synthetic_inputs": [
+    {
+      "flow": "DEV_ROUTINE",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Hỏi lệ phí phúc khảo",
+        "body": "Cho em hỏi lệ phí phúc khảo một học phần là bao nhiêu?",
+        "received_at": "2026-09-21T09:00:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "90cb79a96ad872b2346f467ee259086ce7d42b35e598896f0c0c4211ec607118",
+      "is_synthetic": true
+    },
+    {
+      "flow": "DEV_AUTHORITY",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Xin phúc khảo trễ",
+        "body": "Em xin được nộp đơn phúc khảo môn X sau thời hạn, nhờ trường chấp thuận ngoại lệ cho em.",
+        "received_at": "2026-09-21T09:00:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "1ce4b0abd119a6a770bb1dd6b0b8ebab197adb540f606a39bb06e6254c347005",
+      "is_synthetic": true
+    },
+    {
+      "flow": "DEV_FACT",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Văn bản rèn luyện áp dụng",
+        "body": "Cho em hỏi văn bản điểm rèn luyện nào áp dụng cho khóa học và học kỳ của em?",
+        "received_at": "2026-09-21T09:00:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "453277535935e7b1c412d9afe171ed5431f128ef01d4741c56848816b61acb4c",
+      "is_synthetic": true
+    },
+    {
+      "flow": "V01",
+      "input": {
+        "sender": "minh.k49@example.edu.vn",
+        "subject": "Quy trình và thang điểm rèn luyện",
+        "body": "Em là sinh viên K49, học kỳ 1 năm học 2026-2027. Cho em hỏi điểm rèn luyện được chấm theo thang điểm nào và kết quả được công bố khi nào?",
+        "received_at": "2026-09-21T09:00:00+07:00",
+        "channel": "verify",
+        "external_id": "V01"
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "6d6b9b491177ac25f00411b59b531987721f2aef856431b5bbbd5ca4b5b26306",
+      "is_synthetic": true
+    },
+    {
+      "flow": "V02",
+      "input": {
+        "sender": "alex.k49@example.edu.vn",
+        "subject": "Course withdrawal deadline",
+        "body": "I am a K49 undergraduate student. What is the deadline and process for withdrawing a registered course in the 2026-2027 academic year?",
+        "received_at": "2026-09-21T09:01:00+07:00",
+        "channel": "verify",
+        "external_id": "V02"
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "cf61ce6833d4fa0c668483972cc0ec29f2a58f89d0d8e67ce31f995e722096a4",
+      "is_synthetic": true
+    },
+    {
+      "flow": "V03",
+      "input": {
+        "sender": "lan.k50@example.edu.vn",
+        "subject": "Xin nộp phúc khảo muộn vì nhập viện",
+        "body": "Em bị nhập viện và đã quá thời hạn công bố điểm. Em xin được nộp hồ sơ phúc khảo môn X muộn, mong Phòng Đào tạo chấp thuận cho trường hợp của em.",
+        "received_at": "2026-09-21T09:02:00+07:00",
+        "channel": "verify",
+        "external_id": "V03"
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "d27403f8e5675ec55a65f14aae68c1e284dc2223898661502dc485c9dd69a357",
+      "is_synthetic": true
+    },
+    {
+      "flow": "V04",
+      "input": {
+        "sender": "hoa.k48@example.edu.vn",
+        "subject": "Đăng ký ký túc xá",
+        "body": "Em muốn hỏi thủ tục đăng ký ở ký túc xá cho học kỳ tới và thời hạn nộp đơn là khi nào?",
+        "received_at": "2026-09-21T09:03:00+07:00",
+        "channel": "verify",
+        "external_id": "V04"
+      },
+      "nominal_calls": 2,
+      "attempt_cap": 3,
+      "input_sha256": "2bf3c24a6748a7186d4544f19447ec1f2952a583e16fa649a897219b2b4d65a3",
+      "is_synthetic": true
+    },
+    {
+      "flow": "DEV_HUMAN_R11",
+      "input": {
+        "subject": "Synthetic DEV — yêu cầu bản dịch",
+        "body": "学生の質問を確認してください。",
+        "sender": "synthetic@example.invalid",
+        "received_at": "2026-09-21T09:04:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "human_decision": {
+        "choice": "Yêu cầu bản dịch",
+        "reason": "Đề nghị bổ sung nội dung bằng tiếng Việt hoặc tiếng Anh để đối chiếu quy định."
+      },
+      "nominal_calls": 1,
+      "attempt_cap": 1,
+      "input_sha256": "8848bcb623b826d14939ce230be1cac0c3da27074d25b8333eb1ab5a57a4b927",
+      "is_synthetic": true
+    }
+  ],
+  "public_documentation": {
+    "verified_on": "2026-10-13",
+    "model_source": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+    "pricing_source": "https://developers.openai.com/api/docs/pricing",
+    "tier_source": "https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create",
+    "account_limits_source": "https://developers.openai.com/api/docs/guides/rate-limits",
+    "model": "gpt-6-luna",
+    "context_window_tokens": 1050000,
+    "max_output_tokens": 128000,
+    "standard_input_usd_per_million": "0.10",
+    "standard_output_usd_per_million": "0.50",
+    "cache_write_usd_per_million": "0.125",
+    "maximum_public_input_rate_calculation": "0.125 * 2 long-context * 2 Fast * 1.1 regional = 0.55",
+    "maximum_public_output_rate_calculation": "0.50 * 1.5 long-context * 2 Fast * 1.1 regional = 1.65",
+    "bound_note": "Conservative sum of full context and full output, not predicted token use. Account-specific higher rates or changed maxima invalidate this envelope.",
+    "snapshot_status": "Alias configured; exact returned model allow-list must be verified and approved before execution"
+  },
+  "cost_bound": {
+    "basis": "VERIFIED_PROVIDER_ENFORCED_MAXIMA_AND_MAXIMUM_BILLED_RATES",
+    "max_input_tokens": 1050000,
+    "max_output_tokens": 128000,
+    "max_input_usd_per_million": "0.55",
+    "max_output_usd_per_million": "1.65",
+    "public_documentation_status": "VERIFIED",
+    "account_status": "NOT_VERIFIED"
+  },
+  "public_upper_cost_usd_per_attempt": "0.7887",
+  "public_total_reservation_usd": "17.3514",
+  "approved_usd_cap": "10.00",
+  "verified_upper_cost_usd": null,
+  "account_readiness": {
+    "dashboard_observation": "Authenticated account/project settings inspected read-only; raw account identifiers and billing balance are ignored private evidence only",
+    "account_project_key_binding": "NOT_VERIFIED; Coordinator budget reply does not attest credential association or custom pricing/maxima",
+    "model_access": "PROJECT_ALLOWED; org/system restrictions and recording-key binding not fully established",
+    "usage_tier": "Build",
+    "rpm": 5000,
+    "tpm": 2000000,
+    "project_service_tier": "Standard",
+    "billing_currency": "USD",
+    "maximum_effective_input_rate": null,
+    "maximum_effective_output_rate": null,
+    "token_maxima_account_exceptions": "NOT_VERIFIED",
+    "available_funds_at_least_cap": "NOT_PROVEN_FOR_USD10; observed balance below10; auto-reload OFF",
+    "credential_presence": "OPENAI_API_KEY defined in local .env; presence only, not validity/account/access proof; no value or fingerprint published",
+    "needed_private_evidence": [
+      "Correct recording-key account/project association attested by account administrator without revealing key",
+      "Model access and exact permitted returned model IDs",
+      "Usage tier and applicable RPM/TPM; project service tier and any region/custom contract rates",
+      "USD rate ceilings no greater than approved envelope, provider token maxima, and enough balance/quota for approved cap"
+    ],
+    "tpd": 20000000,
+    "project_residency": "Global"
+  },
+  "go_reference": null,
+  "account_evidence_reference": "data/validation/m6-t05-account-readiness-private.json (partial dashboard evidence, not complete key/rate proof)",
+  "bound_evidence_reference": null,
+  "sdk_capture_format": "SDK_JSON_PAYLOAD_NOT_HTTP_WIRE_BYTES",
+  "allowed_response_models": null,
+  "safeguards": {
+    "pre_dispatch": "Reserve per-flow/global attempt and worst-case USD before original production SDK request; stop on drift or cap",
+    "failures": "No refund of unknown/failed usage; no automatic flow reruns or quota transfers; SDK retries=0; product retry/repair consumes same cap",
+    "cache": "LLM_CACHE=0; cache reads trapped; fresh temporary DEV DB; no Gold/SetA/SetB/private inputs",
+    "provenance": "Exclusive-create full original SDK JSON before parser, SHA256, request/response IDs, usage, config/input/source bindings, append-only attempts; no overwrite or automatic promotion",
+    "privacy": "Raw snapshots/candidates ignored local quarantine; independent privacy/origin review before any cassette commit",
+    "operator": "Minh/authorized operator; stop on provider/schema/business/identity/privacy failure; no authority to expand caps or production scope"
+  },
+  "local_execution_blocker": "Unrelated staged CURRENT_RUNTIME_SMOKE.md and ten untracked SQLite WAL/SHM files remain preserved. Runner requires fully clean checkout. Do not move/delete SQLite sidecars without associated DB owner and stopped writers.",
+  "acceptance_scope_limit": "BASE22 excludes two cited-R11 responses. Original full cited-context coverage cannot be declared PASS without separately valid responses and/or explicit future contract/scope decision; no supplemental call authorized now.",
+  "final_go_required": [
+    "Exact final PR44 SHA plus unchanged fingerprints/config/input hashes",
+    "Private account evidence verified, rates/token maxima and allowed returned model IDs pinned",
+    "Approved USD cap and verified per-attempt upper cost",
+    "Synthetic input/provenance/privacy/SDK format, stop conditions and operator approval",
+    "Authoritative GO reference; booleans in this proposal do not authenticate Coordinator",
+    "Clean checkout after safe reconciliation of unrelated work"
+  ],
+  "next_execution": [
+    "Guarded BASE recording once within 22 caps and approved USD",
+    "Inspect attempts/raw usage/failures; validate original/cassette chain and privacy",
+    "Replay same BASE inputs on fresh isolated DB with network/provider/cache traps",
+    "Assess Layer A zero-miss and Layer B business/draft/audit results separately",
+    "Commit only reviewed approved pack/report/manifest; validation exact SHA; Minh self-review/handoff",
+    "Nam independent review; Coordinator ACCEPT/DONE/merge decision on Trello"
+  ],
+  "current_ac": {
+    "AC1": "NOT_VERIFIED",
+    "AC2": "FAIL",
+    "AC3": "NOT_VERIFIED",
+    "AC4": "FAIL",
+    "AC5": "FAIL",
+    "AC6": "PASS_OFFLINE",
+    "AC7": "PASS_CHECKPOINT"
+  },
+  "historical_exact_tested_sha": "cee0f067660feeeb1f626582818607fe7334d472",
+  "historical_validation": "51 targeted PASS; 8/8 misses; two cited NOT_RUN. Not rerun for documentation-only readiness.",
+  "actual_provider_attempts": 0,
+  "actual_tokens": 0,
+  "actual_cost_usd": "0",
+  "human_self_review": "PENDING",
+  "nam_final_review": "PENDING",
+  "coordinator_acceptance": "NOT_GRANTED",
+  "budget_decision_source": "Direct Coordinator message in this chat: [M6-T05] COORDINATOR BUDGET DECISION; maximum USD10, BASE22, no final LIVE GO",
+  "budget_scope_approval_is_final_live_go": false,
+  "budget_analysis": {
+    "approved_usd_cap": "10.00",
+    "full_base22_broad_reservation_usd": "17.3514",
+    "base22_fits_current_guarded_envelope": false,
+    "conditional_max_attempts_at_public_upper": 12,
+    "conditional_12_attempt_reservation_usd": "9.4644",
+    "current_authorized_dispatch_attempts": 0,
+    "qualification": "12 is arithmetic capacity only, conditional on account evidence and final GO. It is not authorization, a replacement BASE scope or AC completion.",
+    "lower_standard_global_conditional_envelope": {
+      "max_input_usd_per_million": "0.25",
+      "max_output_usd_per_million": "0.75",
+      "per_attempt_usd": "0.3585",
+      "base22_usd": "7.887",
+      "status": "NOT_CURRENTLY_ENFORCEABLE_BY_EXISTING_RUNNER; omitted service_tier is auto; current guard requires broader rate floors. Do not use this as approved dispatch bound."
+    }
+  },
+  "outside_scope_decisions": [
+    "Budget remains maximum10; do not request/use17.36 or run partial12 as a substitute for BASE22.",
+    "If full BASE22 must run under10, Coordinator must assign authoritative account-bound verification and separately scoped infra work if explicit request tier/output caps or provider-interface changes are needed. No such change is authorized here.",
+    "Original cited-R11 full acceptance requires separately valid responses or explicit future contract/scope decision; BASE22 excludes their recording.",
+    "Associated owners must safely reconcile unrelated staged smoke report and live SQLite sidecars before clean-checkout execution; no reset/clean/stash or sidecar moves performed."
+  ]
+}
