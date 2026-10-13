@@ -362,6 +362,7 @@ def source_fingerprints() -> dict[str, str]:
         "scripts/audit_runtime_replay.py",
         "scripts/runtime_recording_readiness.py",
         "scripts/guarded_runtime_recording.py",
+        "scripts/guarded_runtime_delta_recording.py",
         "scripts/validate_recorded_replay_pack.py",
     ):
         source_hashes[name] = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
