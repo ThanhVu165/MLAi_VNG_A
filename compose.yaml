@@ -9,6 +9,7 @@ x-app: &app
     OPENAI_MODEL: gpt-6-luna
     OPENAI_REASONING_EFFORT: none
     LLM_CACHE: "0"
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
   healthcheck:
     test:
       ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8511/_stcore/health', timeout=3).read()"]

@@ -1,5 +1,12 @@
 # M6-T04 — Deployment and reproducibility runbook
 
+> **BLOCKED CHECKPOINT:** Không dùng hoặc phân phối image
+> `sha256:8e408bd7aa6462bb412a8211b12075c84abf795cc7d35462660c7d892b9e40b8`.
+> Image này chứa artifact `.pytest-*`, gồm `.env` và `*.db`. Owner tiếp theo phải sửa
+> `.dockerignore`, được cấp quyền cho một clean network build mới và lặp lại toàn bộ
+> security/runtime checks. Các lệnh dưới đây chỉ là kế hoạch tiếp tục, không phải bằng
+> chứng nghiệm thu image hiện tại.
+
 ## Safety boundary
 
 - This runbook is for a local, synthetic DEMO environment only.
@@ -35,8 +42,8 @@ Do not grant build networking from an earlier task authorization. After the Coor
 explicitly approves these dependency downloads, build and identify the image:
 
 ```powershell
-$env:EXODIA_IMAGE = 'exodia:m6-t04-eaaeea8'
-docker compose --project-name exodia-m6t04-validation --profile demo build --pull=false demo
+$env:EXODIA_IMAGE = 'exodia:m6-t04-<source-sha>'
+docker compose --project-name exodia-m6t02-validation-m6t04 --profile demo build --pull=false demo
 docker image inspect $env:EXODIA_IMAGE --format 'ID={{.Id}} CREATED={{.Created}} SIZE={{.Size}} REPO_DIGESTS={{json .RepoDigests}}'
 docker run --rm --network none --entrypoint python $env:EXODIA_IMAGE --version
 ```
@@ -49,13 +56,13 @@ image evidence for a different source revision.
 Use an isolated Compose project and non-conflicting loopback port:
 
 ```powershell
-$env:EXODIA_IMAGE = 'exodia:m6-t04-eaaeea8'
+$env:EXODIA_IMAGE = 'exodia:m6-t04-<source-sha>'
 $env:DEMO_HOST_PORT = '18513'
-docker compose --project-name exodia-m6t04-validation --profile demo up -d --no-build demo
-docker compose --project-name exodia-m6t04-validation --profile demo ps
+docker compose --project-name exodia-m6t02-validation-m6t04 --profile demo up -d --no-build demo
+docker compose --project-name exodia-m6t02-validation-m6t04 --profile demo ps
 Invoke-WebRequest http://127.0.0.1:18513/_stcore/health
-docker compose --project-name exodia-m6t04-validation --profile demo logs demo
-docker compose --project-name exodia-m6t04-validation exec -T demo python -c "import os; print({name: os.environ.get(name) for name in ('DATABASE_PATH','LLM_MODE','LLM_PROVIDER','OPENAI_MODEL','OPENAI_REASONING_EFFORT','LLM_CACHE')})"
+docker compose --project-name exodia-m6t02-validation-m6t04 --profile demo logs demo
+docker compose --project-name exodia-m6t02-validation-m6t04 exec -T demo python -c "import os; print({name: os.environ.get(name) for name in ('DATABASE_PATH','LLM_MODE','LLM_PROVIDER','OPENAI_MODEL','OPENAI_REASONING_EFFORT','LLM_CACHE','STREAMLIT_BROWSER_GATHER_USAGE_STATS')})"
 ```
 
 Expected configuration is `/runtime/app.db`, replay/openai/gpt-6-luna/none/cache `0`.
@@ -69,7 +76,7 @@ directory created for this task:
 
 ```powershell
 $repo = (Get-Location).Path
-$image = 'exodia:m6-t04-eaaeea8'
+$image = 'exodia:m6-t04-<source-sha>'
 docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=256m --cap-drop ALL --security-opt no-new-privileges:true -e LLM_MODE=replay -e LLM_PROVIDER=openai -e OPENAI_MODEL=gpt-6-luna -e OPENAI_REASONING_EFFORT=none -e LLM_CACHE=0 -e DATABASE_PATH=/tmp/app.db --mount "type=bind,source=$repo\tests\cassettes,target=/app/tests/cassettes,readonly" --entrypoint python $image -m scripts.audit_runtime_replay --output-dir /tmp/m6-t04-replay
 ```
 
@@ -80,20 +87,20 @@ calls before AC5 can pass.
 
 ## Synthetic database, persistence, and recovery
 
-Only use project `exodia-m6t04-validation`. Seed through the application entrypoint,
+Only use project `exodia-m6t02-validation-m6t04`. Seed through the application entrypoint,
 write a synthetic probe, restart, and confirm it persists:
 
 ```powershell
-docker compose --project-name exodia-m6t04-validation exec -T demo python -c 'from infra.db import execute; execute("CREATE TABLE IF NOT EXISTS m6_t04_probe (value TEXT NOT NULL)"); execute("INSERT INTO m6_t04_probe VALUES (''synthetic'')")'
-docker compose --project-name exodia-m6t04-validation restart demo
-docker compose --project-name exodia-m6t04-validation exec -T demo python -c 'from infra.db import fetch_one; assert fetch_one("SELECT value FROM m6_t04_probe")[0] == "synthetic"'
+docker compose --project-name exodia-m6t02-validation-m6t04 exec -T demo python -c 'from infra.db import execute; execute("CREATE TABLE IF NOT EXISTS m6_t04_probe (value TEXT NOT NULL)"); execute("INSERT INTO m6_t04_probe VALUES (''synthetic'')")'
+docker compose --project-name exodia-m6t02-validation-m6t04 restart demo
+docker compose --project-name exodia-m6t02-validation-m6t04 exec -T demo python -c 'from infra.db import fetch_one; assert fetch_one("SELECT value FROM m6_t04_probe")[0] == "synthetic"'
 ```
 
 For a controlled recovery check, stop and start the same service and re-run health and
-probe checks. Do not reset ordinary DEV/STUDY/DEMO projects. The existing reset guard
-only accepts M6-T02 validation project names; therefore M6-T04 cleanup must retain the
-volume until a Coordinator-approved reset procedure is added or the project is reviewed
-manually. Never use a wildcard, global prune, or an unverified `down --volumes` command.
+probe checks. Do not reset ordinary DEV/STUDY/DEMO projects. After verifying the exact
+project labels, use the existing guarded reset only for
+`exodia-m6t02-validation-m6t04`. Never use a wildcard, global prune, or an unverified
+`down --volumes` command.
 
 ## Concurrent sessions
 
@@ -110,8 +117,8 @@ If independent browser contexts are unavailable, record AC6 as `NOT VERIFIED`.
 Stop while retaining the database:
 
 ```powershell
-docker compose --project-name exodia-m6t04-validation stop demo
-docker compose --project-name exodia-m6t04-validation --profile demo up -d --no-build demo
+docker compose --project-name exodia-m6t02-validation-m6t04 stop demo
+docker compose --project-name exodia-m6t02-validation-m6t04 --profile demo up -d --no-build demo
 ```
 
 Rollback uses the previous inspected image ID/tag with the same volume. Stop the service,

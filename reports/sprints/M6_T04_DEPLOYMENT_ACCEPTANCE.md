@@ -1,148 +1,150 @@
-# M6-T04 — Deployment & Reproducibility Acceptance
+# M6-T04 — Nghiệm thu triển khai và khả năng tái lập
 
-## Checkpoint result
+## Kết luận checkpoint
 
-- **RESULT: BLOCKED / PARTIAL ONLY**
-- Task: `M6-T04`
-- Execution Owner: Project Coordinator (authorized on the official Trello card)
-- Reviewer: Vũ per Task Contract
-- Authorized baseline / tested SHA: `eaaeea88a59618b49219a20ae01a3cf3227cec87`
-- Branch: `sprint/m6-t04-deployment-acceptance`
-- Final SHA / PR: pending this partial checkpoint
-- Public hosting, LIVE LLM, external API and email: **not authorized; actual calls 0/0/0**
-- Fresh clone: not authorized for this implementer; reviewer authorization remains separate
+- **KẾT QUẢ: BLOCKED / PARTIAL ONLY**
+- Nhánh local: `sprint/m6-t04-deployment-acceptance`
+- Baseline được duyệt: `dev@eaaeea88a59618b49219a20ae01a3cf3227cec87`
+- SHA dùng để build/test image: `81f340c72d9b75567920299a1761cf762311c233`
+- Image: `exodia:m6-t04-81f340c`
+- Image ID: `sha256:8e408bd7aa6462bb412a8211b12075c84abf795cc7d35462660c7d892b9e40b8`
+- Publish handoff: được Coordinator cho phép đẩy đúng branch và tạo Draft PR; URL/final
+  SHA sẽ được xác nhận sau khi GitHub chấp nhận push
+- Public hosting, LIVE LLM, API ngoài và email thật: **0**
 
-This checkpoint does not claim task DONE, M6 PASS, a live deployment, or a reproducible
-exact image. Offline execution stopped when the exact-image build proved that external
-package downloads were required and no M6-T04 network authorization existed.
+Không được dùng image trên để triển khai hoặc làm image nghiệm thu. Container DEMO local đã
+được dừng ngay sau khi phát hiện lỗi. Không tuyên bố Task DONE, M6 PASS, hosting PASS hoặc
+fresh-clone PASS.
 
-## Preflight
+## Safety failure bắt buộc dừng
 
-Preflight was `STARTABLE` for offline Phases A–C before the build stop condition:
+Clean build có network được Coordinator cấp quyền đã hoàn tất, nhưng bước quét image phát
+hiện workspace tạm của pytest bị đóng gói vào `/app` vì `.dockerignore` chỉ loại
+`.pytest_cache/`, chưa loại `.pytest-*`.
 
-- Official Trello card is in `IN PROGRESS` and contains a Coordinator authorization for
-  offline Phases A–C. Hosting, public exposure, LIVE/API/email and fresh clone are withheld.
-- Live GitHub `dev` was verified identical to `eaaeea88a59618b49219a20ae01a3cf3227cec87`.
-- M6-T02, M6-T03 and M6-T05 cards are in `Done - Đã nghiệm thu`.
-- No existing M6-T04 branch or PR was found. The starting working tree was clean.
-- Host Python is `3.11.9`.
-- Docker Desktop/Engine is `29.1.3`, Compose `v2.40.3-desktop.1`, Linux `x86_64`,
-  `overlayfs`, 8 CPUs and 8,218,968,064 bytes memory.
-- Existing accepted reference image `exodia:m6-t03-7801eab` has ID
-  `sha256:34fb7d38e8464ff54a72756f29cf1864770fdb2c9eebfa208dd94182b0369940`.
-  It is reference evidence only, not claimed as the M6-T04 exact-image build.
+Ví dụ artifact được tìm thấy trong image:
 
-## Completed safe work
+- `/app/.pytest-anti-test-run/test_database_isolated_before_2/.env`
+- `/app/.pytest-anti-test-run/test_database_isolated_before_2/data/app.db`
+- nhiều file `*.db` khác dưới các thư mục `/app/.pytest-*`
 
-- Compose still uses the M6-T02 architecture and loopback bindings.
-- Compose now makes provider/model identity explicit and accepts an exact image tag through
-  `EXODIA_IMAGE`; defaults remain backward compatible.
-- `docker compose config --quiet` and `docker compose --profile demo config --quiet`
-  passed after the replay identity correction.
-- A clean-run runbook now records the authorization gate, exact image identity, local
-  start/health, replay mounts, synthetic persistence, concurrency, recovery, rollback,
-  safety boundary and hosting decision packet.
-- No production logic, policy, Gold, cassette, schema or dependency was changed.
+Không đọc nội dung các file `.env`; chúng được xử lý như secret-risk theo nguyên tắc
+fail-closed. Dù đường dẫn cho thấy đây là dữ liệu test/synthetic, image không đạt yêu cầu
+secret hygiene và khả năng tái lập từ source sạch.
 
-## Build stop condition
+**PROBLEM:** build context chứa artifact pytest không được `.dockerignore` loại bỏ.
 
-| Field | Evidence |
+**IMPACT:** AC2 và AC7 không thể PASS; image không được push/deploy. Lượt clean build có
+network duy nhất đã được sử dụng nên không được tự ý sửa rồi build lại.
+
+**EVIDENCE:** lệnh quét read-only trong image bằng `find /app` trả về các file `.env` và
+`*.db` dưới `.pytest-*`; container đang chạy được xác nhận dùng đúng image ID nêu trên.
+
+**SOLUTION:** thêm mẫu loại trừ `.pytest-*/` vào `.dockerignore`, xóa/không đưa artifact
+test vào build context, rồi chạy một clean build mới và lặp lại toàn bộ image scan,
+runtime, replay/Verify, persistence/recovery và session checks.
+
+**RESPONSIBLE:** implementer sửa build context sau khi Coordinator cấp quyền build lại;
+reviewer kiểm tra image mới độc lập.
+
+**COORDINATOR DECISION NEEDED:** cấp quyền cho **một clean Docker build có network bổ sung**
+sau bản sửa `.dockerignore`. Quyền build một lượt trước đó đã được sử dụng.
+
+## Build và môi trường đã quan sát
+
+| Trường | Giá trị |
 | --- | --- |
-| Command | `docker build --pull=false --network=none -t exodia:m6-t04-eaaeea8 .` |
-| Result | FAIL, exit 1; no M6-T04 image was created |
-| Failure | Uncached dependency layer attempted to resolve `torch==2.5.1+cpu` from the pinned PyTorch index; DNS/network was denied by `--network=none` |
-| External downloads | 0 completed; no network-enabled retry was made |
-| Impact | Exact-source image ID, startup, health, DB runtime, replay/Verify and browser concurrency cannot be accepted on this checkpoint |
+| Lệnh | `docker build --pull=false --no-cache -t exodia:m6-t04-81f340c .` |
+| Kết quả build | PASS |
+| Python trong image | `3.11.17` |
+| Kích thước image | `569311354` byte |
+| Docker / Compose | Engine `29.1.3`; Compose `v2.40.3-desktop.1` |
+| Host Docker | Linux `x86_64`, 8 CPU, 8,218,968,064 byte RAM |
+| Nguồn tải | Python/PyTorch package indexes đã cấu hình; không đổi version/source |
 
-**PROBLEM:** exact image build requires external package downloads.
+`requirements.txt` và CPU Torch được pin trực tiếp. Tuy nhiên một số dependency bắc cầu
+vẫn được resolver chọn theo index tại thời điểm build; đây là rủi ro tái lập còn lại.
 
-**IMPACT:** Phase A cannot complete and Phases B/C cannot produce evidence on the intended
-image.
+## Bằng chứng runtime đã thu trước safety gate
 
-**EVIDENCE:** failed offline BuildKit step 4/5 for pinned CPU Torch; image inspect returned
-`No such image`.
+- DEMO chạy bằng Compose project `exodia-m6t02-validation-m6t04`, bind duy nhất
+  `127.0.0.1:18513`, health trả `HTTP 200 / ok`.
+- Cấu hình runtime: `/runtime/app.db`, `replay/openai/gpt-6-luna/none`, cache `0`,
+  Streamlit usage telemetry `false`, `no-new-privileges:true`.
+- Log có marker hai worker `email-processing` và `email-dispatch` hoạt động.
+- Quan sát tài nguyên: khoảng `46.57 MiB`, 13 PID, 0.46% CPU tại một thời điểm.
+- SQLite schema version `2`, 15 bảng, seed `6` sources / `72` chunks; chạy seed lần hai
+  không tạo bản ghi lặp.
+- Synthetic probe tồn tại sau restart đúng image và sau controlled `SIGKILL` + start.
+- BASE24: 24/24 hash đúng, 0 mismatch.
+- Critical + Verify: 7 luồng, 23 replay hit, 0 miss, LIVE 0; critical 4/4 và
+  Verify V01–V04 4/4 đạt semantic expectation.
+- Hai kiểm thử AppTest độc lập trong chính image, `--network none`, read-only filesystem,
+  cap-drop và no-new-privileges: **2 passed**; xác nhận hai session không gửi lặp và reload
+  không tạo case lặp. Đây không thay thế bằng chứng hai browser context thật.
 
-**SOLUTION:** Coordinator authorizes one scoped Docker build with network access to the
-PyTorch/Python package indexes, retaining pinned dependencies and recording the resulting
-image ID; then resume the runbook from build through Phases A–C.
+Aggregate runner mở rộng dừng ở nhánh UI R11 với `KeyError choice_<case>` sau khi bảy
+luồng mục tiêu đã chạy. Bằng chứng AC5 chỉ dựa trên scope critical 4/4 + V01–V04 4/4,
+không nhận R11.
 
-**RESPONSIBLE:** Project Coordinator for authorization; implementer for rerun/evidence.
+## Sự cố thủ tục đã được cô lập
 
-**COORDINATOR DECISION NEEDED:** approve or deny the scoped dependency download.
+Trong một shell kiểm tra restart, biến `EXODIA_IMAGE` và `DEMO_HOST_PORT` chưa được export
+lại nên Compose tạm recreate service bằng image mặc định `exodia:m6-t02` tại cổng 8513.
+Sai lệch được phát hiện ngay bằng `docker inspect`; kết quả đó không được dùng làm bằng
+chứng. Service sau đó được force-recreate bằng đúng image M6-T04 và cổng 18513, giữ nguyên
+volume synthetic. Runbook phải yêu cầu export lại biến ở mỗi PowerShell mới.
 
-## BASE24 and source/image provenance
+## AC1–AC8
 
-- Canonical manifest: `reports/readiness/M6_T05_BASE24_RECORDED_PACK.json`.
-- Manifest SHA-256 recorded by accepted M6-T03 evidence:
-  `2a3c80855923010e3ead807424bc1d2e904c01422ab08eade7655fe30aa280c8`.
-- Accepted pack integrity: 24/24 hashes, zero mismatch; scope
-  `BASE_PACK_V1_PLUS_DELTA_REPAIR_V1`.
-- Accepted M6-T03 runtime evidence: critical flows 4/4, Verify V01–V04 4/4,
-  23/23 replay hits, zero misses, zero LIVE calls on image
-  `sha256:34fb7d38e8464ff54a72756f29cf1864770fdb2c9eebfa208dd94182b0369940`.
-- These are dependency/reference results. They were not relabeled as M6-T04 execution.
-
-## Hosting decision packet
-
-No provider, budget, credential, region, access policy or public exposure is approved.
-The runbook compares: (1) a single managed VM with Docker Compose, (2) a managed container
-service with verified persistent-volume semantics and one SQLite writer, and (3) a private
-institutional/VPN host. Every option needs an authentication/access layer because the app
-has no built-in accounts, private ingress, persistent storage, monitoring, backup/restore,
-and image rollback. Current price/quota assumptions must be verified before selection.
-
-AC1 requires an approved live URL plus health/uptime evidence. AC3 requires a separately
-authorized independent reviewer fresh clone. Neither can be completed offline by this owner.
-
-## AC1–AC8 matrix
-
-| AC | Status | Evidence / remaining work |
+| AC | Trạng thái | Bằng chứng / phần còn thiếu |
 | --- | --- | --- |
-| AC1 — Deployment | NOT RUN / BLOCKED | Hosting and public exposure not authorized; no URL created. |
-| AC2 — Reproducibility | PARTIAL | Python 3.11, pinned inputs, explicit config and runbook present; exact image build blocked on dependency-download authorization. |
-| AC3 — Fresh Clone | NOT VERIFIED | Reviewer clone authorization absent. |
-| AC4 — Data | NOT RUN | No migration/seed/reset/persistence run on an M6-T04 exact image. |
-| AC5 — Runtime | NOT RUN | Accepted M6-T03 reference retained; no M6-T04 image replay/Verify rerun. |
-| AC6 — Sessions | NOT VERIFIED | Browser-based independent sessions were not started after the build stop. |
-| AC7 — Safety | PASS for checkpoint boundary | Loopback-only config; replay/cache-off identity explicit; no public exposure, secret, PII, LIVE/API/email call. |
-| AC8 — Evidence | PARTIAL | Report/runbook/config checkpoint present; image/log/runtime/PR final evidence pending. |
+| AC1 — Deployment | NOT RUN / BLOCKED | Chưa có quyền hosting/public URL; không tạo URL. |
+| AC2 — Reproducibility | FAIL / BLOCKED | Build chạy được nhưng image chứa `.pytest-*`, `.env`, `*.db`; cần image sạch mới. |
+| AC3 — Fresh Clone | NOT VERIFIED | Chưa có nghiệm thu fresh clone độc lập của reviewer. |
+| AC4 — Data | PARTIAL PASS | Migration/seed/idempotence/persistence/recovery đạt trên image hiện tại; reset cuối chưa chạy vì safety STOP. |
+| AC5 — Runtime | PASS có giới hạn | Critical 4/4, Verify 4/4, 23/23 replay hit, miss 0, LIVE 0 trên SHA/image nêu trên. |
+| AC6 — Sessions | NOT VERIFIED | AppTest hai session đạt 2/2; browser thật không chạy được vì Computer Use kernel lỗi trước khởi tạo. |
+| AC7 — Safety | FAIL / BLOCKED | Loopback/replay/network-disabled đạt, nhưng image secret hygiene thất bại. |
+| AC8 — Evidence | PARTIAL | Report/runbook/config/evidence local có; chưa push, chưa PR do safety gate. |
 
 ## Validation log
 
-| Check | Result |
+| Kiểm tra | Kết quả |
 | --- | --- |
-| Trello authorization and dependency state | PASS |
-| Live GitHub `dev` vs authorized SHA | PASS — identical |
-| Local fetch and branch creation | PASS |
-| Initial working tree | PASS — clean |
-| Python/Docker/Compose/resources | PASS |
-| Default and DEMO Compose config | PASS |
-| Offline exact-image build | FAIL closed; dependency download authorization required |
-| Exact image inspect / Python in new image | NOT RUN — image absent |
-| Startup / health / logs | NOT RUN |
-| Synthetic migration/seed/reset/restart/recovery | NOT RUN |
-| Critical replay and Verify V01–V04 | NOT RUN on M6-T04 image |
-| 2–3 independent browser sessions | NOT VERIFIED |
-| Public deployment / fresh clone | NOT AUTHORIZED |
+| Trello authorization và dependency state | PASS |
+| Live GitHub `dev` đúng SHA được duyệt | PASS |
+| Clean network build được cấp quyền | PASS; quyền một lượt đã dùng |
+| Image identity / Python | PASS |
+| Startup / health / worker / loopback | PASS |
+| Migration / seed / restart / crash recovery | PASS |
+| BASE24 integrity | PASS 24/24 |
+| Critical + Verify offline | PASS 7 luồng, 23/23 hit, LIVE 0 |
+| AppTest hai session | PASS 2/2 |
+| Hai browser context thật | NOT VERIFIED — kernel lỗi `failed to write kernel assets: The system cannot find the path specified. (os error 3)` |
+| Quét secret/artifact trong image | **FAIL — safety stop** |
+| Reset/recreate cuối | NOT RUN — dừng theo Coordinator gate |
+| Push / PR | PENDING — chỉ publish checkpoint BLOCKED, không phải nghiệm thu |
 
-## Files changed and self-review
+## Thay đổi local và self-review
 
-- `compose.yaml`
-- `docs/deploy/M6_T04_RUNBOOK.md`
-- `reports/sprints/M6_T04_DEPLOYMENT_ACCEPTANCE.md`
+- `compose.yaml`: chọn image qua `EXODIA_IMAGE`, chốt replay identity và tắt Streamlit
+  usage telemetry.
+- `docs/deploy/M6_T04_RUNBOOK.md`: runbook local, recovery, rollback và hosting decision
+  packet; chưa được nghiệm thu cuối.
+- `reports/sprints/M6_T04_DEPLOYMENT_ACCEPTANCE.md`: report này.
 
-Self-review scope: deployment config and evidence only. The change is backward compatible,
-keeps loopback bindings and existing volumes, and introduces no secret or credential. No
-database was deleted or modified. Rollback is a revert of this checkpoint; no schema/data
-migration is involved.
+Không sửa production logic, policy, Gold, cassette, schema hoặc dependency version.
+Không force-push, merge, rewrite history, public deploy, gọi LIVE/API/email hay đọc nội
+dung artifact `.env`. Image lỗi và volume synthetic vẫn được giữ local để điều tra; chỉ
+container đã dừng. Git chỉ chứa config/runbook/report; Docker image, DB, raw log và
+artifact `.pytest-*` không được đưa vào commit.
 
-## Required decisions and next step
+## Quyền còn cần xin
 
-1. Coordinator approves or denies a single scoped dependency-enabled Docker build.
-2. Coordinator later selects hosting, budget, credentials and access/exposure policy for AC1.
-3. Coordinator separately authorizes Vũ's independent fresh clone for AC3.
-
-After decision 1, resume with the runbook: build and pin image ID, start isolated DEMO,
-health/config/secrets checks, synthetic persistence/recovery, exact-image replay/Verify,
-real 2–3 browser-session smoke, then update this report and PR as `PARTIAL ONLY` until
-AC1 and AC3 have their external evidence.
+1. Quyền sửa `.dockerignore` và chạy thêm một clean Docker build có network từ đúng các
+   package index đã duyệt.
+2. Sau khi image mới pass safety: quyền tiếp tục reset/recreate cuối và browser-context
+   nghiệm thu nếu công cụ GUI hoạt động.
+3. Quyết định riêng cho hosting/provider/budget/access để thực hiện AC1.
+4. Quyền fresh clone độc lập cho reviewer để thực hiện AC3.
