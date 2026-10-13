@@ -183,3 +183,162 @@ Raw evidence đã ghi đúng transition của bảy flow. Riêng V02 ghi `GROUND
 - Solution/Responsible: Coordinator mở/ủy quyền task production riêng để xử lý semantic normalization/groundedness; M6-T03 không được sửa business logic.
 - Decision Needed: quyết định owner và scope cho production fix, sau đó rerun M6-T03 từ exact approved revision.
 - Safe Work Continuing: Coordinator có thể review blocker report và raw evidence; không merge, không sửa cassette/expected result.
+
+---
+
+## POST-INTEGRATION FINAL VALIDATION
+
+### Disposition hiện hành
+
+- Authorization: Coordinator chấp nhận audit hai tầng cho AC6: R2 được ghi một
+  diagnostic `CASE_ERROR`; pipeline ghi đúng một terminal `CASE_ERROR` có
+  `rule_id=TECHNICAL_ERROR` khi case kết thúc `ERROR`.
+- Result: **READY_FOR_COORDINATOR_REVIEW**.
+- Historical evidence: toàn bộ V02 FAIL và AC6 FAIL/NOT RUN phía trên được giữ nguyên.
+  Phần này là hậu kiểm sau remediation/integration, không sửa hoặc xóa raw FAIL.
+- Production/runtime change trong M6-T03: **0**. Diff cuối chỉ gồm targeted test assertion
+  và report này.
+- LIVE/API/email: **0/0/0**.
+
+### Revision và exact image
+
+| Mốc | SHA / giá trị | Kết quả |
+|---|---|---|
+| Original tested baseline | `348058f9c7c0f9d81ab38870271b4260fadbb79f` | Historical blocker run phía trên |
+| Original evidence commit | `92be4059c330e06a8c25c76e1b8630c3ef534700` | Historical report được bảo toàn |
+| Integrated `origin/dev` | `e8f44c5b87a671916267aeede5bf10602016a6c2` | V02 remediation và safety integration |
+| Image-tested merge SHA | `7801eabc5859fb4cb8cb049620d04bba79dde917` | Critical replay, Verify, reset/restart và reporting evidence |
+| Final test/report SHA | PR #48 head sau commit cuối | Khác image-tested SHA chỉ ở test/report; xem PR head |
+| Image tag | `exodia:m6-t03-7801eab` | Tồn tại cục bộ, được inspect lại |
+| Image ID / RepoDigest | `sha256:34fb7d38e8464ff54a72756f29cf1864770fdb2c9eebfa208dd94182b0369940` | Khớp exact image đã báo cáo |
+
+Docker build của exact image đã PASS trong lượt post-integration. Không rebuild sau khi chỉ
+đổi assertion/report, để không tạo một image có runtime giống hệt nhưng digest khác.
+
+### BASE24, replay và Verify
+
+- Canonical BASE24 manifest:
+  `reports/readiness/M6_T05_BASE24_RECORDED_PACK.json`.
+- Manifest SHA-256:
+  `2a3c80855923010e3ead807424bc1d2e904c01422ab08eade7655fe30aa280c8`.
+- Cassette integrity kiểm lại từ canonical manifest: **24/24 hash khớp, 0 mismatch**;
+  `integrity=PASS_24_OF_24`.
+- Privacy: `PASS_AUTOMATED_SCAN`; raw SDK responses vẫn ở ignored quarantine.
+- Critical product flows: **4/4 PASS** — Routine/P05, Authority/P01, Fact/P03,
+  Out-of-policy/P02.
+- Verify V01–V04: **4/4 PASS** sau V02 remediation; V02 hiện
+  `AUTO_REPLY/P05` như expected.
+- Runtime replay: **23 calls / 23 hits / 0 misses**, network guard bật,
+  `live_provider_calls=0`.
+- Evidence exact SHA:
+  `data/validation/m6-t03/post-remediation-critical/M6_T05_REPLAY_EVIDENCE.json`
+  và `M6_T05_REPLAY_MANIFEST.json` (local ignored evidence). Canonical provenance và
+  acceptance status lấy từ tracked BASE24 manifest ở trên; runtime-observation manifest
+  không thay thế canonical provenance record.
+
+Không chạy lại 23-call replay trong lượt AC6 final vì production, cassette, config và image
+không thay đổi; exact-image evidence trên vẫn khớp SHA `7801eab`.
+
+### Reset/restart
+
+Hai lượt DB synthetic độc lập (`run1`, `run2`) đều giữ nguyên sau restart:
+
+| Kiểm tra | Run 1 | Run 2 |
+|---|---:|---:|
+| V01 `AUTO_REPLY/P05`, `PENDING_SEND` | PASS | PASS |
+| V03 `ESCALATE/AUTHORITY_REQUIRED/P01`, `AWAITING_HUMAN` | PASS | PASS |
+| Auto draft | 1 | 1 |
+| Authority escalation | 1 | 1 |
+| Forbidden side effects | 0 | 0 |
+
+DB chỉ chứa synthetic inputs và nằm trong evidence directory riêng. Không dùng DB dev/study/demo.
+
+### AC6 — diagnostic và terminal evidence
+
+Hai regression lịch sử được chạy trước khi điều chỉnh assertion và tái hiện nguyên trạng:
+
+```text
+extract_timeout: FAIL — total CASE_ERROR actual 2, expected cũ 1
+extract_schema:  FAIL — total CASE_ERROR actual 2, expected cũ 1
+```
+
+Đối chiếu từng row chứng minh expected cũ đang đếm gộp hai tầng audit:
+
+| Scenario | R2 diagnostic `CASE_ERROR` (`rule_id IS NULL`) | Terminal `CASE_ERROR/TECHNICAL_ERROR` | Final status / decision | Classified completed | Send/approval/resolved |
+|---|---:|---:|---|---:|---:|
+| `extract_timeout` | 1, reason còn truy vết | 1 | `ERROR / ERROR` | 0 | 0 |
+| `extract_schema` | 1, reason còn truy vết | 1 | `ERROR / ERROR` | 0 | 0 |
+
+Targeted assertion nay phân biệt `rule_id IS NULL` và `TECHNICAL_ERROR`; không yêu cầu tổng
+`CASE_ERROR=1`. Guard exception vẫn yêu cầu 0 diagnostic và đúng 1 terminal event. Test còn
+xác minh không có `CASE_QUEUED`, `CASE_RESOLVED`, `HUMAN_DECISION`,
+`HUMAN_APPROVED_SEND`, `SEND_SCHEDULED` hoặc `SEND_DISPATCHED`.
+Scenario R2 missing-cassette dùng cùng invariant hai tầng; nhánh R11 vẫn giữ đúng một error
+event vì case giữ `HUMAN_DECIDED` và không kết thúc ở trạng thái `ERROR`.
+
+Reporting/telemetry dùng cùng tiêu chí hiện hành của `infra.telemetry.snapshot` và trang
+Đo lường: chỉ `AUTO_REPLY`/`ESCALATE` thuộc classified denominator. Với R2 technical-error
+scenario: `total_cases=1`, `classified_completed=0`, `technical_errors=1`,
+`auto_rate=0.0`; diagnostic event không làm tăng completed automation. Evidence local:
+`data/validation/m6-t03/post-remediation-reporting/technical-error-reporting.json`.
+
+### Before/after và validation
+
+Môi trường host validation: Windows, Python 3.11.9 trong `.venv`, pytest 8.3.3; pytest
+network/provider guard luôn bật và DB tạo trong temporary directory riêng.
+
+| Validation | Kết quả |
+|---|---|
+| Hai regression trước assertion update | **2 FAIL**, đúng historical total-count mismatch |
+| Hai regression sau update | **2 PASS** |
+| Full parameterized technical-error test + R2 diagnostics + extraction guards + telemetry | **26 PASS** |
+| Full Human Control file + R2 diagnostics + extraction guards + telemetry | **39 PASS** |
+| BASE24 cassette hash verification | **24/24 PASS**, 0 mismatch |
+| Exact Docker image inspect | **PASS**, ID khớp `sha256:34fb7d...9940` |
+
+Commands chính:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest `
+  tests/test_m3_t06_human_control.py::test_technical_error_state_audit_and_display_are_consistent[extract_timeout] `
+  tests/test_m3_t06_human_control.py::test_technical_error_state_audit_and_display_are_consistent[extract_schema] `
+  -q -vv --tb=short
+
+.\.venv\Scripts\python.exe -m pytest `
+  tests/test_m3_t06_human_control.py::test_technical_error_state_audit_and_display_are_consistent `
+  tests/test_r2_validation_diagnostics.py `
+  tests/test_guards.py::test_extraction_schema_normalizes_for_openai_without_mutation `
+  tests/test_guards.py::test_extract_retries_invalid_payload_once_then_records_error `
+  tests/test_guards.py::test_extract_timeout_is_fail_safe_and_records_error `
+  tests/test_telemetry.py -q --tb=short
+
+docker image inspect exodia:m6-t03-7801eab `
+  --format 'ID={{.Id}} REPO_DIGESTS={{json .RepoDigests}} CREATED={{.Created}}'
+```
+
+### AC1–AC7 final mapping
+
+| AC | Trạng thái | Evidence |
+|---|---|---|
+| AC1 — Exact image | **PASS** | exact tag/ID, integrated SHA và config đã chốt |
+| AC2 — Replay | **PASS** | 23/23 hits, 0 misses, network/LIVE=0 |
+| AC3 — Critical flows | **PASS** | 4/4 business flows khớp expected |
+| AC4 — Verify V01–V04 | **PASS** | 4/4 sau integrated V02 remediation |
+| AC5 — Persistence/reset/restart | **PASS** | hai isolated runs có state/count giống nhau sau restart |
+| AC6 — Reporting/audit | **PASS** | mỗi R2 error: diagnostic=1, terminal=1; ERROR/ERROR; completed=0; side effects=0 |
+| AC7 — Evidence/handoff | **PASS** | historical FAIL giữ nguyên, final section, validation và PR handoff |
+
+### Self-review, risks và rollback
+
+- Full diff self-review: targeted test chỉ thay expected invariant; không sửa production,
+  audit action, schema, policy, cassette hoặc expected Verify.
+- Historical raw FAIL vẫn còn nguyên trong report và git history.
+- Source/image risk được giới hạn: final commit khác `7801eab` chỉ ở test/report; runtime
+  image không đổi. Nếu production thay đổi sau handoff, exact-image evidence phải chạy lại.
+- Hai fingerprint khác recording time đã công khai (`core/worker.py`, recording helper);
+  exact-image critical replay vẫn 23/23 hits.
+- Rollback: revert commit test/report cuối; không có data/schema/runtime migration cần hoàn tác.
+- Không sửa Trello, `STATUS.md`; không merge PR #48 và không tự tuyên bố DONE.
+
+Owner self-review: **PASS — Project Coordinator handoff candidate**. Bước tiếp theo là
+Coordinator review PR #48 trên final head và quyết định ACCEPT/merge.

@@ -21,6 +21,7 @@ from core.worker import queue_resume, submit_case, worker_tick
 from infra import db
 from infra import llm
 from infra.llm import LLMResult
+from infra.telemetry import snapshot
 from test_runtime_worker import _email, approval_case as _approval_case, runtime as _runtime
 from ui.presentation import decision_label, status_label
 
@@ -314,7 +315,14 @@ def test_technical_error_state_audit_and_display_are_consistent(
     )
     assert decision["decision"] == Decision.ERROR and decision["escalation_type"] is None
     actions = _actions(result.case_id)
-    assert not {"CASE_QUEUED", "SEND_SCHEDULED", "SEND_DISPATCHED"}.intersection(actions)
+    assert not {
+        "CASE_QUEUED",
+        "CASE_RESOLVED",
+        "HUMAN_APPROVED_SEND",
+        "HUMAN_DECISION",
+        "SEND_SCHEDULED",
+        "SEND_DISPATCHED",
+    }.intersection(actions)
     assert not dispatch_due(result.case_id, now=datetime.now(timezone.utc) + timedelta(minutes=2))
     restored = load_result(result.case_id)
     assert restored is not None and restored.status is CaseStatus.ERROR
@@ -343,7 +351,28 @@ def test_technical_error_state_audit_and_display_are_consistent(
             ensure_ascii=False,
         ),
     )
-    assert actions.count("CASE_ERROR") == 1
+    error_events = db.fetch_all(
+        "SELECT rule_id, reason FROM audit_events "
+        "WHERE case_id = ? AND action = 'CASE_ERROR' ORDER BY rowid",
+        (result.case_id,),
+    )
+    diagnostic_events = [event for event in error_events if event["rule_id"] is None]
+    terminal_events = [event for event in error_events if event["rule_id"] == "TECHNICAL_ERROR"]
+    assert len(diagnostic_events) == (1 if failure.startswith("extract_") else 0)
+    assert len(terminal_events) == 1
+    assert all(event["reason"] for event in diagnostic_events)
+    assert terminal_events[0]["reason"]
+    if failure.startswith("extract_"):
+        assert (
+            db.fetch_one(
+                "SELECT COUNT(*) AS total FROM decisions "
+                "WHERE decision IN ('AUTO_REPLY', 'ESCALATE')"
+            )["total"]
+            == 0
+        )
+        assert snapshot()["auto_rate"] == 0.0
+    record_property("diagnostic_error_events", len(diagnostic_events))
+    record_property("terminal_error_events", len(terminal_events))
 
 
 @pytest.mark.parametrize("step", ["R2", "R11"])
@@ -401,4 +430,14 @@ def test_real_replay_missing_pack_fails_safe(
     assert not {"SEND_DISPATCHED", "HUMAN_APPROVED_SEND"}.intersection(_actions(case_id))
     assert not db.fetch_all("SELECT draft_id FROM drafts WHERE case_id = ?", (case_id,))
     record_property("actual_error_events", _actions(case_id).count("CASE_ERROR"))
-    assert _actions(case_id).count("CASE_ERROR") == 1
+    error_events = db.fetch_all(
+        "SELECT rule_id, reason FROM audit_events "
+        "WHERE case_id = ? AND action = 'CASE_ERROR' ORDER BY rowid",
+        (case_id,),
+    )
+    if step == "R2":
+        assert sum(event["rule_id"] is None for event in error_events) == 1
+        assert sum(event["rule_id"] == "TECHNICAL_ERROR" for event in error_events) == 1
+        assert all(event["reason"] for event in error_events)
+    else:
+        assert len(error_events) == 1
