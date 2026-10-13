@@ -1,0 +1,531 @@
+{
+  "schema_version": 1,
+  "tested_sha": "c5d8a1d72bacb48f8cc7b088d6ecf8238887848b",
+  "working_tree_tools_fingerprinted": true,
+  "config": {
+    "LLM_MODE": "replay",
+    "LLM_PROVIDER": "openai",
+    "OPENAI_MODEL": "gpt-6-luna",
+    "OPENAI_REASONING_EFFORT": "none",
+    "LLM_CACHE": "0"
+  },
+  "source_sha256": {
+    "infra/llm.py": "09db7dca677ccc05cc4270d49604e38afd92a7a7a0953c99b23a0d5fbf65c324",
+    "infra/settings.py": "00873244fbd7b6f8dd870606c90475933497165add40bb03627aef9e8ee5a194",
+    "infra/db.py": "6d9c60f3af3ea0b44217cface47b1981a4a0ad943662fad44fce4103d172e03e",
+    "core/pipeline.py": "664d775e072656a5317cdbddebdf6c5f1fc7581b6eb2051b9aeae9fde54bfd90",
+    "core/extract.py": "ab52cc0203c08fa8439ef4fcf0313bc3177e0f5a3cdd01f5b69373fe5c01e0d2",
+    "core/retrieval.py": "02ea482a4d2ac9bff84b169b3c96f2918896b26f01b5040984b1d3cdec8b34bc",
+    "core/generate.py": "cce4fbbaf370a7da0a2710f30abe651a9ac006c1d602e9ea616ed0f31a2fde0d",
+    "core/question_gen.py": "adeaa9ceab7485329987284a63a778eabe1ad0a89cd255e42fffc62d71f52dbb",
+    "core/question_guard.py": "8e501c7ac3d51dc678683e6007705cab4538adb33006502347e9425531bb8948",
+    "core/resume.py": "67b28b529a7cadd052bb2df765f6a887346564d885ad385c7ada18f9269b1235",
+    "core/worker.py": "224cdca639536d2e57b7f1ceb4be669833ae81a4b060cf648362f265b087d847",
+    "pages/2_Hang_cho_duyet.py": "51267752c1818b5da87e05f333f8c12f1f84dcb72df8f6d223b051739e3f6604",
+    "verify/harness.py": "29ad1d51cba978d3bb5d1e900cafa585ae1e2cd2ee7246b7aa1df51ccf3665af",
+    "verify/cases_verify4.json": "3ec0e98499d682cf778791c1d9f1ea4b1614b4da9bab882edb741e9e819494a6",
+    "policies/policy.yaml": "805349a02bbd804f5b690e822f4098f3f394d9caaeddb94a9d7f4b950f422430",
+    "data/seed_docs/HP-2026-1.json": "693c1068ea5a53f4ffea60cca0dae1176da0a64acbeca2e166f769364803791c",
+    "data/seed_docs/PK-2026-204.json": "cc2cb0613ea4cfdad38a665e4375bafea3ae5f149e20af4825c9c8bb4ba18d3c",
+    "data/seed_docs/QDPQ-2026-01.json": "b9cfeccebe3e59b199a775c035bb82dc35e84d9f9ba061c95347a0b9f48c9c75",
+    "data/seed_docs/RH-2026-101.json": "05bef922f4c9c9eb77e667636772b6e7d7915d628a77c203fd5cb68adbbe0734",
+    "data/seed_docs/RL-2025-2363.json": "fa657f2c1ffcdd0be59486d8166b2b87e867451829614d9dff12adfc7acb4dff",
+    "data/seed_docs/RL-2026-3150.json": "e9d5649628751b1ff6843dab9fc7e17f44f198c44391aeb1e53d72d229937bd4",
+    "scripts/audit_runtime_replay.py": "dbb125ddc93830e12959c8e350b5738a3aec67a5cb4c0223646b8380e2bb4a07"
+  },
+  "tool_test_sha256": {
+    "scripts/runtime_recording_readiness.py": "2340b106b324500b877ea5a1ffd13bbc59a269c2b261176431e2cc8c7a38d78d",
+    "tests/test_runtime_replay_audit.py": "672f274d878c89f254a8826322ad38bba93f65ed9264289382d97f6f246c4578",
+    "tests/test_runtime_recording_readiness.py": "3a17f6821880c45f970aba9d6d24da319d742cfdeb51cb768977bb8d4f9fce5a"
+  },
+  "full_raw_audit": "data/validation/m6-t05-phase2-handoff/M6_T05_REPLAY_EVIDENCE.json",
+  "full_raw_audit_sha256": "dcec30660286afb4a93eb85bde0a4a853678de4ef1657d3ab487cb2aaa0b0ea3",
+  "canonical_prompt_schema_reference": "reports/readiness/M6_T05_REPLAY_EVIDENCE.json",
+  "phase1_prompt_schema_bytes_unchanged": true,
+  "phase1_json_preserved": true,
+  "calls": [
+    {
+      "step": "R2_extract",
+      "case_ref": "c_01M4QWYHN2AT4BFJR7A0X6VXW2",
+      "prompt_hash": "b76ffb27344b722f37e9d7a2689dcdcfa493b9bec6456d2c989b2a0711b9b33b",
+      "schema_sha256": "0904add94e2af8a8e4728f77499c5c26b8440f1053f5bf7161def51cc39ee950",
+      "provider_schema_sha256": "35fcd884dd0841ecec80dd3f2669eff16b155fbf1bd0eb0959056d6d19027885",
+      "temperature": 0.0,
+      "model": "gpt-6-luna",
+      "provider": "openai",
+      "reasoning_effort": "none",
+      "timeout_s": 30,
+      "retries": 1,
+      "cassette_source": "tests\\cassettes\\b76ffb27344b722f37e9d7a2689dcdcfa493b9bec6456d2c989b2a0711b9b33b.json",
+      "replay_ok": false,
+      "error": "Không có cassette hợp lệ cho prompt này.",
+      "data": {},
+      "flow": "DEV_ROUTINE"
+    },
+    {
+      "step": "R2_extract",
+      "case_ref": "c_01M4QWYHQT4H0CGERKDXN4QWHZ",
+      "prompt_hash": "050a43d660e2def02f7599d979b06bedd19afe92b8cab0144d34ebba941126f8",
+      "schema_sha256": "0904add94e2af8a8e4728f77499c5c26b8440f1053f5bf7161def51cc39ee950",
+      "provider_schema_sha256": "35fcd884dd0841ecec80dd3f2669eff16b155fbf1bd0eb0959056d6d19027885",
+      "temperature": 0.0,
+      "model": "gpt-6-luna",
+      "provider": "openai",
+      "reasoning_effort": "none",
+      "timeout_s": 30,
+      "retries": 1,
+      "cassette_source": "tests\\cassettes\\050a43d660e2def02f7599d979b06bedd19afe92b8cab0144d34ebba941126f8.json",
+      "replay_ok": false,
+      "error": "Không có cassette hợp lệ cho prompt này.",
+      "data": {},
+      "flow": "DEV_AUTHORITY"
+    },
+    {
+      "step": "R2_extract",
+      "case_ref": "c_01M4QWYHT9NETK5EK7SY31VXFC",
+      "prompt_hash": "88e798ff394d209c3846f67c98f1ba316ea90f7876d96a51d433aac6985a7be6",
+      "schema_sha256": "0904add94e2af8a8e4728f77499c5c26b8440f1053f5bf7161def51cc39ee950",
+      "provider_schema_sha256": "35fcd884dd0841ecec80dd3f2669eff16b155fbf1bd0eb0959056d6d19027885",
+      "temperature": 0.0,
+      "model": "gpt-6-luna",
+      "provider": "openai",
+      "reasoning_effort": "none",
+      "timeout_s": 30,
+      "retries": 1,
+      "cassette_source": "tests\\cassettes\\88e798ff394d209c3846f67c98f1ba316ea90f7876d96a51d433aac6985a7be6.json",
+      "replay_ok": false,
+      "error": "Không có cassette hợp lệ cho prompt này.",
+      "data": {},
+      "flow": "DEV_FACT"
+    },
+    {
+      "step": "R2_extract",
+      "case_ref": "c_01M4QWYHX30KDRHPEKECG3M94Y",
+      "prompt_hash": "22a3e3620f76e5eddaef6ad4b3583575926bc2011a517154924718bfb377f057",
+      "schema_sha256": "0904add94e2af8a8e4728f77499c5c26b8440f1053f5bf7161def51cc39ee950",
+      "provider_schema_sha256": "35fcd884dd0841ecec80dd3f2669eff16b155fbf1bd0eb0959056d6d19027885",
+      "temperature": 0.0,
+      "model": "gpt-6-luna",
+      "provider": "openai",
+      "reasoning_effort": "none",
+      "timeout_s": 30,
+      "retries": 1,
+      "cassette_source": "tests\\cassettes\\22a3e3620f76e5eddaef6ad4b3583575926bc2011a517154924718bfb377f057.json",
+      "replay_ok": false,
+      "error": "Không có cassette hợp lệ cho prompt này.",
+      "data": {},
+      "flow": "V01"
+    },
+    {
+      "step": "R2_extract",
+      "case_ref": "c_01M4QWYJ0F87T87TQHCV7T64Z6",
+      "prompt_hash": "76324c1a472a061da3d9e2d7ff6152c2593a81ddefe09b58f8047075a93c1b8d",
+      "schema_sha256": "0904add94e2af8a8e4728f77499c5c26b8440f1053f5bf7161def51cc39ee950",
+      "provider_schema_sha256": "35fcd884dd0841ecec80dd3f2669eff16b155fbf1bd0eb0959056d6d19027885",
+      "temperature": 0.0,
+      "model": "gpt-6-luna",
+      "provider": "openai",
+      "reasoning_effort": "none",
+      "timeout_s": 30,
+      "retries": 1,
+      "cassette_source": "tests\\cassettes\\76324c1a472a061da3d9e2d7ff6152c2593a81ddefe09b58f8047075a93c1b8d.json",
+      "replay_ok": false,
+      "error": "Không có cassette hợp lệ cho prompt này.",
+      "data": {},
+      "flow": "V02"
+    },
+    {
+      "step": "R2_extract",
+      "case_ref": "c_01M4QWYJ3KHD6T3PBADY79K0Z8",
+      "prompt_hash": "dc958213fb18e81826d94e6becafc06beb4f76f4f9cc9921ddd1024bd93fc3c2",
+      "schema_sha256": "0904add94e2af8a8e4728f77499c5c26b8440f1053f5bf7161def51cc39ee950",
+      "provider_schema_sha256": "35fcd884dd0841ecec80dd3f2669eff16b155fbf1bd0eb0959056d6d19027885",
+      "temperature": 0.0,
+      "model": "gpt-6-luna",
+      "provider": "openai",
+      "reasoning_effort": "none",
+      "timeout_s": 30,
+      "retries": 1,
+      "cassette_source": "tests\\cassettes\\dc958213fb18e81826d94e6becafc06beb4f76f4f9cc9921ddd1024bd93fc3c2.json",
+      "replay_ok": false,
+      "error": "Không có cassette hợp lệ cho prompt này.",
+      "data": {},
+      "flow": "V03"
+    },
+    {
+      "step": "R2_extract",
+      "case_ref": "c_01M4QWYJ7637QAQRFAR4847K2W",
+      "prompt_hash": "43b38848a6d84560402a872b0e33ed8982a2f96e256a2a27a53ef0c1f9336c14",
+      "schema_sha256": "0904add94e2af8a8e4728f77499c5c26b8440f1053f5bf7161def51cc39ee950",
+      "provider_schema_sha256": "35fcd884dd0841ecec80dd3f2669eff16b155fbf1bd0eb0959056d6d19027885",
+      "temperature": 0.0,
+      "model": "gpt-6-luna",
+      "provider": "openai",
+      "reasoning_effort": "none",
+      "timeout_s": 30,
+      "retries": 1,
+      "cassette_source": "tests\\cassettes\\43b38848a6d84560402a872b0e33ed8982a2f96e256a2a27a53ef0c1f9336c14.json",
+      "replay_ok": false,
+      "error": "Không có cassette hợp lệ cho prompt này.",
+      "data": {},
+      "flow": "V04"
+    },
+    {
+      "step": "R11_resume",
+      "case_ref": "c_01M4QWYJJDW491ZQ4QF69Q33TG",
+      "prompt_hash": "2447ffcce6d7372fd5cdc1810653804259f0f7b82402b57472679884de20d015",
+      "schema_sha256": "ba6c56a6df021b99e0c70aa8cbf6eea94d6a8d5fc530f2de2f462a9669bc0555",
+      "provider_schema_sha256": "178ccba5f15cfc73a3ba9cb2b6e28a15df3b3c55d2128e85334a58c12735442a",
+      "temperature": 0.0,
+      "model": "gpt-6-luna",
+      "provider": "openai",
+      "reasoning_effort": "none",
+      "timeout_s": 30,
+      "retries": 1,
+      "cassette_source": "tests\\cassettes\\2447ffcce6d7372fd5cdc1810653804259f0f7b82402b57472679884de20d015.json",
+      "replay_ok": false,
+      "error": "Không có cassette hợp lệ cho prompt này.",
+      "data": {},
+      "flow": "DEV_HUMAN_R11"
+    }
+  ],
+  "outcomes": [
+    {
+      "flow": "DEV_ROUTINE",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Hỏi lệ phí phúc khảo",
+        "body": "Cho em hỏi lệ phí phúc khảo một học phần là bao nhiêu?",
+        "received_at": "2026-09-21 09:00:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "result": {
+        "case_id": "c_01M4QWYHN2AT4BFJR7A0X6VXW2",
+        "trace_id": "0825b872-5fed-4ad2-9992-754f8b2aa6b8",
+        "status": "ERROR",
+        "decision": {
+          "decision": "ERROR",
+          "escalation_type": null,
+          "rule_id": "TECHNICAL_ERROR",
+          "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+          "evidence_ids": [],
+          "corpus_version": "cv_f6eb04187bb0"
+        },
+        "extraction": {
+          "language": "other",
+          "requests": [],
+          "critical_facts": {},
+          "missing_critical_facts": [],
+          "injection_suspected": false,
+          "raw_json": "{}",
+          "llm_error": "Không có cassette hợp lệ cho prompt này."
+        },
+        "evidence": null,
+        "draft": null,
+        "card": null,
+        "corpus_version": "cv_f6eb04187bb0",
+        "step_latencies_ms": {
+          "R0": 26,
+          "R1": 19,
+          "R2": 20,
+          "R3": 0,
+          "R4": 0,
+          "R5": 0,
+          "R6": 0,
+          "R7": 0,
+          "R8": 0,
+          "R9": 0,
+          "R10": 0,
+          "R11": 0,
+          "R12": 0,
+          "R13": 0,
+          "R14": 0
+        },
+        "started_at": "2026-10-12 11:11:15.618841+00:00",
+        "finished_at": "2026-10-12 11:11:15.698731+00:00"
+      }
+    },
+    {
+      "flow": "DEV_AUTHORITY",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Xin phúc khảo trễ",
+        "body": "Em xin được nộp đơn phúc khảo môn X sau thời hạn, nhờ trường chấp thuận ngoại lệ cho em.",
+        "received_at": "2026-09-21 09:00:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "result": {
+        "case_id": "c_01M4QWYHQT4H0CGERKDXN4QWHZ",
+        "trace_id": "e025a991-162a-411f-b142-17830a30468a",
+        "status": "ERROR",
+        "decision": {
+          "decision": "ERROR",
+          "escalation_type": null,
+          "rule_id": "TECHNICAL_ERROR",
+          "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+          "evidence_ids": [],
+          "corpus_version": "cv_f6eb04187bb0"
+        },
+        "extraction": {
+          "language": "other",
+          "requests": [],
+          "critical_facts": {},
+          "missing_critical_facts": [],
+          "injection_suspected": false,
+          "raw_json": "{}",
+          "llm_error": "Không có cassette hợp lệ cho prompt này."
+        },
+        "evidence": null,
+        "draft": null,
+        "card": null,
+        "corpus_version": "cv_f6eb04187bb0",
+        "step_latencies_ms": {
+          "R0": 25,
+          "R1": 18,
+          "R2": 17,
+          "R3": 0,
+          "R4": 0,
+          "R5": 0,
+          "R6": 0,
+          "R7": 0,
+          "R8": 0,
+          "R9": 0,
+          "R10": 0,
+          "R11": 0,
+          "R12": 0,
+          "R13": 0,
+          "R14": 0
+        },
+        "started_at": "2026-10-12 11:11:15.706292+00:00",
+        "finished_at": "2026-10-12 11:11:15.778811+00:00"
+      }
+    },
+    {
+      "flow": "DEV_FACT",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Văn bản rèn luyện áp dụng",
+        "body": "Cho em hỏi văn bản điểm rèn luyện nào áp dụng cho khóa học và học kỳ của em?",
+        "received_at": "2026-09-21 09:00:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "result": {
+        "case_id": "c_01M4QWYHT9NETK5EK7SY31VXFC",
+        "trace_id": "47eb2f9c-2715-41d9-bfbb-c6675be43a1a",
+        "status": "ERROR",
+        "decision": {
+          "decision": "ERROR",
+          "escalation_type": null,
+          "rule_id": "TECHNICAL_ERROR",
+          "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+          "evidence_ids": [],
+          "corpus_version": "cv_f6eb04187bb0"
+        },
+        "extraction": {
+          "language": "other",
+          "requests": [],
+          "critical_facts": {},
+          "missing_critical_facts": [],
+          "injection_suspected": false,
+          "raw_json": "{}",
+          "llm_error": "Không có cassette hợp lệ cho prompt này."
+        },
+        "evidence": null,
+        "draft": null,
+        "card": null,
+        "corpus_version": "cv_f6eb04187bb0",
+        "step_latencies_ms": {
+          "R0": 24,
+          "R1": 17,
+          "R2": 18,
+          "R3": 0,
+          "R4": 0,
+          "R5": 0,
+          "R6": 0,
+          "R7": 0,
+          "R8": 0,
+          "R9": 0,
+          "R10": 0,
+          "R11": 0,
+          "R12": 0,
+          "R13": 0,
+          "R14": 0
+        },
+        "started_at": "2026-10-12 11:11:15.785999+00:00",
+        "finished_at": "2026-10-12 11:11:15.859092+00:00"
+      }
+    },
+    {
+      "flow": "V01",
+      "verify_result": {
+        "case_id": "V01",
+        "subject": "Quy trình và thang điểm rèn luyện",
+        "question": null,
+        "expected_decision": "AUTO_REPLY",
+        "expected_type": null,
+        "actual_decision": "ERROR",
+        "actual_type": null,
+        "rule_id": "TECHNICAL_ERROR",
+        "passed": false,
+        "elapsed_ms": 84,
+        "timestamp": "2026-10-12T18:11:15.959969+07:00",
+        "corpus_version": "cv_f6eb04187bb0",
+        "case_ref": "c_01M4QWYHX30KDRHPEKECG3M94Y",
+        "expected_rule_id": "P05"
+      }
+    },
+    {
+      "flow": "V02",
+      "verify_result": {
+        "case_id": "V02",
+        "subject": "Course withdrawal deadline",
+        "question": null,
+        "expected_decision": "AUTO_REPLY",
+        "expected_type": null,
+        "actual_decision": "ERROR",
+        "actual_type": null,
+        "rule_id": "TECHNICAL_ERROR",
+        "passed": false,
+        "elapsed_ms": 78,
+        "timestamp": "2026-10-12T18:11:16.060639+07:00",
+        "corpus_version": "cv_f6eb04187bb0",
+        "case_ref": "c_01M4QWYJ0F87T87TQHCV7T64Z6",
+        "expected_rule_id": "P05"
+      }
+    },
+    {
+      "flow": "V03",
+      "verify_result": {
+        "case_id": "V03",
+        "subject": "Xin nộp phúc khảo muộn vì nhập viện",
+        "question": null,
+        "expected_decision": "ESCALATE",
+        "expected_type": "AUTHORITY_REQUIRED",
+        "actual_decision": "ERROR",
+        "actual_type": null,
+        "rule_id": "TECHNICAL_ERROR",
+        "passed": false,
+        "elapsed_ms": 96,
+        "timestamp": "2026-10-12T18:11:16.179136+07:00",
+        "corpus_version": "cv_f6eb04187bb0",
+        "case_ref": "c_01M4QWYJ3KHD6T3PBADY79K0Z8",
+        "expected_rule_id": "P01"
+      }
+    },
+    {
+      "flow": "V04",
+      "verify_result": {
+        "case_id": "V04",
+        "subject": "Đăng ký ký túc xá",
+        "question": null,
+        "expected_decision": "ESCALATE",
+        "expected_type": "OUT_OF_POLICY",
+        "actual_decision": "ERROR",
+        "actual_type": null,
+        "rule_id": "TECHNICAL_ERROR",
+        "passed": false,
+        "elapsed_ms": 95,
+        "timestamp": "2026-10-12T18:11:16.293302+07:00",
+        "corpus_version": "cv_f6eb04187bb0",
+        "case_ref": "c_01M4QWYJ7637QAQRFAR4847K2W",
+        "expected_rule_id": "P02"
+      }
+    },
+    {
+      "flow": "DEV_HUMAN_R11",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Synthetic DEV — yêu cầu bản dịch",
+        "body": "学生の質問を確認してください。",
+        "received_at": "2026-09-21 09:04:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "human_input": {
+        "subject": "Synthetic DEV — yêu cầu bản dịch",
+        "body": "学生の質問を確認してください。",
+        "choice": "Yêu cầu bản dịch",
+        "reason": "Đề nghị bổ sung nội dung bằng tiếng Việt hoặc tiếng Anh để đối chiếu quy định."
+      },
+      "intake_result": {
+        "case_id": "c_01M4QWYJJDW491ZQ4QF69Q33TG",
+        "trace_id": "d7f6f994-3d7c-4a0a-9085-0d0462b48011",
+        "status": "AWAITING_HUMAN",
+        "decision": {
+          "decision": "ESCALATE",
+          "escalation_type": "OUT_OF_POLICY",
+          "rule_id": "R1",
+          "reason": "Email không dùng tiếng Việt hoặc tiếng Anh nên cần chuyên viên hỗ trợ.",
+          "evidence_ids": [],
+          "corpus_version": "cv_f6eb04187bb0"
+        },
+        "extraction": null,
+        "evidence": null,
+        "draft": null,
+        "card": {
+          "summary": "Synthetic DEV — yêu cầu bản dịch",
+          "facts": [
+            "Email sử dụng ngôn ngữ ngoài phạm vi tiếng Việt và tiếng Anh."
+          ],
+          "basis": [],
+          "question": "Chuyên viên có thể xử lý bằng ngôn ngữ gốc hay cần yêu cầu người gửi bổ sung bản dịch?",
+          "options": [
+            "Xử lý bằng ngôn ngữ gốc",
+            "Yêu cầu bản dịch"
+          ],
+          "escalation_type": "OUT_OF_POLICY",
+          "partial_draft": null
+        },
+        "corpus_version": "cv_f6eb04187bb0",
+        "step_latencies_ms": {
+          "R0": 24,
+          "R1": 17,
+          "R2": 0,
+          "R3": 0,
+          "R4": 0,
+          "R5": 0,
+          "R6": 0,
+          "R7": 0,
+          "R8": 0,
+          "R9": 0,
+          "R10": 0,
+          "R11": 0,
+          "R12": 0,
+          "R13": 0,
+          "R14": 0
+        },
+        "started_at": "2026-10-12 11:11:16.557713+00:00",
+        "finished_at": "2026-10-12 11:11:16.635694+00:00"
+      },
+      "final_case": {
+        "status": "HUMAN_DECIDED"
+      },
+      "job": {
+        "state": "failed"
+      },
+      "human_decision": {
+        "choice": "Yêu cầu bản dịch",
+        "reason": "Đề nghị bổ sung nội dung bằng tiếng Việt hoặc tiếng Anh để đối chiếu quy định.",
+        "actor": "HUMAN:local"
+      },
+      "draft_count": 0
+    }
+  ],
+  "network_guard": "socket and _call_live denied; replay must bypass _load_cache",
+  "actual_provider_attempts": 0,
+  "actual_tokens": 0,
+  "actual_cost_usd": "0",
+  "cassette_conversion_count": 0,
+  "approved_pack": false,
+  "checks": {
+    "targeted_pytest": "25 passed in 5.15s",
+    "black": "PASS",
+    "ruff": "PASS",
+    "readiness": "BLOCKED, no provider execution",
+    "audit": "8 calls / 8 misses / 0 cassettes / LIVE=0",
+    "cassette_provenance_and_integrity": "NOT VERIFIED; no cassette artifacts"
+  }
+}

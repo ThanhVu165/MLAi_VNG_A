@@ -1,0 +1,1436 @@
+{
+  "result": "PARTIAL_ONLY_BLOCKED",
+  "date_local": "2026-10-13",
+  "timezone": "Asia/Saigon",
+  "baseline_dev": "1251c3c116a302d519dd71d6c31c3191874d785b",
+  "starting_head": "5f5ee5619143dfa627299c9faa5f89ad1fb013fd",
+  "branch": "sprint/m6-t05-runtime-replay",
+  "tested_source": "starting_head plus working-tree source fingerprints; final exact committed validation is recorded in PR44",
+  "source_fingerprints": {
+    "infra/llm.py": "09db7dca677ccc05cc4270d49604e38afd92a7a7a0953c99b23a0d5fbf65c324",
+    "infra/settings.py": "00873244fbd7b6f8dd870606c90475933497165add40bb03627aef9e8ee5a194",
+    "infra/db.py": "6d9c60f3af3ea0b44217cface47b1981a4a0ad943662fad44fce4103d172e03e",
+    "core/pipeline.py": "664d775e072656a5317cdbddebdf6c5f1fc7581b6eb2051b9aeae9fde54bfd90",
+    "core/extract.py": "ab52cc0203c08fa8439ef4fcf0313bc3177e0f5a3cdd01f5b69373fe5c01e0d2",
+    "core/retrieval.py": "02ea482a4d2ac9bff84b169b3c96f2918896b26f01b5040984b1d3cdec8b34bc",
+    "core/generate.py": "cce4fbbaf370a7da0a2710f30abe651a9ac006c1d602e9ea616ed0f31a2fde0d",
+    "core/question_gen.py": "adeaa9ceab7485329987284a63a778eabe1ad0a89cd255e42fffc62d71f52dbb",
+    "core/question_guard.py": "8e501c7ac3d51dc678683e6007705cab4538adb33006502347e9425531bb8948",
+    "core/resume.py": "67b28b529a7cadd052bb2df765f6a887346564d885ad385c7ada18f9269b1235",
+    "core/worker.py": "224cdca639536d2e57b7f1ceb4be669833ae81a4b060cf648362f265b087d847",
+    "pages/2_Hang_cho_duyet.py": "51267752c1818b5da87e05f333f8c12f1f84dcb72df8f6d223b051739e3f6604",
+    "verify/harness.py": "29ad1d51cba978d3bb5d1e900cafa585ae1e2cd2ee7246b7aa1df51ccf3665af",
+    "verify/cases_verify4.json": "3ec0e98499d682cf778791c1d9f1ea4b1614b4da9bab882edb741e9e819494a6",
+    "policies/policy.yaml": "805349a02bbd804f5b690e822f4098f3f394d9caaeddb94a9d7f4b950f422430",
+    "data/seed_docs/HP-2026-1.json": "693c1068ea5a53f4ffea60cca0dae1176da0a64acbeca2e166f769364803791c",
+    "data/seed_docs/PK-2026-204.json": "cc2cb0613ea4cfdad38a665e4375bafea3ae5f149e20af4825c9c8bb4ba18d3c",
+    "data/seed_docs/QDPQ-2026-01.json": "b9cfeccebe3e59b199a775c035bb82dc35e84d9f9ba061c95347a0b9f48c9c75",
+    "data/seed_docs/RH-2026-101.json": "05bef922f4c9c9eb77e667636772b6e7d7915d628a77c203fd5cb68adbbe0734",
+    "data/seed_docs/RL-2025-2363.json": "fa657f2c1ffcdd0be59486d8166b2b87e867451829614d9dff12adfc7acb4dff",
+    "data/seed_docs/RL-2026-3150.json": "e9d5649628751b1ff6843dab9fc7e17f44f198c44391aeb1e53d72d229937bd4",
+    "scripts/audit_runtime_replay.py": "70799a8008eb499750f3fa884fddff6de3952f42c9c5c448ac6825a08e63ad87",
+    "scripts/runtime_recording_readiness.py": "25ed7d4718a4bae3f57765c0d0f239322b3d42f6e1039b73011a0b81bee2c202",
+    "scripts/guarded_runtime_recording.py": "a21f48075333ab95af9a876140367b413fcf1894fa02aedfb91a321e28b37272",
+    "scripts/validate_recorded_replay_pack.py": "f2abda7c59cca0394f5ae5de398d66e2b2a91cfbd383bbbabe41cd5f10562b96"
+  },
+  "config": {
+    "LLM_MODE": "replay",
+    "LLM_PROVIDER": "openai",
+    "OPENAI_MODEL": "gpt-6-luna",
+    "OPENAI_REASONING_EFFORT": "none",
+    "LLM_CACHE": "0",
+    "LLM_TIMEOUT_S": "30",
+    "LLM_RETRIES": "1",
+    "SIMILARITY_THRESHOLD": "0.35",
+    "CITATION_RATIO_MIN": "0.6",
+    "RETRIEVAL_TOP_K": "6",
+    "QUESTION_WORDS_MIN": "8",
+    "QUESTION_WORDS_MAX": "45",
+    "PENDING_SEND_SECONDS": "60",
+    "PENDING_STATUS_REFRESH_SECONDS": "1"
+  },
+  "authorization": {
+    "live": "NOT_AUTHORIZED",
+    "reference": "https://trello.com/c/7nEZN4bu#comment-6accbc2f1051ed46587d019f",
+    "last_card_activity": "2026-10-12T10:53:35.726Z",
+    "parallel_task_note": "M4-T01 also IN PROGRESS; user answered có to continuation/parallel authorization clarification. No Trello state changed."
+  },
+  "m2_capture_inventory": [
+    {
+      "probe": "m2_dev_live_probe_01",
+      "file": "data/validation/m2_dev_live_probe_01/cases/M2DEV-A1/capture.json",
+      "available_here": true,
+      "published_sha256": "411b191cf0ef7fdad273f7b270fac18dd098b88507b5d941919c8b8298a23480",
+      "actual_sha256": "411b191cf0ef7fdad273f7b270fac18dd098b88507b5d941919c8b8298a23480",
+      "checksum_status": "PASS",
+      "classification": "NOT VERIFIED",
+      "kind": "historical_output_and_telemetry; not replay cassette",
+      "capture_top_level_keys": [
+        "case_id",
+        "config",
+        "diagnostics",
+        "fixture_sha256",
+        "identity",
+        "observation_id",
+        "result"
+      ],
+      "manifest_available_here": true,
+      "manifest_sha256": "7b64b245327fa80265dd6dd5c4d5956b092ff4c245989e5d0ba49c615b4c4569",
+      "cassette_eligible": false
+    },
+    {
+      "probe": "m2_dev_live_probe_02",
+      "file": "data/validation/m2_dev_live_probe_02/cases/M2DEV-A4/capture.json",
+      "available_here": true,
+      "published_sha256": "ddd281c0e0368c41391d40799994077eb6489841b2821a90ce3cde6ea403eb39",
+      "actual_sha256": "ddd281c0e0368c41391d40799994077eb6489841b2821a90ce3cde6ea403eb39",
+      "checksum_status": "PASS",
+      "classification": "NOT VERIFIED",
+      "kind": "historical_output_and_telemetry; not replay cassette",
+      "capture_top_level_keys": [
+        "case_id",
+        "config",
+        "diagnostics",
+        "fixture_sha256",
+        "identity",
+        "observation_id",
+        "result"
+      ],
+      "manifest_available_here": true,
+      "manifest_sha256": "7b64b245327fa80265dd6dd5c4d5956b092ff4c245989e5d0ba49c615b4c4569",
+      "cassette_eligible": false
+    },
+    {
+      "probe": "m2_dev_live_probe_03",
+      "file": "data/validation/m2_dev_live_probe_03/cases/M2DEV-A4/capture.json",
+      "available_here": true,
+      "published_sha256": "b5dfa108bb7beac8417acc2b61328a07605dbd53362970d85ba3dc9b4c066810",
+      "actual_sha256": "b5dfa108bb7beac8417acc2b61328a07605dbd53362970d85ba3dc9b4c066810",
+      "checksum_status": "PASS",
+      "classification": "NOT VERIFIED",
+      "kind": "historical_output_and_telemetry; not replay cassette",
+      "capture_top_level_keys": [
+        "case_id",
+        "config",
+        "diagnostics",
+        "fixture_sha256",
+        "identity",
+        "observation_id",
+        "result"
+      ],
+      "manifest_available_here": true,
+      "manifest_sha256": "7b64b245327fa80265dd6dd5c4d5956b092ff4c245989e5d0ba49c615b4c4569",
+      "cassette_eligible": false
+    },
+    {
+      "probe": "m2_dev_live_probe_04",
+      "file": "data/validation/m2_dev_live_probe_04/cases/M2DEV-B1/capture.json",
+      "available_here": true,
+      "published_sha256": "268e586ac07d250c0035e5a6e8ac001fd22787d8c20744c34ad113b0c4b7b587",
+      "actual_sha256": "268e586ac07d250c0035e5a6e8ac001fd22787d8c20744c34ad113b0c4b7b587",
+      "checksum_status": "PASS",
+      "classification": "NOT VERIFIED",
+      "kind": "historical_output_and_telemetry; not replay cassette",
+      "capture_top_level_keys": [
+        "case_id",
+        "config",
+        "diagnostics",
+        "fixture_sha256",
+        "identity",
+        "observation_id",
+        "result"
+      ],
+      "manifest_available_here": true,
+      "manifest_sha256": "7b64b245327fa80265dd6dd5c4d5956b092ff4c245989e5d0ba49c615b4c4569",
+      "cassette_eligible": false
+    },
+    {
+      "probe": "m2_dev_live_probe_05",
+      "file": "data/validation/m2_dev_live_probe_05/cases/M2DEV-B4/capture.json",
+      "available_here": true,
+      "published_sha256": "9449dc7385535aeaddbc1851841c2e9dfc530ba5fc4769060ca4efea9f6d50c5",
+      "actual_sha256": "9449dc7385535aeaddbc1851841c2e9dfc530ba5fc4769060ca4efea9f6d50c5",
+      "checksum_status": "PASS",
+      "classification": "NOT VERIFIED",
+      "kind": "historical_output_and_telemetry; not replay cassette",
+      "capture_top_level_keys": [
+        "case_id",
+        "config",
+        "diagnostics",
+        "fixture_sha256",
+        "identity",
+        "observation_id",
+        "result"
+      ],
+      "manifest_available_here": true,
+      "manifest_sha256": "7b64b245327fa80265dd6dd5c4d5956b092ff4c245989e5d0ba49c615b4c4569",
+      "cassette_eligible": false
+    },
+    {
+      "probe": "m2_dev_live_probe_06",
+      "file": "data/validation/m2_dev_live_probe_06/cases/M2DEV-B3/capture.json",
+      "available_here": true,
+      "published_sha256": "1e01863ec58b36836886b90531fe0897f96750b27990ebe9234187b93bf05910",
+      "actual_sha256": "1e01863ec58b36836886b90531fe0897f96750b27990ebe9234187b93bf05910",
+      "checksum_status": "PASS",
+      "classification": "NOT VERIFIED",
+      "kind": "historical_output_and_telemetry; not replay cassette",
+      "capture_top_level_keys": [
+        "case_id",
+        "config",
+        "diagnostics",
+        "fixture_sha256",
+        "identity",
+        "observation_id",
+        "result"
+      ],
+      "manifest_available_here": true,
+      "manifest_sha256": "7b64b245327fa80265dd6dd5c4d5956b092ff4c245989e5d0ba49c615b4c4569",
+      "cassette_eligible": false
+    },
+    {
+      "probe": "m2_dev_live_probe_07",
+      "file": "data/validation/m2_dev_live_probe_07/cases/M2DEV-A2/capture.json",
+      "available_here": true,
+      "published_sha256": "a8b0b0eb4f6f8ae83c293e76823fea75da6e08d742a27c55e90d29d06802845f",
+      "actual_sha256": "a8b0b0eb4f6f8ae83c293e76823fea75da6e08d742a27c55e90d29d06802845f",
+      "checksum_status": "PASS",
+      "classification": "NOT VERIFIED",
+      "kind": "historical_output_and_telemetry; not replay cassette",
+      "capture_top_level_keys": [
+        "case_id",
+        "config",
+        "diagnostics",
+        "fixture_sha256",
+        "identity",
+        "observation_id",
+        "result"
+      ],
+      "manifest_available_here": true,
+      "manifest_sha256": "7b64b245327fa80265dd6dd5c4d5956b092ff4c245989e5d0ba49c615b4c4569",
+      "cassette_eligible": false
+    },
+    {
+      "probe": "m2_dev_live_probe_08",
+      "file": "data/validation/m2_dev_live_probe_08/cases/M2DEV-A4/capture.json",
+      "available_here": true,
+      "published_sha256": "1a59fb2b2873c1873a58f328602e631f17d639597d8d09e9cddb08aeed83ce11",
+      "actual_sha256": "1a59fb2b2873c1873a58f328602e631f17d639597d8d09e9cddb08aeed83ce11",
+      "checksum_status": "PASS",
+      "classification": "NOT VERIFIED",
+      "kind": "historical_output_and_telemetry; not replay cassette",
+      "capture_top_level_keys": [
+        "case_id",
+        "config",
+        "diagnostics",
+        "fixture_sha256",
+        "identity",
+        "observation_id",
+        "result"
+      ],
+      "manifest_available_here": true,
+      "manifest_sha256": "7b64b245327fa80265dd6dd5c4d5956b092ff4c245989e5d0ba49c615b4c4569",
+      "cassette_eligible": false
+    },
+    {
+      "probe": "m2_dev_live_probe_09",
+      "file": "data/validation/m2_dev_live_probe_09/cases/M2DEV-B4/capture.json",
+      "available_here": true,
+      "published_sha256": "4181f55bce09849f3ef7c8a8c4864d98e053daf49327d7d7ebc3923f35822a29",
+      "actual_sha256": "4181f55bce09849f3ef7c8a8c4864d98e053daf49327d7d7ebc3923f35822a29",
+      "checksum_status": "PASS",
+      "classification": "NOT VERIFIED",
+      "kind": "historical_output_and_telemetry; not replay cassette",
+      "capture_top_level_keys": [
+        "case_id",
+        "config",
+        "diagnostics",
+        "fixture_sha256",
+        "identity",
+        "observation_id",
+        "result"
+      ],
+      "manifest_available_here": true,
+      "manifest_sha256": "7b64b245327fa80265dd6dd5c4d5956b092ff4c245989e5d0ba49c615b4c4569",
+      "cassette_eligible": false
+    }
+  ],
+  "m2_capture_checksum_pass": 9,
+  "m2_conversion_count": 0,
+  "valid_product_cassette_count": 0,
+  "replay": {
+    "raw_directory": "data/validation/m6-t05-continuation-20261013-snapshot-replay",
+    "program_exit": 2,
+    "calls": [
+      {
+        "flow": "DEV_ROUTINE",
+        "step": "R2_extract",
+        "prompt_hash": "b76ffb27344b722f37e9d7a2689dcdcfa493b9bec6456d2c989b2a0711b9b33b",
+        "model": "gpt-6-luna",
+        "cassette_source": "tests\\cassettes\\b76ffb27344b722f37e9d7a2689dcdcfa493b9bec6456d2c989b2a0711b9b33b.json",
+        "replay_ok": false,
+        "error": "Không có cassette hợp lệ cho prompt này."
+      },
+      {
+        "flow": "DEV_AUTHORITY",
+        "step": "R2_extract",
+        "prompt_hash": "050a43d660e2def02f7599d979b06bedd19afe92b8cab0144d34ebba941126f8",
+        "model": "gpt-6-luna",
+        "cassette_source": "tests\\cassettes\\050a43d660e2def02f7599d979b06bedd19afe92b8cab0144d34ebba941126f8.json",
+        "replay_ok": false,
+        "error": "Không có cassette hợp lệ cho prompt này."
+      },
+      {
+        "flow": "DEV_FACT",
+        "step": "R2_extract",
+        "prompt_hash": "88e798ff394d209c3846f67c98f1ba316ea90f7876d96a51d433aac6985a7be6",
+        "model": "gpt-6-luna",
+        "cassette_source": "tests\\cassettes\\88e798ff394d209c3846f67c98f1ba316ea90f7876d96a51d433aac6985a7be6.json",
+        "replay_ok": false,
+        "error": "Không có cassette hợp lệ cho prompt này."
+      },
+      {
+        "flow": "V01",
+        "step": "R2_extract",
+        "prompt_hash": "22a3e3620f76e5eddaef6ad4b3583575926bc2011a517154924718bfb377f057",
+        "model": "gpt-6-luna",
+        "cassette_source": "tests\\cassettes\\22a3e3620f76e5eddaef6ad4b3583575926bc2011a517154924718bfb377f057.json",
+        "replay_ok": false,
+        "error": "Không có cassette hợp lệ cho prompt này."
+      },
+      {
+        "flow": "V02",
+        "step": "R2_extract",
+        "prompt_hash": "76324c1a472a061da3d9e2d7ff6152c2593a81ddefe09b58f8047075a93c1b8d",
+        "model": "gpt-6-luna",
+        "cassette_source": "tests\\cassettes\\76324c1a472a061da3d9e2d7ff6152c2593a81ddefe09b58f8047075a93c1b8d.json",
+        "replay_ok": false,
+        "error": "Không có cassette hợp lệ cho prompt này."
+      },
+      {
+        "flow": "V03",
+        "step": "R2_extract",
+        "prompt_hash": "dc958213fb18e81826d94e6becafc06beb4f76f4f9cc9921ddd1024bd93fc3c2",
+        "model": "gpt-6-luna",
+        "cassette_source": "tests\\cassettes\\dc958213fb18e81826d94e6becafc06beb4f76f4f9cc9921ddd1024bd93fc3c2.json",
+        "replay_ok": false,
+        "error": "Không có cassette hợp lệ cho prompt này."
+      },
+      {
+        "flow": "V04",
+        "step": "R2_extract",
+        "prompt_hash": "43b38848a6d84560402a872b0e33ed8982a2f96e256a2a27a53ef0c1f9336c14",
+        "model": "gpt-6-luna",
+        "cassette_source": "tests\\cassettes\\43b38848a6d84560402a872b0e33ed8982a2f96e256a2a27a53ef0c1f9336c14.json",
+        "replay_ok": false,
+        "error": "Không có cassette hợp lệ cho prompt này."
+      },
+      {
+        "flow": "DEV_HUMAN_R11",
+        "step": "R11_resume",
+        "prompt_hash": "2447ffcce6d7372fd5cdc1810653804259f0f7b82402b57472679884de20d015",
+        "model": "gpt-6-luna",
+        "cassette_source": "tests\\cassettes\\2447ffcce6d7372fd5cdc1810653804259f0f7b82402b57472679884de20d015.json",
+        "replay_ok": false,
+        "error": "Không có cassette hợp lệ cho prompt này."
+      }
+    ],
+    "misses": 8,
+    "outcomes": [
+      {
+        "flow": "DEV_ROUTINE",
+        "input": {
+          "sender": "synthetic@example.invalid",
+          "subject": "Hỏi lệ phí phúc khảo",
+          "body": "Cho em hỏi lệ phí phúc khảo một học phần là bao nhiêu?",
+          "received_at": "2026-09-21 09:00:00+07:00",
+          "channel": "paste",
+          "external_id": null
+        },
+        "result": {
+          "case_id": "c_01M4TYADDHN9BFXJTB0NPGCDKS",
+          "trace_id": "b7404049-16bc-435b-bc3e-e9abb76c3ed6",
+          "status": "ERROR",
+          "decision": {
+            "decision": "ERROR",
+            "escalation_type": null,
+            "rule_id": "TECHNICAL_ERROR",
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "evidence_ids": [],
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          "extraction": {
+            "language": "other",
+            "requests": [],
+            "critical_facts": {},
+            "missing_critical_facts": [],
+            "injection_suspected": false,
+            "raw_json": "{}",
+            "llm_error": "Không có cassette hợp lệ cho prompt này."
+          },
+          "evidence": null,
+          "draft": null,
+          "card": null,
+          "corpus_version": "cv_f6eb04187bb0",
+          "step_latencies_ms": {
+            "R0": 13,
+            "R1": 7,
+            "R2": 11,
+            "R3": 0,
+            "R4": 0,
+            "R5": 0,
+            "R6": 0,
+            "R7": 0,
+            "R8": 0,
+            "R9": 0,
+            "R10": 0,
+            "R11": 0,
+            "R12": 0,
+            "R13": 0,
+            "R14": 0
+          },
+          "started_at": "2026-10-13 15:32:56.369036+00:00",
+          "finished_at": "2026-10-13 15:32:56.410793+00:00"
+        },
+        "prompt_calls": 1,
+        "replay_misses": 1,
+        "replay_errors": [
+          "Không có cassette hợp lệ cho prompt này."
+        ],
+        "persisted_case": {
+          "status": "ERROR"
+        },
+        "audit_events": [
+          {
+            "event_id": "2fb365a8-4782-46a7-9d51-0d92867a69df",
+            "case_id": "c_01M4TYADDHN9BFXJTB0NPGCDKS",
+            "ts": "2026-10-13T15:32:56.378088Z",
+            "actor": "SYSTEM",
+            "action": "CASE_RECEIVED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADDHN9BFXJTB0NPGCDKS",
+            "output_ref": null,
+            "reason": "Đã tiếp nhận email để xử lý theo quy trình.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "6d384953-2058-4715-88a9-354049942551",
+            "case_id": "c_01M4TYADDHN9BFXJTB0NPGCDKS",
+            "ts": "2026-10-13T15:32:56.385603Z",
+            "actor": "SYSTEM",
+            "action": "CASE_SANITIZED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADDHN9BFXJTB0NPGCDKS",
+            "output_ref": null,
+            "reason": "Đã làm sạch nội dung email và bắt đầu xử lý.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "c08f9727-a916-4c07-92f8-799d9e4bc088",
+            "case_id": "c_01M4TYADDHN9BFXJTB0NPGCDKS",
+            "ts": "2026-10-13T15:32:56.395635Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Trích xuất dữ kiện thất bại: Không có cassette hợp lệ cho prompt này.",
+            "sources": null,
+            "corpus_version": null
+          },
+          {
+            "event_id": "87fa281e-aae0-4d09-bd36-11bc1bd836f9",
+            "case_id": "c_01M4TYADDHN9BFXJTB0NPGCDKS",
+            "ts": "2026-10-13T15:32:56.410793Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": "TECHNICAL_ERROR",
+            "input_ref": "c_01M4TYADDHN9BFXJTB0NPGCDKS",
+            "output_ref": null,
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          }
+        ],
+        "draft_count": 0
+      },
+      {
+        "flow": "DEV_AUTHORITY",
+        "input": {
+          "sender": "synthetic@example.invalid",
+          "subject": "Xin phúc khảo trễ",
+          "body": "Em xin được nộp đơn phúc khảo môn X sau thời hạn, nhờ trường chấp thuận ngoại lệ cho em.",
+          "received_at": "2026-09-21 09:00:00+07:00",
+          "channel": "paste",
+          "external_id": null
+        },
+        "result": {
+          "case_id": "c_01M4TYADEZX9X07WMYCA10G7W3",
+          "trace_id": "1faf30cc-21b9-48f0-ba59-207b46edf777",
+          "status": "ERROR",
+          "decision": {
+            "decision": "ERROR",
+            "escalation_type": null,
+            "rule_id": "TECHNICAL_ERROR",
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "evidence_ids": [],
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          "extraction": {
+            "language": "other",
+            "requests": [],
+            "critical_facts": {},
+            "missing_critical_facts": [],
+            "injection_suspected": false,
+            "raw_json": "{}",
+            "llm_error": "Không có cassette hợp lệ cho prompt này."
+          },
+          "evidence": null,
+          "draft": null,
+          "card": null,
+          "corpus_version": "cv_f6eb04187bb0",
+          "step_latencies_ms": {
+            "R0": 16,
+            "R1": 11,
+            "R2": 9,
+            "R3": 0,
+            "R4": 0,
+            "R5": 0,
+            "R6": 0,
+            "R7": 0,
+            "R8": 0,
+            "R9": 0,
+            "R10": 0,
+            "R11": 0,
+            "R12": 0,
+            "R13": 0,
+            "R14": 0
+          },
+          "started_at": "2026-10-13 15:32:56.415818+00:00",
+          "finished_at": "2026-10-13 15:32:56.459622+00:00"
+        },
+        "prompt_calls": 1,
+        "replay_misses": 1,
+        "replay_errors": [
+          "Không có cassette hợp lệ cho prompt này."
+        ],
+        "persisted_case": {
+          "status": "ERROR"
+        },
+        "audit_events": [
+          {
+            "event_id": "4fdeff28-9fd1-4c6d-ac0f-6bd233109ed9",
+            "case_id": "c_01M4TYADEZX9X07WMYCA10G7W3",
+            "ts": "2026-10-13T15:32:56.425381Z",
+            "actor": "SYSTEM",
+            "action": "CASE_RECEIVED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADEZX9X07WMYCA10G7W3",
+            "output_ref": null,
+            "reason": "Đã tiếp nhận email để xử lý theo quy trình.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "073fa79d-60e9-4929-bb8e-1d6edf10bc73",
+            "case_id": "c_01M4TYADEZX9X07WMYCA10G7W3",
+            "ts": "2026-10-13T15:32:56.436966Z",
+            "actor": "SYSTEM",
+            "action": "CASE_SANITIZED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADEZX9X07WMYCA10G7W3",
+            "output_ref": null,
+            "reason": "Đã làm sạch nội dung email và bắt đầu xử lý.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "b431fefb-4c84-418b-b93a-f2f9019935ff",
+            "case_id": "c_01M4TYADEZX9X07WMYCA10G7W3",
+            "ts": "2026-10-13T15:32:56.446984Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Trích xuất dữ kiện thất bại: Không có cassette hợp lệ cho prompt này.",
+            "sources": null,
+            "corpus_version": null
+          },
+          {
+            "event_id": "fbf0ed98-c3e8-4b41-9745-a215f45a8c36",
+            "case_id": "c_01M4TYADEZX9X07WMYCA10G7W3",
+            "ts": "2026-10-13T15:32:56.459622Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": "TECHNICAL_ERROR",
+            "input_ref": "c_01M4TYADEZX9X07WMYCA10G7W3",
+            "output_ref": null,
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          }
+        ],
+        "draft_count": 0
+      },
+      {
+        "flow": "DEV_FACT",
+        "input": {
+          "sender": "synthetic@example.invalid",
+          "subject": "Văn bản rèn luyện áp dụng",
+          "body": "Cho em hỏi văn bản điểm rèn luyện nào áp dụng cho khóa học và học kỳ của em?",
+          "received_at": "2026-09-21 09:00:00+07:00",
+          "channel": "paste",
+          "external_id": null
+        },
+        "result": {
+          "case_id": "c_01M4TYADGGV4Y5K2B2Q6R7F937",
+          "trace_id": "edaca00e-4d2b-4114-bca6-261b1829dbcb",
+          "status": "ERROR",
+          "decision": {
+            "decision": "ERROR",
+            "escalation_type": null,
+            "rule_id": "TECHNICAL_ERROR",
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "evidence_ids": [],
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          "extraction": {
+            "language": "other",
+            "requests": [],
+            "critical_facts": {},
+            "missing_critical_facts": [],
+            "injection_suspected": false,
+            "raw_json": "{}",
+            "llm_error": "Không có cassette hợp lệ cho prompt này."
+          },
+          "evidence": null,
+          "draft": null,
+          "card": null,
+          "corpus_version": "cv_f6eb04187bb0",
+          "step_latencies_ms": {
+            "R0": 14,
+            "R1": 9,
+            "R2": 10,
+            "R3": 0,
+            "R4": 0,
+            "R5": 0,
+            "R6": 0,
+            "R7": 0,
+            "R8": 0,
+            "R9": 0,
+            "R10": 0,
+            "R11": 0,
+            "R12": 0,
+            "R13": 0,
+            "R14": 0
+          },
+          "started_at": "2026-10-13 15:32:56.464226+00:00",
+          "finished_at": "2026-10-13 15:32:56.505895+00:00"
+        },
+        "prompt_calls": 1,
+        "replay_misses": 1,
+        "replay_errors": [
+          "Không có cassette hợp lệ cho prompt này."
+        ],
+        "persisted_case": {
+          "status": "ERROR"
+        },
+        "audit_events": [
+          {
+            "event_id": "3ed5f911-1d3e-4409-8b3a-80939f3276b4",
+            "case_id": "c_01M4TYADGGV4Y5K2B2Q6R7F937",
+            "ts": "2026-10-13T15:32:56.473848Z",
+            "actor": "SYSTEM",
+            "action": "CASE_RECEIVED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADGGV4Y5K2B2Q6R7F937",
+            "output_ref": null,
+            "reason": "Đã tiếp nhận email để xử lý theo quy trình.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "f84a9e78-6259-4a86-94b8-0310177f9559",
+            "case_id": "c_01M4TYADGGV4Y5K2B2Q6R7F937",
+            "ts": "2026-10-13T15:32:56.482474Z",
+            "actor": "SYSTEM",
+            "action": "CASE_SANITIZED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADGGV4Y5K2B2Q6R7F937",
+            "output_ref": null,
+            "reason": "Đã làm sạch nội dung email và bắt đầu xử lý.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "357c8c16-ce3f-44d5-9b94-8094743d1f49",
+            "case_id": "c_01M4TYADGGV4Y5K2B2Q6R7F937",
+            "ts": "2026-10-13T15:32:56.492729Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Trích xuất dữ kiện thất bại: Không có cassette hợp lệ cho prompt này.",
+            "sources": null,
+            "corpus_version": null
+          },
+          {
+            "event_id": "4f147d4c-47c4-4ef1-92d3-d8c64cc2a95f",
+            "case_id": "c_01M4TYADGGV4Y5K2B2Q6R7F937",
+            "ts": "2026-10-13T15:32:56.505895Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": "TECHNICAL_ERROR",
+            "input_ref": "c_01M4TYADGGV4Y5K2B2Q6R7F937",
+            "output_ref": null,
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          }
+        ],
+        "draft_count": 0
+      },
+      {
+        "flow": "V01",
+        "verify_result": {
+          "case_id": "V01",
+          "subject": "Quy trình và thang điểm rèn luyện",
+          "question": null,
+          "expected_decision": "AUTO_REPLY",
+          "expected_type": null,
+          "actual_decision": "ERROR",
+          "actual_type": null,
+          "rule_id": "TECHNICAL_ERROR",
+          "passed": false,
+          "elapsed_ms": 46,
+          "timestamp": "2026-10-13T22:32:56.560918+07:00",
+          "corpus_version": "cv_f6eb04187bb0",
+          "case_ref": "c_01M4TYADJ3AH2S2QTWK9NHWPYH",
+          "expected_rule_id": "P05"
+        },
+        "prompt_calls": 1,
+        "replay_misses": 1,
+        "replay_errors": [
+          "Không có cassette hợp lệ cho prompt này."
+        ],
+        "persisted_case": {
+          "status": "ERROR"
+        },
+        "audit_events": [
+          {
+            "event_id": "ec4041e7-e5e9-47eb-a861-746f3c3fe86c",
+            "case_id": "c_01M4TYADJ3AH2S2QTWK9NHWPYH",
+            "ts": "2026-10-13T15:32:56.523081Z",
+            "actor": "SYSTEM",
+            "action": "CASE_RECEIVED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADJ3AH2S2QTWK9NHWPYH",
+            "output_ref": null,
+            "reason": "Đã tiếp nhận email để xử lý theo quy trình.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "ae2d2fe2-f707-4703-9fad-05529328da97",
+            "case_id": "c_01M4TYADJ3AH2S2QTWK9NHWPYH",
+            "ts": "2026-10-13T15:32:56.533686Z",
+            "actor": "SYSTEM",
+            "action": "CASE_SANITIZED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADJ3AH2S2QTWK9NHWPYH",
+            "output_ref": null,
+            "reason": "Đã làm sạch nội dung email và bắt đầu xử lý.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "6897aabc-11f3-414f-87ab-366768663051",
+            "case_id": "c_01M4TYADJ3AH2S2QTWK9NHWPYH",
+            "ts": "2026-10-13T15:32:56.543207Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Trích xuất dữ kiện thất bại: Không có cassette hợp lệ cho prompt này.",
+            "sources": null,
+            "corpus_version": null
+          },
+          {
+            "event_id": "981670c5-d89b-4f41-8dab-f8304ee2d7ed",
+            "case_id": "c_01M4TYADJ3AH2S2QTWK9NHWPYH",
+            "ts": "2026-10-13T15:32:56.554913Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": "TECHNICAL_ERROR",
+            "input_ref": "c_01M4TYADJ3AH2S2QTWK9NHWPYH",
+            "output_ref": null,
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          }
+        ],
+        "draft_count": 0
+      },
+      {
+        "flow": "V02",
+        "verify_result": {
+          "case_id": "V02",
+          "subject": "Course withdrawal deadline",
+          "question": null,
+          "expected_decision": "AUTO_REPLY",
+          "expected_type": null,
+          "actual_decision": "ERROR",
+          "actual_type": null,
+          "rule_id": "TECHNICAL_ERROR",
+          "passed": false,
+          "elapsed_ms": 46,
+          "timestamp": "2026-10-13T22:32:56.616405+07:00",
+          "corpus_version": "cv_f6eb04187bb0",
+          "case_ref": "c_01M4TYADKTGB8KQPR7XSH2SJ9P",
+          "expected_rule_id": "P05"
+        },
+        "prompt_calls": 1,
+        "replay_misses": 1,
+        "replay_errors": [
+          "Không có cassette hợp lệ cho prompt này."
+        ],
+        "persisted_case": {
+          "status": "ERROR"
+        },
+        "audit_events": [
+          {
+            "event_id": "81fb13e4-7ab3-486b-b443-d6d05a56ada2",
+            "case_id": "c_01M4TYADKTGB8KQPR7XSH2SJ9P",
+            "ts": "2026-10-13T15:32:56.579066Z",
+            "actor": "SYSTEM",
+            "action": "CASE_RECEIVED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADKTGB8KQPR7XSH2SJ9P",
+            "output_ref": null,
+            "reason": "Đã tiếp nhận email để xử lý theo quy trình.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "7dfade51-c2c7-46d4-aa9f-a69f49056704",
+            "case_id": "c_01M4TYADKTGB8KQPR7XSH2SJ9P",
+            "ts": "2026-10-13T15:32:56.586315Z",
+            "actor": "SYSTEM",
+            "action": "CASE_SANITIZED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADKTGB8KQPR7XSH2SJ9P",
+            "output_ref": null,
+            "reason": "Đã làm sạch nội dung email và bắt đầu xử lý.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "9578d81a-0445-4467-8fe9-07c343702004",
+            "case_id": "c_01M4TYADKTGB8KQPR7XSH2SJ9P",
+            "ts": "2026-10-13T15:32:56.595831Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Trích xuất dữ kiện thất bại: Không có cassette hợp lệ cho prompt này.",
+            "sources": null,
+            "corpus_version": null
+          },
+          {
+            "event_id": "e6a6ec2b-4c9f-407c-9d59-f9dbb5de76d3",
+            "case_id": "c_01M4TYADKTGB8KQPR7XSH2SJ9P",
+            "ts": "2026-10-13T15:32:56.610916Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": "TECHNICAL_ERROR",
+            "input_ref": "c_01M4TYADKTGB8KQPR7XSH2SJ9P",
+            "output_ref": null,
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          }
+        ],
+        "draft_count": 0
+      },
+      {
+        "flow": "V03",
+        "verify_result": {
+          "case_id": "V03",
+          "subject": "Xin nộp phúc khảo muộn vì nhập viện",
+          "question": null,
+          "expected_decision": "ESCALATE",
+          "expected_type": "AUTHORITY_REQUIRED",
+          "actual_decision": "ERROR",
+          "actual_type": null,
+          "rule_id": "TECHNICAL_ERROR",
+          "passed": false,
+          "elapsed_ms": 50,
+          "timestamp": "2026-10-13T22:32:56.675095+07:00",
+          "corpus_version": "cv_f6eb04187bb0",
+          "case_ref": "c_01M4TYADNGQ6M2X2DKRTC980Y9",
+          "expected_rule_id": "P01"
+        },
+        "prompt_calls": 1,
+        "replay_misses": 1,
+        "replay_errors": [
+          "Không có cassette hợp lệ cho prompt này."
+        ],
+        "persisted_case": {
+          "status": "ERROR"
+        },
+        "audit_events": [
+          {
+            "event_id": "c9fa29c8-2e2e-44a4-86fd-ed6732352d04",
+            "case_id": "c_01M4TYADNGQ6M2X2DKRTC980Y9",
+            "ts": "2026-10-13T15:32:56.636094Z",
+            "actor": "SYSTEM",
+            "action": "CASE_RECEIVED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADNGQ6M2X2DKRTC980Y9",
+            "output_ref": null,
+            "reason": "Đã tiếp nhận email để xử lý theo quy trình.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "d5a577cc-8cef-4a53-9f67-4d6d9b674025",
+            "case_id": "c_01M4TYADNGQ6M2X2DKRTC980Y9",
+            "ts": "2026-10-13T15:32:56.645663Z",
+            "actor": "SYSTEM",
+            "action": "CASE_SANITIZED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADNGQ6M2X2DKRTC980Y9",
+            "output_ref": null,
+            "reason": "Đã làm sạch nội dung email và bắt đầu xử lý.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "cac4fa7a-1419-4bd9-9a28-59b4e08a78b8",
+            "case_id": "c_01M4TYADNGQ6M2X2DKRTC980Y9",
+            "ts": "2026-10-13T15:32:56.656224Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Trích xuất dữ kiện thất bại: Không có cassette hợp lệ cho prompt này.",
+            "sources": null,
+            "corpus_version": null
+          },
+          {
+            "event_id": "d78afc95-ffd3-4c85-a10c-672c424d0698",
+            "case_id": "c_01M4TYADNGQ6M2X2DKRTC980Y9",
+            "ts": "2026-10-13T15:32:56.671096Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": "TECHNICAL_ERROR",
+            "input_ref": "c_01M4TYADNGQ6M2X2DKRTC980Y9",
+            "output_ref": null,
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          }
+        ],
+        "draft_count": 0
+      },
+      {
+        "flow": "V04",
+        "verify_result": {
+          "case_id": "V04",
+          "subject": "Đăng ký ký túc xá",
+          "question": null,
+          "expected_decision": "ESCALATE",
+          "expected_type": "OUT_OF_POLICY",
+          "actual_decision": "ERROR",
+          "actual_type": null,
+          "rule_id": "TECHNICAL_ERROR",
+          "passed": false,
+          "elapsed_ms": 43,
+          "timestamp": "2026-10-13T22:32:56.726009+07:00",
+          "corpus_version": "cv_f6eb04187bb0",
+          "case_ref": "c_01M4TYADQC8RVFDGZRCG2HPV5J",
+          "expected_rule_id": "P02"
+        },
+        "prompt_calls": 1,
+        "replay_misses": 1,
+        "replay_errors": [
+          "Không có cassette hợp lệ cho prompt này."
+        ],
+        "persisted_case": {
+          "status": "ERROR"
+        },
+        "audit_events": [
+          {
+            "event_id": "a0dfc0dd-79e6-4a4a-9d86-2a1c31c35feb",
+            "case_id": "c_01M4TYADQC8RVFDGZRCG2HPV5J",
+            "ts": "2026-10-13T15:32:56.692233Z",
+            "actor": "SYSTEM",
+            "action": "CASE_RECEIVED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADQC8RVFDGZRCG2HPV5J",
+            "output_ref": null,
+            "reason": "Đã tiếp nhận email để xử lý theo quy trình.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "e5078e63-4c21-48b3-9c8d-d43b647b20b1",
+            "case_id": "c_01M4TYADQC8RVFDGZRCG2HPV5J",
+            "ts": "2026-10-13T15:32:56.700752Z",
+            "actor": "SYSTEM",
+            "action": "CASE_SANITIZED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYADQC8RVFDGZRCG2HPV5J",
+            "output_ref": null,
+            "reason": "Đã làm sạch nội dung email và bắt đầu xử lý.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "b4411b40-be1e-4163-a9f7-c2d2d2bfef20",
+            "case_id": "c_01M4TYADQC8RVFDGZRCG2HPV5J",
+            "ts": "2026-10-13T15:32:56.709976Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Trích xuất dữ kiện thất bại: Không có cassette hợp lệ cho prompt này.",
+            "sources": null,
+            "corpus_version": null
+          },
+          {
+            "event_id": "c1f5701b-d44a-4335-97f8-c163d5d003f5",
+            "case_id": "c_01M4TYADQC8RVFDGZRCG2HPV5J",
+            "ts": "2026-10-13T15:32:56.722000Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": "TECHNICAL_ERROR",
+            "input_ref": "c_01M4TYADQC8RVFDGZRCG2HPV5J",
+            "output_ref": null,
+            "reason": "Chưa xử lý được email do lỗi dịch vụ hoặc dữ liệu hệ thống. Hãy kiểm tra kết nối và chạy lại; chưa có thư nào được gửi.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          }
+        ],
+        "draft_count": 0
+      },
+      {
+        "flow": "DEV_HUMAN_R11",
+        "input": {
+          "sender": "synthetic@example.invalid",
+          "subject": "Synthetic DEV — yêu cầu bản dịch",
+          "body": "学生の質問を確認してください。",
+          "received_at": "2026-09-21 09:04:00+07:00",
+          "channel": "paste",
+          "external_id": null
+        },
+        "human_input": {
+          "subject": "Synthetic DEV — yêu cầu bản dịch",
+          "body": "学生の質問を確認してください。",
+          "choice": "Yêu cầu bản dịch",
+          "reason": "Đề nghị bổ sung nội dung bằng tiếng Việt hoặc tiếng Anh để đối chiếu quy định."
+        },
+        "intake_result": {
+          "case_id": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+          "trace_id": "5665d9b6-45e6-4bdf-bbbb-8e4fed9316bd",
+          "status": "AWAITING_HUMAN",
+          "decision": {
+            "decision": "ESCALATE",
+            "escalation_type": "OUT_OF_POLICY",
+            "rule_id": "R1",
+            "reason": "Email không dùng tiếng Việt hoặc tiếng Anh nên cần chuyên viên hỗ trợ.",
+            "evidence_ids": [],
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          "extraction": null,
+          "evidence": null,
+          "draft": null,
+          "card": {
+            "summary": "Synthetic DEV — yêu cầu bản dịch",
+            "facts": [
+              "Email sử dụng ngôn ngữ ngoài phạm vi tiếng Việt và tiếng Anh."
+            ],
+            "basis": [],
+            "question": "Chuyên viên có thể xử lý bằng ngôn ngữ gốc hay cần yêu cầu người gửi bổ sung bản dịch?",
+            "options": [
+              "Xử lý bằng ngôn ngữ gốc",
+              "Yêu cầu bản dịch"
+            ],
+            "escalation_type": "OUT_OF_POLICY",
+            "partial_draft": null
+          },
+          "corpus_version": "cv_f6eb04187bb0",
+          "step_latencies_ms": {
+            "R0": 18,
+            "R1": 11,
+            "R2": 0,
+            "R3": 0,
+            "R4": 0,
+            "R5": 0,
+            "R6": 0,
+            "R7": 0,
+            "R8": 0,
+            "R9": 0,
+            "R10": 0,
+            "R11": 0,
+            "R12": 0,
+            "R13": 0,
+            "R14": 0
+          },
+          "started_at": "2026-10-13 15:32:57.075955+00:00",
+          "finished_at": "2026-10-13 15:32:57.123306+00:00"
+        },
+        "final_case": {
+          "status": "HUMAN_DECIDED"
+        },
+        "job": {
+          "state": "failed"
+        },
+        "human_decision": {
+          "choice": "Yêu cầu bản dịch",
+          "reason": "Đề nghị bổ sung nội dung bằng tiếng Việt hoặc tiếng Anh để đối chiếu quy định.",
+          "actor": "HUMAN:local"
+        },
+        "draft_count": 0,
+        "prompt_calls": 1,
+        "replay_misses": 1,
+        "replay_errors": [
+          "Không có cassette hợp lệ cho prompt này."
+        ],
+        "persisted_case": {
+          "status": "HUMAN_DECIDED"
+        },
+        "audit_events": [
+          {
+            "event_id": "f5dc063e-c271-4360-94e4-f1e3d7d41ba6",
+            "case_id": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+            "ts": "2026-10-13T15:32:57.085023Z",
+            "actor": "SYSTEM",
+            "action": "CASE_RECEIVED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+            "output_ref": null,
+            "reason": "Đã tiếp nhận email để xử lý theo quy trình.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "6d67ec72-2f52-4613-abb7-a6030fd2bf6f",
+            "case_id": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+            "ts": "2026-10-13T15:32:57.099569Z",
+            "actor": "SYSTEM",
+            "action": "CASE_SANITIZED",
+            "rule_id": null,
+            "input_ref": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+            "output_ref": null,
+            "reason": "Đã làm sạch nội dung email và bắt đầu xử lý.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "70b7da36-520b-4e1c-881c-caa3d926644e",
+            "case_id": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+            "ts": "2026-10-13T15:32:57.119279Z",
+            "actor": "SYSTEM",
+            "action": "CASE_QUEUED",
+            "rule_id": "R1",
+            "input_ref": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+            "output_ref": null,
+            "reason": "Email không dùng tiếng Việt hoặc tiếng Anh nên cần chuyên viên hỗ trợ.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "0efee50c-2617-4fe7-a682-afcf4f08ab64",
+            "case_id": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+            "ts": "2026-10-13T15:32:57.541217Z",
+            "actor": "HUMAN:local",
+            "action": "CASE_QUEUED",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Đã lưu yêu cầu soạn thư theo quyết định của chuyên viên; chưa gửi email.",
+            "sources": null,
+            "corpus_version": null
+          },
+          {
+            "event_id": "fb97aa0c-e193-4ae8-a1a7-720b0bf96d2b",
+            "case_id": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+            "ts": "2026-10-13T15:32:57.541217Z",
+            "actor": "HUMAN:local",
+            "action": "HUMAN_DECISION",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Đề nghị bổ sung nội dung bằng tiếng Việt hoặc tiếng Anh để đối chiếu quy định.",
+            "sources": null,
+            "corpus_version": "cv_f6eb04187bb0"
+          },
+          {
+            "event_id": "8653ab29-f655-4009-97d0-dfd9ea34dacb",
+            "case_id": "c_01M4TYAE3KGBSHWQ54CJMRM5HT",
+            "ts": "2026-10-13T15:32:57.631304Z",
+            "actor": "SYSTEM",
+            "action": "CASE_ERROR",
+            "rule_id": null,
+            "input_ref": null,
+            "output_ref": null,
+            "reason": "Chưa soạn được thư. Quyết định của chuyên viên vẫn được giữ; hãy yêu cầu soạn lại.",
+            "sources": null,
+            "corpus_version": null
+          }
+        ]
+      },
+      {
+        "flow": "DEV_AUTHORITY_CITED_R11",
+        "status": "NOT_RUN",
+        "case_ref": "c_01M4TYADEZX9X07WMYCA10G7W3",
+        "reason": "Upstream product case is not AWAITING_HUMAN",
+        "prompt_calls": 0,
+        "replay_misses": 0,
+        "replay_errors": []
+      },
+      {
+        "flow": "DEV_FACT_CITED_R11",
+        "status": "NOT_RUN",
+        "case_ref": "c_01M4TYADGGV4Y5K2B2Q6R7F937",
+        "reason": "Upstream product case is not AWAITING_HUMAN",
+        "prompt_calls": 0,
+        "replay_misses": 0,
+        "replay_errors": []
+      }
+    ],
+    "manifest_sha256": "00f2e9bef4dce67a36216b84a103d27d0ea8d218a4e823ef0213ef6e15749708",
+    "evidence_sha256": "8e66c55c9b92d987c24b9fa3b0fc5e940dc94710bad57b6d719c48496642c94c",
+    "layer_a": "FAIL",
+    "layer_b": "NOT_VERIFIED; upstream errors and standalone R11 drafting failure"
+  },
+  "validation": {
+    "targeted_tests": "51 passed in 8.48s",
+    "test_log": "data/validation/m6-t05-continuation-snapshot-final-tests.log",
+    "development_failure": "Snapshot helper initially used wrong audit import: 1 failed / 47 passed / 3 setup errors. Corrected to infra.audit.events_for_case; final tests pass. Log: data/validation/m6-t05-continuation-snapshot-tests.log",
+    "initial_environment_failure": "26 passed / 19 setup errors: WinError5 pytest-of-admin TEMP; rerun with fresh workspace TEMP passed",
+    "black": "PASS",
+    "ruff": "PASS",
+    "diff_check": "PASS",
+    "failed_product_ids": [
+      "DEV_ROUTINE",
+      "DEV_AUTHORITY",
+      "DEV_FACT",
+      "V01",
+      "V02",
+      "V03",
+      "V04",
+      "DEV_HUMAN_R11"
+    ],
+    "not_run": [
+      "LIVE/recording",
+      "genuine candidate-pack validation (no pack)",
+      "Docker",
+      "full suite",
+      "browser/deployment E2E"
+    ]
+  },
+  "ac": {
+    "AC1": "NOT_VERIFIED",
+    "AC2": "FAIL",
+    "AC3": "NOT_VERIFIED",
+    "AC4": "FAIL",
+    "AC5": "FAIL",
+    "AC6": "PASS_OFFLINE",
+    "AC7": "PASS_CHECKPOINT"
+  },
+  "live": {
+    "provider_attempts": 0,
+    "tokens": 0,
+    "cost_usd": "0"
+  },
+  "human_self_review": "PENDING",
+  "nam_final_review": "PENDING",
+  "decision_packet": {
+    "decision": "NOT_AUTHORIZED",
+    "prepared_on_sha": "5f5ee5619143dfa627299c9faa5f89ad1fb013fd",
+    "source_sha": null,
+    "source_sha_instruction": "Approve exact final PR44 head only after validation and human review; this proposal is NOT authorization.",
+    "source_fingerprints": {
+      "infra/llm.py": "09db7dca677ccc05cc4270d49604e38afd92a7a7a0953c99b23a0d5fbf65c324",
+      "infra/settings.py": "00873244fbd7b6f8dd870606c90475933497165add40bb03627aef9e8ee5a194",
+      "infra/db.py": "6d9c60f3af3ea0b44217cface47b1981a4a0ad943662fad44fce4103d172e03e",
+      "core/pipeline.py": "664d775e072656a5317cdbddebdf6c5f1fc7581b6eb2051b9aeae9fde54bfd90",
+      "core/extract.py": "ab52cc0203c08fa8439ef4fcf0313bc3177e0f5a3cdd01f5b69373fe5c01e0d2",
+      "core/retrieval.py": "02ea482a4d2ac9bff84b169b3c96f2918896b26f01b5040984b1d3cdec8b34bc",
+      "core/generate.py": "cce4fbbaf370a7da0a2710f30abe651a9ac006c1d602e9ea616ed0f31a2fde0d",
+      "core/question_gen.py": "adeaa9ceab7485329987284a63a778eabe1ad0a89cd255e42fffc62d71f52dbb",
+      "core/question_guard.py": "8e501c7ac3d51dc678683e6007705cab4538adb33006502347e9425531bb8948",
+      "core/resume.py": "67b28b529a7cadd052bb2df765f6a887346564d885ad385c7ada18f9269b1235",
+      "core/worker.py": "224cdca639536d2e57b7f1ceb4be669833ae81a4b060cf648362f265b087d847",
+      "pages/2_Hang_cho_duyet.py": "51267752c1818b5da87e05f333f8c12f1f84dcb72df8f6d223b051739e3f6604",
+      "verify/harness.py": "29ad1d51cba978d3bb5d1e900cafa585ae1e2cd2ee7246b7aa1df51ccf3665af",
+      "verify/cases_verify4.json": "3ec0e98499d682cf778791c1d9f1ea4b1614b4da9bab882edb741e9e819494a6",
+      "policies/policy.yaml": "805349a02bbd804f5b690e822f4098f3f394d9caaeddb94a9d7f4b950f422430",
+      "data/seed_docs/HP-2026-1.json": "693c1068ea5a53f4ffea60cca0dae1176da0a64acbeca2e166f769364803791c",
+      "data/seed_docs/PK-2026-204.json": "cc2cb0613ea4cfdad38a665e4375bafea3ae5f149e20af4825c9c8bb4ba18d3c",
+      "data/seed_docs/QDPQ-2026-01.json": "b9cfeccebe3e59b199a775c035bb82dc35e84d9f9ba061c95347a0b9f48c9c75",
+      "data/seed_docs/RH-2026-101.json": "05bef922f4c9c9eb77e667636772b6e7d7915d628a77c203fd5cb68adbbe0734",
+      "data/seed_docs/RL-2025-2363.json": "fa657f2c1ffcdd0be59486d8166b2b87e867451829614d9dff12adfc7acb4dff",
+      "data/seed_docs/RL-2026-3150.json": "e9d5649628751b1ff6843dab9fc7e17f44f198c44391aeb1e53d72d229937bd4",
+      "scripts/audit_runtime_replay.py": "70799a8008eb499750f3fa884fddff6de3952f42c9c5c448ac6825a08e63ad87",
+      "scripts/runtime_recording_readiness.py": "25ed7d4718a4bae3f57765c0d0f239322b3d42f6e1039b73011a0b81bee2c202",
+      "scripts/guarded_runtime_recording.py": "a21f48075333ab95af9a876140367b413fcf1894fa02aedfb91a321e28b37272",
+      "scripts/validate_recorded_replay_pack.py": "f2abda7c59cca0394f5ae5de398d66e2b2a91cfbd383bbbabe41cd5f10562b96"
+    },
+    "config": {
+      "LLM_MODE": "record",
+      "LLM_PROVIDER": "openai",
+      "OPENAI_MODEL": "gpt-6-luna",
+      "OPENAI_REASONING_EFFORT": "none",
+      "LLM_CACHE": "0",
+      "LLM_TIMEOUT_S": "30",
+      "LLM_RETRIES": "1",
+      "SIMILARITY_THRESHOLD": "0.35",
+      "CITATION_RATIO_MIN": "0.6",
+      "RETRIEVAL_TOP_K": "6",
+      "QUESTION_WORDS_MIN": "8",
+      "QUESTION_WORDS_MAX": "45",
+      "PENDING_SEND_SECONDS": "60",
+      "PENDING_STATUS_REFRESH_SECONDS": "1"
+    },
+    "effective_request_parameters": {
+      "temperature": 0.0,
+      "timeout_s": 30,
+      "transport_retries_max": 1,
+      "sdk_retries": 0
+    },
+    "scope": null,
+    "scope_variants_proposal": {
+      "BASE_PACK_V1": {
+        "input_hashes": {
+          "DEV_ROUTINE": "90cb79a96ad872b2346f467ee259086ce7d42b35e598896f0c0c4211ec607118",
+          "DEV_AUTHORITY": "1ce4b0abd119a6a770bb1dd6b0b8ebab197adb540f606a39bb06e6254c347005",
+          "DEV_FACT": "453277535935e7b1c412d9afe171ed5431f128ef01d4741c56848816b61acb4c",
+          "V01": "6d6b9b491177ac25f00411b59b531987721f2aef856431b5bbbd5ca4b5b26306",
+          "V02": "cf61ce6833d4fa0c668483972cc0ec29f2a58f89d0d8e67ce31f995e722096a4",
+          "V03": "d27403f8e5675ec55a65f14aae68c1e284dc2223898661502dc485c9dd69a357",
+          "V04": "2bf3c24a6748a7186d4544f19447ec1f2952a583e16fa649a897219b2b4d65a3",
+          "DEV_HUMAN_R11": "8848bcb623b826d14939ce230be1cac0c3da27074d25b8333eb1ab5a57a4b927"
+        },
+        "flow_caps": {
+          "DEV_ROUTINE": 3,
+          "DEV_AUTHORITY": 3,
+          "DEV_FACT": 3,
+          "V01": 3,
+          "V02": 3,
+          "V03": 3,
+          "V04": 3,
+          "DEV_HUMAN_R11": 1
+        },
+        "authorized_senders": [
+          "alex.k49@example.edu.vn",
+          "hoa.k48@example.edu.vn",
+          "lan.k50@example.edu.vn",
+          "minh.k49@example.edu.vn",
+          "synthetic@example.invalid"
+        ],
+        "nominal_calls": 21,
+        "total_cap": 22,
+        "public_documentation_worst_case_reservation_usd": "17.3514",
+        "usd_cap_proposal_rounded": "17.36",
+        "cited_r11_scope_approved": false
+      },
+      "BASE_PLUS_CITED_R11_V1": {
+        "input_hashes": {
+          "DEV_ROUTINE": "90cb79a96ad872b2346f467ee259086ce7d42b35e598896f0c0c4211ec607118",
+          "DEV_AUTHORITY": "1ce4b0abd119a6a770bb1dd6b0b8ebab197adb540f606a39bb06e6254c347005",
+          "DEV_FACT": "453277535935e7b1c412d9afe171ed5431f128ef01d4741c56848816b61acb4c",
+          "V01": "6d6b9b491177ac25f00411b59b531987721f2aef856431b5bbbd5ca4b5b26306",
+          "V02": "cf61ce6833d4fa0c668483972cc0ec29f2a58f89d0d8e67ce31f995e722096a4",
+          "V03": "d27403f8e5675ec55a65f14aae68c1e284dc2223898661502dc485c9dd69a357",
+          "V04": "2bf3c24a6748a7186d4544f19447ec1f2952a583e16fa649a897219b2b4d65a3",
+          "DEV_HUMAN_R11": "8848bcb623b826d14939ce230be1cac0c3da27074d25b8333eb1ab5a57a4b927",
+          "DEV_AUTHORITY_CITED_R11": "8f33d256b129eccaaa0619af9f5730c03a3387f577d523da5f406999da53e748",
+          "DEV_FACT_CITED_R11": "69c3b2074cf01387683e859835d9338a2aa104f96373109f35680d860537b366"
+        },
+        "flow_caps": {
+          "DEV_ROUTINE": 3,
+          "DEV_AUTHORITY": 3,
+          "DEV_FACT": 3,
+          "V01": 3,
+          "V02": 3,
+          "V03": 3,
+          "V04": 3,
+          "DEV_HUMAN_R11": 1,
+          "DEV_AUTHORITY_CITED_R11": 1,
+          "DEV_FACT_CITED_R11": 1
+        },
+        "authorized_senders": [
+          "alex.k49@example.edu.vn",
+          "hoa.k48@example.edu.vn",
+          "lan.k50@example.edu.vn",
+          "minh.k49@example.edu.vn",
+          "synthetic@example.invalid"
+        ],
+        "nominal_calls": 23,
+        "total_cap": 24,
+        "public_documentation_worst_case_reservation_usd": "18.9288",
+        "usd_cap_proposal_rounded": "18.93",
+        "cited_r11_scope_approved": false
+      }
+    },
+    "flow_caps": null,
+    "input_hashes": null,
+    "total_cap": null,
+    "authorized_senders": null,
+    "approved_usd_cap": null,
+    "verified_upper_cost_usd": null,
+    "cost_bound": {
+      "basis": "VERIFIED_PROVIDER_ENFORCED_MAXIMA_AND_MAXIMUM_BILLED_RATES",
+      "max_input_tokens": 1050000,
+      "max_output_tokens": 128000,
+      "max_input_usd_per_million": "0.55",
+      "max_output_usd_per_million": "1.65",
+      "status": "PUBLIC_DOC_PROPOSAL_ONLY; account/tier/pricing/maxima evidence requires Coordinator verification",
+      "public_documentation_source": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+      "verified_public_doc_on": "2026-10-12"
+    },
+    "sdk_capture_format": "SDK_JSON_PAYLOAD_NOT_HTTP_WIRE_BYTES",
+    "allowed_response_models": null,
+    "go_reference": null,
+    "account_evidence_reference": null,
+    "bound_evidence_reference": null,
+    "stop_conditions": [
+      "no genuine verified GO",
+      "source/config/input drift",
+      "quota/cost cap",
+      "unknown response usage/origin metadata",
+      "provider/schema/domain failure",
+      "business defect",
+      "same hash conflicting response",
+      "PII/secret concern",
+      "outside-scope production change"
+    ],
+    "privacy_rule": "Raw SDK snapshots/candidates stay ignored local quarantine; independent origin/privacy review and guarded real replay before committing any cassette",
+    "actual_provider_attempts": 0,
+    "actual_tokens": 0,
+    "actual_cost_usd": "0",
+    "operator_rule": "JSON booleans/refs cannot authenticate Coordinator; verify authoritative decision before invoking runner",
+    "coordinator_go_reference": false,
+    "source_sha_and_fingerprints": false,
+    "exact_provider_model_config": false,
+    "approved_case_input_hashes": false,
+    "global_attempt_cap_including_retries": false,
+    "per_flow_attempt_caps": false,
+    "account_model_access_and_account_pricing_proof": false,
+    "approved_usd_cap_and_pre_request_cost_bound": false,
+    "synthetic_data_and_provenance_approval": false,
+    "stop_conditions_and_failure_reporting": false,
+    "pricing_status": "HISTORICAL_UNVERIFIED_PROPOSAL; no current account/rate/token/cost verification or LIVE probe performed"
+  }
+}

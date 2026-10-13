@@ -1,0 +1,1 @@
+{"data": {"chunk_ids": ["RL-2026-3150:seed:1", "RL-2026-3150:seed:2", "RL-2026-3150:seed:3", "RL-2026-3150:seed:4", "RL-2026-3150:seed:5", "RL-2026-3150:seed:6"], "missing_facts": ["Khóa học của sinh viên", "Học kỳ được hỏi", "Sinh viên có thuộc diện bảo lưu và quay lại học tập hay không"], "unanswered_requests": []}, "model": "gpt-6-luna"}

@@ -1,0 +1,371 @@
+{
+  "schema_version": 1,
+  "prepared_on_sha": "c5d8a1d72bacb48f8cc7b088d6ecf8238887848b",
+  "runtime_source_sha": "ffb7f79f827172537d731528394173f4ce4f8551",
+  "runtime_source_fingerprints": {
+    "infra/llm.py": "09db7dca677ccc05cc4270d49604e38afd92a7a7a0953c99b23a0d5fbf65c324",
+    "infra/settings.py": "00873244fbd7b6f8dd870606c90475933497165add40bb03627aef9e8ee5a194",
+    "infra/db.py": "6d9c60f3af3ea0b44217cface47b1981a4a0ad943662fad44fce4103d172e03e",
+    "core/pipeline.py": "664d775e072656a5317cdbddebdf6c5f1fc7581b6eb2051b9aeae9fde54bfd90",
+    "core/extract.py": "ab52cc0203c08fa8439ef4fcf0313bc3177e0f5a3cdd01f5b69373fe5c01e0d2",
+    "core/retrieval.py": "02ea482a4d2ac9bff84b169b3c96f2918896b26f01b5040984b1d3cdec8b34bc",
+    "core/generate.py": "cce4fbbaf370a7da0a2710f30abe651a9ac006c1d602e9ea616ed0f31a2fde0d",
+    "core/question_gen.py": "adeaa9ceab7485329987284a63a778eabe1ad0a89cd255e42fffc62d71f52dbb",
+    "core/question_guard.py": "8e501c7ac3d51dc678683e6007705cab4538adb33006502347e9425531bb8948",
+    "core/resume.py": "67b28b529a7cadd052bb2df765f6a887346564d885ad385c7ada18f9269b1235",
+    "core/worker.py": "224cdca639536d2e57b7f1ceb4be669833ae81a4b060cf648362f265b087d847",
+    "pages/2_Hang_cho_duyet.py": "51267752c1818b5da87e05f333f8c12f1f84dcb72df8f6d223b051739e3f6604",
+    "verify/harness.py": "29ad1d51cba978d3bb5d1e900cafa585ae1e2cd2ee7246b7aa1df51ccf3665af",
+    "verify/cases_verify4.json": "3ec0e98499d682cf778791c1d9f1ea4b1614b4da9bab882edb741e9e819494a6",
+    "policies/policy.yaml": "805349a02bbd804f5b690e822f4098f3f394d9caaeddb94a9d7f4b950f422430",
+    "data/seed_docs/HP-2026-1.json": "693c1068ea5a53f4ffea60cca0dae1176da0a64acbeca2e166f769364803791c",
+    "data/seed_docs/PK-2026-204.json": "cc2cb0613ea4cfdad38a665e4375bafea3ae5f149e20af4825c9c8bb4ba18d3c",
+    "data/seed_docs/QDPQ-2026-01.json": "b9cfeccebe3e59b199a775c035bb82dc35e84d9f9ba061c95347a0b9f48c9c75",
+    "data/seed_docs/RH-2026-101.json": "05bef922f4c9c9eb77e667636772b6e7d7915d628a77c203fd5cb68adbbe0734",
+    "data/seed_docs/RL-2025-2363.json": "fa657f2c1ffcdd0be59486d8166b2b87e867451829614d9dff12adfc7acb4dff",
+    "data/seed_docs/RL-2026-3150.json": "e9d5649628751b1ff6843dab9fc7e17f44f198c44391aeb1e53d72d229937bd4"
+  },
+  "phase1_preserved": true,
+  "offline_preparation_reference": "https://trello.com/c/7nEZN4bu#comment-6accb8f4b731380929f71f9a",
+  "live_authorization": "NOT_AUTHORIZED",
+  "authorization_blockers": [
+    "LIVE_NOT_AUTHORIZED",
+    "coordinator_go_reference",
+    "source_sha_and_fingerprints",
+    "exact_provider_model_config",
+    "approved_case_input_hashes",
+    "global_attempt_cap_including_retries",
+    "per_flow_attempt_caps",
+    "account_model_access_and_account_pricing_proof",
+    "approved_usd_cap_and_pre_request_cost_bound",
+    "synthetic_data_and_provenance_approval",
+    "stop_conditions_and_failure_reporting"
+  ],
+  "record_config_proposal": {
+    "LLM_MODE": "record",
+    "LLM_PROVIDER": "openai",
+    "OPENAI_MODEL": "gpt-6-luna",
+    "OPENAI_REASONING_EFFORT": "none",
+    "LLM_CACHE": "0"
+  },
+  "cases_proposal": [
+    {
+      "flow": "DEV_ROUTINE",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Hỏi lệ phí phúc khảo",
+        "body": "Cho em hỏi lệ phí phúc khảo một học phần là bao nhiêu?",
+        "received_at": "2026-09-21T09:00:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "90cb79a96ad872b2346f467ee259086ce7d42b35e598896f0c0c4211ec607118",
+      "is_synthetic": true
+    },
+    {
+      "flow": "DEV_AUTHORITY",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Xin phúc khảo trễ",
+        "body": "Em xin được nộp đơn phúc khảo môn X sau thời hạn, nhờ trường chấp thuận ngoại lệ cho em.",
+        "received_at": "2026-09-21T09:00:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "1ce4b0abd119a6a770bb1dd6b0b8ebab197adb540f606a39bb06e6254c347005",
+      "is_synthetic": true
+    },
+    {
+      "flow": "DEV_FACT",
+      "input": {
+        "sender": "synthetic@example.invalid",
+        "subject": "Văn bản rèn luyện áp dụng",
+        "body": "Cho em hỏi văn bản điểm rèn luyện nào áp dụng cho khóa học và học kỳ của em?",
+        "received_at": "2026-09-21T09:00:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "453277535935e7b1c412d9afe171ed5431f128ef01d4741c56848816b61acb4c",
+      "is_synthetic": true
+    },
+    {
+      "flow": "V01",
+      "input": {
+        "sender": "minh.k49@example.edu.vn",
+        "subject": "Quy trình và thang điểm rèn luyện",
+        "body": "Em là sinh viên K49, học kỳ 1 năm học 2026-2027. Cho em hỏi điểm rèn luyện được chấm theo thang điểm nào và kết quả được công bố khi nào?",
+        "received_at": "2026-09-21T09:00:00+07:00",
+        "channel": "verify",
+        "external_id": "V01"
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "6d6b9b491177ac25f00411b59b531987721f2aef856431b5bbbd5ca4b5b26306",
+      "is_synthetic": true
+    },
+    {
+      "flow": "V02",
+      "input": {
+        "sender": "alex.k49@example.edu.vn",
+        "subject": "Course withdrawal deadline",
+        "body": "I am a K49 undergraduate student. What is the deadline and process for withdrawing a registered course in the 2026-2027 academic year?",
+        "received_at": "2026-09-21T09:01:00+07:00",
+        "channel": "verify",
+        "external_id": "V02"
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "cf61ce6833d4fa0c668483972cc0ec29f2a58f89d0d8e67ce31f995e722096a4",
+      "is_synthetic": true
+    },
+    {
+      "flow": "V03",
+      "input": {
+        "sender": "lan.k50@example.edu.vn",
+        "subject": "Xin nộp phúc khảo muộn vì nhập viện",
+        "body": "Em bị nhập viện và đã quá thời hạn công bố điểm. Em xin được nộp hồ sơ phúc khảo môn X muộn, mong Phòng Đào tạo chấp thuận cho trường hợp của em.",
+        "received_at": "2026-09-21T09:02:00+07:00",
+        "channel": "verify",
+        "external_id": "V03"
+      },
+      "nominal_calls": 3,
+      "attempt_cap": 3,
+      "input_sha256": "d27403f8e5675ec55a65f14aae68c1e284dc2223898661502dc485c9dd69a357",
+      "is_synthetic": true
+    },
+    {
+      "flow": "V04",
+      "input": {
+        "sender": "hoa.k48@example.edu.vn",
+        "subject": "Đăng ký ký túc xá",
+        "body": "Em muốn hỏi thủ tục đăng ký ở ký túc xá cho học kỳ tới và thời hạn nộp đơn là khi nào?",
+        "received_at": "2026-09-21T09:03:00+07:00",
+        "channel": "verify",
+        "external_id": "V04"
+      },
+      "nominal_calls": 2,
+      "attempt_cap": 3,
+      "input_sha256": "2bf3c24a6748a7186d4544f19447ec1f2952a583e16fa649a897219b2b4d65a3",
+      "is_synthetic": true
+    },
+    {
+      "flow": "DEV_HUMAN_R11",
+      "input": {
+        "subject": "Synthetic DEV — yêu cầu bản dịch",
+        "body": "学生の質問を確認してください。",
+        "sender": "synthetic@example.invalid",
+        "received_at": "2026-09-21T09:04:00+07:00",
+        "channel": "paste",
+        "external_id": null
+      },
+      "human_decision": {
+        "choice": "Yêu cầu bản dịch",
+        "reason": "Đề nghị bổ sung nội dung bằng tiếng Việt hoặc tiếng Anh để đối chiếu quy định."
+      },
+      "nominal_calls": 1,
+      "attempt_cap": 1,
+      "input_sha256": "8848bcb623b826d14939ce230be1cac0c3da27074d25b8333eb1ab5a57a4b927",
+      "is_synthetic": true
+    }
+  ],
+  "nominal_calls_proposal": 21,
+  "provider_attempt_cap_proposal": 22,
+  "budget_warning": "Six 3-step cases have no retry/repair headroom; quotas cannot transfer between flows",
+  "r11_supplemental_proposal": [
+    {
+      "upstream_flow": "DEV_AUTHORITY",
+      "choice": "Quyết định khác",
+      "reason": "Chuyển đề nghị phúc khảo trễ đến cấp có thẩm quyền; chưa chấp thuận ngoại lệ.",
+      "resume_attempt_cap": 1,
+      "prompt_hash": null,
+      "evidence_ids": null,
+      "status": "REQUIRES_SEPARATE_COORDINATOR_APPROVAL"
+    },
+    {
+      "upstream_flow": "DEV_FACT",
+      "choice": "Quyết định khác",
+      "reason": "Yêu cầu bổ sung khóa học và học kỳ trước khi xác định văn bản áp dụng.",
+      "resume_attempt_cap": 1,
+      "prompt_hash": null,
+      "evidence_ids": null,
+      "status": "REQUIRES_SEPARATE_COORDINATOR_APPROVAL"
+    }
+  ],
+  "pricing_public_documentation": {
+    "source": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+    "verified_on": "2026-10-12",
+    "standard_input_usd_per_million": "0.10",
+    "conservative_input_usd_per_million": "0.125",
+    "output_usd_per_million": "0.50",
+    "account_model_access": "NOT VERIFIED",
+    "account_tier_and_billed_rates": "NOT VERIFIED",
+    "proposed_usd_cap": null,
+    "assumed_input_tokens_per_attempt": 8000,
+    "assumed_output_tokens_per_attempt": 1000,
+    "nominal_estimate_usd": "0.0315",
+    "cap_estimate_usd": "0.033",
+    "estimate_is_a_hard_cap": false
+  },
+  "execution_readiness": {
+    "pre_attempt_ledger": "OFFLINE_UNIT_TESTED_ONLY",
+    "provider_attempt_observer": "NOT INTEGRATED; existing telemetry is post-request",
+    "output_token_bound": "NOT ENFORCED by current production adapter",
+    "cost_guard": "BLOCKED until verified per-request upper cost and account tier are supplied",
+    "sidecar_storage": "APPEND_ONLY; origin still requires original response/source/authorization review",
+    "recording_runner": "NOT ENABLED; no provider execution code in readiness module"
+  },
+  "recovery": {
+    "cassette_files": [],
+    "commits_touching_cassette_directory": [],
+    "m1_candidates": [
+      {
+        "file": "reports\\evidence\\m1\\escalation5_final.json",
+        "sha256": "07869713037ca86aa59b9456a7bb2a55e66c8609cbbf04fe17d0fe3241787fa8",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_result_summary_or_telemetry",
+        "missing_reason": "M1 archive explicitly excludes raw prompt/provider responses"
+      },
+      {
+        "file": "reports\\evidence\\m1\\escalation5_final_console.log",
+        "sha256": "ec2bbba6e4d4ba2e5c0ed7af464ef8326452daacc612a29664aeb8e248d5f6a1",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_result_summary_or_telemetry",
+        "missing_reason": "M1 archive explicitly excludes raw prompt/provider responses"
+      },
+      {
+        "file": "reports\\evidence\\m1\\full15_gate_final.json",
+        "sha256": "81203a4a50eb01c68595555a7f7ce8c3b0060d8e8451ed5e81c9138cc705ddaf",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_result_summary_or_telemetry",
+        "missing_reason": "M1 archive explicitly excludes raw prompt/provider responses"
+      },
+      {
+        "file": "reports\\evidence\\m1\\full15_gate_final_console.log",
+        "sha256": "89a380edf71d05e764e95767c3bcf51ac48d4cbee564c24483364a61f26ff3df",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_result_summary_or_telemetry",
+        "missing_reason": "M1 archive explicitly excludes raw prompt/provider responses"
+      },
+      {
+        "file": "reports\\evidence\\m1\\verify4_final.json",
+        "sha256": "351b9573f35d7953b075c6d96cadf7abd8d6665fbc861d5f5ada523e2142e6e2",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_result_summary_or_telemetry",
+        "missing_reason": "M1 archive explicitly excludes raw prompt/provider responses"
+      },
+      {
+        "file": "reports\\evidence\\m1\\verify4_final_console.log",
+        "sha256": "a6dfaa17a70288abd994cdeb8002feb015549795faf064189cdaf314402f9b7b",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_result_summary_or_telemetry",
+        "missing_reason": "M1 archive explicitly excludes raw prompt/provider responses"
+      }
+    ],
+    "m2_probes": [
+      {
+        "probe": "m2_dev_live_probe_01",
+        "file": "data/validation/m2_dev_live_probe_01/cases/M2DEV-A1/capture.json",
+        "available_here": false,
+        "published_sha256": "411b191cf0ef7fdad273f7b270fac18dd098b88507b5d941919c8b8298a23480",
+        "actual_sha256": null,
+        "checksum_status": "NOT VERIFIED",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_output_and_telemetry; not replay cassette"
+      },
+      {
+        "probe": "m2_dev_live_probe_02",
+        "file": "data/validation/m2_dev_live_probe_02/cases/M2DEV-A4/capture.json",
+        "available_here": false,
+        "published_sha256": "ddd281c0e0368c41391d40799994077eb6489841b2821a90ce3cde6ea403eb39",
+        "actual_sha256": null,
+        "checksum_status": "NOT VERIFIED",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_output_and_telemetry; not replay cassette"
+      },
+      {
+        "probe": "m2_dev_live_probe_03",
+        "file": "data/validation/m2_dev_live_probe_03/cases/M2DEV-A4/capture.json",
+        "available_here": false,
+        "published_sha256": "b5dfa108bb7beac8417acc2b61328a07605dbd53362970d85ba3dc9b4c066810",
+        "actual_sha256": null,
+        "checksum_status": "NOT VERIFIED",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_output_and_telemetry; not replay cassette"
+      },
+      {
+        "probe": "m2_dev_live_probe_04",
+        "file": "data/validation/m2_dev_live_probe_04/cases/M2DEV-B1/capture.json",
+        "available_here": false,
+        "published_sha256": "268e586ac07d250c0035e5a6e8ac001fd22787d8c20744c34ad113b0c4b7b587",
+        "actual_sha256": null,
+        "checksum_status": "NOT VERIFIED",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_output_and_telemetry; not replay cassette"
+      },
+      {
+        "probe": "m2_dev_live_probe_05",
+        "file": "data/validation/m2_dev_live_probe_05/cases/M2DEV-B4/capture.json",
+        "available_here": false,
+        "published_sha256": "9449dc7385535aeaddbc1851841c2e9dfc530ba5fc4769060ca4efea9f6d50c5",
+        "actual_sha256": null,
+        "checksum_status": "NOT VERIFIED",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_output_and_telemetry; not replay cassette"
+      },
+      {
+        "probe": "m2_dev_live_probe_06",
+        "file": "data/validation/m2_dev_live_probe_06/cases/M2DEV-B3/capture.json",
+        "available_here": false,
+        "published_sha256": "1e01863ec58b36836886b90531fe0897f96750b27990ebe9234187b93bf05910",
+        "actual_sha256": null,
+        "checksum_status": "NOT VERIFIED",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_output_and_telemetry; not replay cassette"
+      },
+      {
+        "probe": "m2_dev_live_probe_07",
+        "file": "data/validation/m2_dev_live_probe_07/cases/M2DEV-A2/capture.json",
+        "available_here": false,
+        "published_sha256": "a8b0b0eb4f6f8ae83c293e76823fea75da6e08d742a27c55e90d29d06802845f",
+        "actual_sha256": null,
+        "checksum_status": "NOT VERIFIED",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_output_and_telemetry; not replay cassette"
+      },
+      {
+        "probe": "m2_dev_live_probe_08",
+        "file": "data/validation/m2_dev_live_probe_08/cases/M2DEV-A4/capture.json",
+        "available_here": false,
+        "published_sha256": "1a59fb2b2873c1873a58f328602e631f17d639597d8d09e9cddb08aeed83ce11",
+        "actual_sha256": null,
+        "checksum_status": "NOT VERIFIED",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_output_and_telemetry; not replay cassette"
+      },
+      {
+        "probe": "m2_dev_live_probe_09",
+        "file": "data/validation/m2_dev_live_probe_09/cases/M2DEV-B4/capture.json",
+        "available_here": false,
+        "published_sha256": "4181f55bce09849f3ef7c8a8c4864d98e053daf49327d7d7ebc3923f35822a29",
+        "actual_sha256": null,
+        "checksum_status": "NOT VERIFIED",
+        "classification": "NOT VERIFIED",
+        "kind": "historical_output_and_telemetry; not replay cassette"
+      }
+    ],
+    "coordinator_clarification": "116 was offline tests PASS, not cassette inventory; 9 M2 captures attested",
+    "handoff_file_available_here": true,
+    "handoff_sha256": "3afde449b9eaa87bc905706dc93dc11b367903c7ff1d2fd692b7ff6a44605d80",
+    "m2_conversion": "SEPARATE_TASK_AND_REVIEW_REQUIRED; not performed"
+  },
+  "actual_provider_attempts": 0,
+  "actual_tokens": 0,
+  "actual_cost_usd": "0",
+  "cassette_conversion_count": 0
+}
