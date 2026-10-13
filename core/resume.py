@@ -78,6 +78,29 @@ def _contradicts_human_decision(body: str, choice: str, reason: str) -> bool:
     return any(phrase in extra for phrase in opposites)
 
 
+def _choice_authorizes_authority_claim(choice: str) -> bool:
+    """Chỉ lựa chọn rõ ràng của người mới có thể cấp quyền cho claim phê duyệt."""
+    normalized_choice = " ".join(mask_pii(choice).casefold().split())
+    if any(
+        phrase in normalized_choice
+        for phrase in (
+            "từ chối",
+            "không chấp thuận",
+            "chưa chấp thuận",
+            "không đồng ý",
+            "không cho phép",
+            "chưa cho phép",
+            "không duyệt",
+        )
+    ):
+        return False
+    for prefix in ("có,", "có:", "có -"):
+        if normalized_choice.startswith(prefix):
+            normalized_choice = normalized_choice[len(prefix) :].lstrip()
+            break
+    return normalized_choice.startswith(("chấp thuận", "đồng ý", "cho phép", "đã được duyệt"))
+
+
 def _validated_candidate(
     data: Mapping[str, object], choice: str, reason: str, evidence: EvidenceResult
 ) -> list[str]:
@@ -87,18 +110,9 @@ def _validated_candidate(
     citations = _citations(data.get("citations"), evidence)
     candidate = DraftReply("candidate", mask_pii(body), citations, False, [])
     trusted = DraftReply("trusted", f"{mask_pii(choice)}\n{mask_pii(reason)}", citations, False, [])
-    normalized_trusted = trusted.body.casefold()
-    negative_authority = any(
-        phrase in normalized_trusted
-        for phrase in ("từ chối", "không chấp thuận", "chưa chấp thuận", "không đồng ý")
-    )
-    human_authorizes = not negative_authority and any(
-        phrase in normalized_trusted
-        for phrase in ("chấp thuận", "đồng ý", "cho phép", "đã được duyệt")
-    )
     if _contradicts_human_decision(body, choice, reason):
         raise ValueError("Bản nháp mâu thuẫn với quyết định của chuyên viên.")
-    if _authority_failure(candidate) and not (human_authorizes or _authority_failure(trusted)):
+    if _authority_failure(candidate) and not _choice_authorizes_authority_claim(choice):
         raise ValueError("Bản nháp thêm kết luận vượt thẩm quyền của chuyên viên.")
     if _unsupported_value_failure(candidate, evidence, trusted.body):
         raise ValueError("Bản nháp thêm dữ kiện không có trong quyết định hoặc căn cứ.")

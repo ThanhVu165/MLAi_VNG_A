@@ -228,3 +228,36 @@ def test_authority_wording_is_allowed_only_from_positive_human_decision(
     assert case is not None and case["status"] == CaseStatus.PENDING_APPROVAL
     assert draft is not None and draft["grounded"] == 1
     assert choice in draft["body"] and reason in draft["body"]
+
+
+def test_authority_wording_is_not_authorized_by_reason_only(replay_r11, monkeypatch) -> None:
+    case_id, _ = replay_r11
+    choice = "Yêu cầu bổ sung"
+    reason = "Hồ sơ tham chiếu trước đây đã được duyệt, nhưng case này còn thiếu tài liệu."
+    db.execute(
+        "UPDATE human_decisions SET choice = ?, reason = ? WHERE case_id = ?",
+        (choice, reason, case_id),
+    )
+    monkeypatch.setattr(
+        "core.resume.call_json",
+        lambda *args, **kwargs: LLMResult(
+            True,
+            {"subject": "Kết quả", "body": "Yêu cầu của bạn đã được duyệt.", "citations": []},
+            None,
+            0,
+            "test",
+            "test",
+        ),
+    )
+
+    worker_tick()
+
+    case = db.fetch_one("SELECT status FROM cases WHERE case_id = ?", (case_id,))
+    job = db.fetch_one("SELECT state FROM case_jobs WHERE case_id = ?", (case_id,))
+    drafts = db.fetch_one("SELECT COUNT(*) AS n FROM drafts WHERE case_id = ?", (case_id,))
+    actions = [event.action for event in events_for_case(case_id)]
+    assert case is not None and case["status"] == CaseStatus.HUMAN_DECIDED
+    assert job is not None and job["state"] == "failed"
+    assert drafts is not None and drafts["n"] == 0
+    assert actions.count("CASE_ERROR") == 1
+    assert "CASE_RESUMED" not in actions and "HUMAN_APPROVED_SEND" not in actions
