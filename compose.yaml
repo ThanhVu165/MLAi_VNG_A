@@ -22,7 +22,7 @@ services:
   dev:
     <<: *app
     ports:
-      - "127.0.0.1:8511:8511"
+      - "127.0.0.1:${DEV_HOST_PORT:-8511}:8511"
     volumes:
       - dev_data:/runtime
 
@@ -30,7 +30,7 @@ services:
     <<: *app
     profiles: [study]
     ports:
-      - "127.0.0.1:8512:8511"
+      - "127.0.0.1:${STUDY_HOST_PORT:-8512}:8511"
     volumes:
       - study_data:/runtime
 
@@ -38,7 +38,7 @@ services:
     <<: *app
     profiles: [demo]
     ports:
-      - "127.0.0.1:8513:8511"
+      - "127.0.0.1:${DEMO_HOST_PORT:-8513}:8511"
     volumes:
       - demo_data:/runtime
 
