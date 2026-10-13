@@ -1,9 +1,105 @@
 # M3-T07 — Remediation R11 Human Decision/Resume
 
-## 0. Change Request — MLAI review / PR #47
+## 0. Final Safety Correction — review-only authority / PR #47
 
-**CURRENT RESULT: READY_FOR_FINAL_REVIEW sau khi correction được push lên PR #47; chưa merge,
-chưa DONE và không phải product gate PASS.**
+**CURRENT RESULT: READY_FOR_FINAL_REVIEW sau khi final correction được push; chưa merge, chưa
+DONE và không phải product gate PASS.**
+
+### Preflight
+
+- Project Coordinator trực tiếp tiếp nhận Owner/final-review responsibility và cấp scope correction
+  cuối cho R11 trong chat ngày 14/10/2026; Codex không tự nghiệm thu thay Coordinator.
+- Reviewed SHA, remote branch và `refs/pull/47/head` tại preflight:
+  `d3804549242fb48c6b1b6cbffc4cc25f50b9806c`.
+- Final correction code/test SHA: `8237e7c5fc1e703cd31edea6ffbaf8a4a4a8d76f` —
+  `fix(m3-t07): reject review-only authority claims`.
+- Branch `sprint/m3-t07-safety-remediation`; PR
+  [#47](https://github.com/ThanhVu165/MLAi_VNG_A/pull/47) nhắm `dev`.
+- `origin/dev=348058f9c7c0f9d81ab38870271b4260fadbb79f`; merge base/baseline vẫn
+  `9dfb33494cbf28e05651508ecfed145e5cc70fe7`. Working tree sạch; không rebase,
+  merge, force-push hoặc đổi baseline.
+
+### Before/after regression và root cause
+
+Case mới dùng đúng dữ liệu Coordinator yêu cầu:
+
+- choice: `Đồng ý xem xét thêm`
+- reason: `Cần kiểm tra tài liệu trước khi quyết định.`
+- candidate: `Yêu cầu của bạn đã được duyệt.`
+
+Trên reviewed SHA, regression **FAIL**: actual `PENDING_APPROVAL`, expected `HUMAN_DECIDED`.
+Helper coi mọi choice bắt đầu bằng `đồng ý` là affirmative authority, nên đồng ý một bước xem xét
+bị nâng thành phê duyệt case. JUnit SHA-256:
+`dfdf915737f07f44e67cbbf1e7559962ec022e8a23aca6b53fab1ea13571847e`.
+
+Fix thu hẹp parser: `đồng ý` chung chung không tự cấp quyền; nếu theo sau bởi quyết định trực tiếp
+`chấp thuận`/`phê duyệt`/`cho phép` thì mới được xét tiếp. Các qualifier chưa phải quyết định cuối
+`xem xét`, `kiểm tra`, `đánh giá`, `thẩm định` luôn fail-closed. Positive choice `Chấp thuận` vẫn
+PASS. Không đổi validator khác, prompt/schema/cassette/replay identity, interface, DB schema,
+workflow, audit action, policy hoặc LLM call budget.
+
+Sau fix, regression **PASS**: case giữ `HUMAN_DECIDED`, job `failed`, zero draft, một
+`CASE_ERROR`, không `CASE_RESUMED`, approval hoặc send.
+
+### Validation trên exact SHA `8237e7c`
+
+| Check | Kết quả | Evidence |
+|---|---|---|
+| Review-only authority regression | **PASS — 1/1** | Expected fail-closed được giữ nguyên |
+| Focused M3-T07 | **PASS — 10/10**, 0.56s | JUnit SHA-256 `7676de57563ac66d639ef4f8fa4891fb1f4995fc6d529cffbcc3d3ac8bc8eb26` |
+| Targeted blast radius | **PASS — 136/136**, 1 warning, 6.77s | JUnit SHA-256 `d54dd6cce26a9a587d87ecab4859e8cd6e0f3fc05d64f0613d45f866a2febe95` |
+| Black | **PASS** | Hai file code/test đúng format |
+| Ruff | **PASS** | Không có finding |
+| Diff/scope | **PASS** | Chỉ ba file allowed; không whitespace error |
+| Mypy | **FAIL — baseline** | 4 lỗi `infra/llm.py:459,484,504,510`; không có lỗi M3-T07 |
+| Full suite | **NOT RUN** | Không nâng targeted evidence thành full-suite PASS |
+
+Environment: Python 3.11.17, SQLite 3.53.1, `LLM_MODE=replay`, `LLM_CACHE=0`, model
+`gpt-6-luna`, synthetic SQLite/temp ngoài repository. Cassette R11 không đổi, SHA-256
+`1f0df8886213ba84b7985e773ee949d0742be844afbd5e66550f7d97c4584417`.
+Không LIVE/API/recording/email thật.
+
+### Safety invariants và AC1–AC7
+
+| AC | Disposition | Evidence / giới hạn |
+|---|---|---|
+| AC1 | **PASS** | Review-only bypass tái hiện trước fix; expected an toàn không đổi |
+| AC2 | **PASS** | Cùng regression FAIL trước fix, PASS sau fix; root cause và fix trực tiếp tương ứng |
+| AC3 | **PASS** | R11 replay hợp lệ, choice/reason/actor, một draft, `PENDING_APPROVAL`, approval/audit/restart/persistence/idempotency nằm trong 10 focused/136 targeted PASS |
+| AC4 | **PASS** | Review-only và unsafe candidates giữ zero draft/no auto-send; stale/double approval vẫn bị chặn |
+| AC5 | **PASS** | Positive `Chấp thuận` PASS; negative/reason-only/review-only, citation bịa, dữ kiện không hỗ trợ và contradiction fail-closed |
+| AC6 | **PASS** | Black/Ruff/diff/scope/targeted PASS; mypy baseline FAIL và full suite NOT RUN được ghi đúng |
+| AC7 | **PASS — handoff prepared** | Report, evidence hashes, rollback/risk, self-review và PR #47 đầy đủ; Coordinator acceptance còn pending |
+
+### Self-review, risks, rollback và handoff
+
+- Self-review: **COMPLETED**. Final correction diff từ `d380454` chỉ gồm `core/resume.py`,
+  targeted test và report này; secret scan không phát hiện credential/PII thật.
+- Parser cố ý bảo thủ: choice chỉ đồng ý quy trình hoặc choice tùy biến mơ hồ có thể cần chuyên
+  viên chọn/ghi quyết định phê duyệt rõ ràng; hệ thống fail-closed thay vì suy quyền.
+- Kiểm tra ngôn ngữ vẫn là bounded deterministic guard, không chứng minh mọi diễn đạt tiếng Việt;
+  final human approval và các guard hiện hữu tiếp tục là lớp bảo vệ bắt buộc.
+- Rollback bằng revert final correction code/test và report commit; không migration, cassette
+  re-record, policy/corpus rollback hoặc data transform.
+- R11 targeted PASS không phải complete product E2E, LIVE evidence hoặc product gate PASS.
+
+Handoff content để Coordinator sử dụng; Codex không tự đổi Trello DONE:
+
+```text
+M3-T07 FINAL SAFETY CORRECTION / PR #47
+RESULT: READY_FOR_FINAL_REVIEW
+CORRECTION SHA: 8237e7c5fc1e703cd31edea6ffbaf8a4a4a8d76f
+REGRESSION: “Đồng ý xem xét thêm” FAIL trước fix (PENDING_APPROVAL bypass) -> PASS fail-closed
+VALIDATION: 10/10 focused PASS; 136/136 targeted PASS; Black/Ruff/diff/scope PASS
+KNOWN: mypy FAIL 4 lỗi baseline infra/llm.py; full suite NOT RUN; LIVE/API/email=0
+SAFETY: R11 one draft/PENDING_APPROVAL/no auto-send; approval/audit/restart/persistence/idempotency PASS
+LIMIT: targeted R11 PASS không phải product gate hoặc complete LIVE E2E PASS
+REQUEST: Coordinator final-review, quyết định acceptance/merge; chưa chuyển DONE.
+```
+
+## 0A. Prior Change Request — MLAI review / PR #47
+
+**PRIOR RESULT:** correction `37619dd` đã được push và thay thế bởi final correction ở Mục 0.
 
 ### Preflight correction
 
@@ -65,7 +161,7 @@ Không LIVE/API/recording/email thật.
 | AC6 | **PASS** | Report ghi PR #47, reviewed/correction SHA, validation mới và blocker cũ đã giải quyết |
 | AC7 | **PASS — handoff prepared** | Scope/self-review/secret scan và evidence hoàn tất; final reviewer/Coordinator acceptance còn pending |
 
-### Owner self-review và Trello handoff content
+### Prior owner self-review và Trello handoff content
 
 - **Self-review: COMPLETED.** Full correction diff từ reviewed SHA chỉ sửa ba file allowed;
   production change giới hạn ở authority gate trong `core/resume.py`.
@@ -165,7 +261,7 @@ draft.
 | File | Thay đổi |
 |---|---|
 | `core/resume.py` | Kiểm tra candidate và render draft xác định từ quyết định đã lưu; giữ safety guards |
-| `tests/test_m3_t07_safety_remediation.py` | 9 targeted cases: replay R11, idempotency, authority bypass, unsafe candidates, human conflict, approval/send/restart/persistence/audit |
+| `tests/test_m3_t07_safety_remediation.py` | 10 targeted cases: replay R11, idempotency, authority bypass, unsafe candidates, human conflict, approval/send/restart/persistence/audit |
 | `reports/sprints/M3_T07_SAFETY_REMEDIATION.md` | Evidence và handoff này |
 
 Không đổi production file nào khác, cassette, manifest, corpus, policy, DB schema hoặc assertion
@@ -276,7 +372,7 @@ Trên synthetic SQLite của test R11:
 | AC4 | **PASS** | `HUMAN_DECIDED -> PENDING_APPROVAL`; không auto-send/dispatch trước approval |
 | AC5 | **PASS trong targeted cases** | choice/reason/actor giữ nguyên; 5 unsafe candidate classes và edited contradiction fail-closed |
 | AC6 | **PASS cho R11 synthetic/replay chain; product E2E NOT CLAIMED** | Preview, explicit simulated approval/send, fresh-process restart, SQLite persistence và audit có evidence; không LIVE/email |
-| AC7 | **PASS** | Correction run 135 targeted regressions PASS; stale/double approval, idempotency, payload binding và atomicity suites gồm trong selection |
+| AC7 | **PASS** | Final correction run 136 targeted regressions PASS; stale/double approval, idempotency, payload binding và atomicity suites gồm trong selection |
 | AC8 | **READY_FOR_FINAL_REVIEW** | Code/test commits, report, diff review, tested SHA, rollback/risk và PR #47 đã có; independent review/Coordinator acceptance pending |
 
 ## 8. Risks, giới hạn và rollback
@@ -285,7 +381,7 @@ Trên synthetic SQLite của test R11:
   minh hiểu mọi mâu thuẫn ngôn ngữ tự nhiên. Rủi ro được giới hạn bằng việc không dùng prose LLM
   trong draft cuối và vẫn yêu cầu human approval.
 - Authority helper cố ý chỉ chấp nhận affirmative decision rõ ràng ở đầu `choice`; lựa chọn tùy
-  biến mơ hồ hoặc chỉ yêu cầu cấp khác xem xét sẽ fail-closed thay vì suy quyền từ `reason`.
+  biến mơ hồ, chỉ đồng ý quy trình hoặc yêu cầu cấp khác xem xét sẽ fail-closed thay vì suy quyền.
 - Candidate prose được validate rồi loại khỏi nội dung cuối. Điều này ưu tiên nguồn quyết định đã
   lưu; reviewer cần xác nhận trade-off UX/wording là phù hợp contract.
 - Test dùng actor/local, DB/input synthetic và simulated send. Không có evidence provider, inbox,
