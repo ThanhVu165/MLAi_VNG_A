@@ -8,8 +8,8 @@
 - SHA dùng để build/test image: `81f340c72d9b75567920299a1761cf762311c233`
 - Image: `exodia:m6-t04-81f340c`
 - Image ID: `sha256:8e408bd7aa6462bb412a8211b12075c84abf795cc7d35462660c7d892b9e40b8`
-- Publish handoff: được Coordinator cho phép đẩy đúng branch và tạo Draft PR; URL/final
-  SHA sẽ được xác nhận sau khi GitHub chấp nhận push
+- Remote branch: `https://github.com/ThanhVu165/MLAi_VNG_A/tree/sprint/m6-t04-deployment-acceptance`
+- Draft PR: `https://github.com/ThanhVu165/MLAi_VNG_A/pull/51`
 - Public hosting, LIVE LLM, API ngoài và email thật: **0**
 
 Không được dùng image trên để triển khai hoặc làm image nghiệm thu. Container DEMO local đã
@@ -106,7 +106,7 @@ volume synthetic. Runbook phải yêu cầu export lại biến ở mỗi PowerS
 | AC5 — Runtime | PASS có giới hạn | Critical 4/4, Verify 4/4, 23/23 replay hit, miss 0, LIVE 0 trên SHA/image nêu trên. |
 | AC6 — Sessions | NOT VERIFIED | AppTest hai session đạt 2/2; browser thật không chạy được vì Computer Use kernel lỗi trước khởi tạo. |
 | AC7 — Safety | FAIL / BLOCKED | Loopback/replay/network-disabled đạt, nhưng image secret hygiene thất bại. |
-| AC8 — Evidence | PARTIAL | Report/runbook/config/evidence local có; chưa push, chưa PR do safety gate. |
+| AC8 — Evidence | PARTIAL | Config/runbook/report đã publish qua Draft PR #51; evidence cuối vẫn thiếu do safety gate. |
 
 ## Validation log
 
@@ -124,7 +124,7 @@ volume synthetic. Runbook phải yêu cầu export lại biến ở mỗi PowerS
 | Hai browser context thật | NOT VERIFIED — kernel lỗi `failed to write kernel assets: The system cannot find the path specified. (os error 3)` |
 | Quét secret/artifact trong image | **FAIL — safety stop** |
 | Reset/recreate cuối | NOT RUN — dừng theo Coordinator gate |
-| Push / PR | PENDING — chỉ publish checkpoint BLOCKED, không phải nghiệm thu |
+| Push / PR | PASS — Draft PR #51, chỉ publish checkpoint BLOCKED, không phải nghiệm thu |
 
 ## Thay đổi local và self-review
 
