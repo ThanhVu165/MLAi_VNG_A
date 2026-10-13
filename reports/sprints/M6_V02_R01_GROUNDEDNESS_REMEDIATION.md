@@ -8,7 +8,10 @@
 - Trạng thái candidate: `READY_FOR_COORDINATOR_REVIEW`
 - Branch: `sprint/m6-v02-r01-groundedness`
 - Baseline SHA: `8d79492a8354aa2b6e0f92dce748a908e70a1506`
-- Tested source state: baseline trên cộng đúng diff của bốn file được phép; production file có SHA-256 `d5c3a552ad37bcad150ee910eff5135c090f89e8e189516a36ad0c8ee5dfffaa`
+- Original implementation SHA: `0d970bd4271ec34d721c133d645aa66f33904f3b`
+- Correction tested SHA: `1696a3c415c44e53eb790b6e99c7c38ce22e3fde`
+- Original tested source state: baseline trên cộng đúng diff của bốn file được phép; production file có SHA-256 `d5c3a552ad37bcad150ee910eff5135c090f89e8e189516a36ad0c8ee5dfffaa`
+- Correction production SHA-256: `22c53d019a8b6aba011aa75a1855eda2c39c8ac50e279023d672fe4cd3109a6a`
 - Final SHA: xem commit/PR và handoff sau khi report này được commit; commit không thể tự chứa SHA của chính nó
 - LIVE/API/email: **0**
 
@@ -16,6 +19,41 @@ V02 đã đổi từ expected `AUTO_REPLY/P05`, actual
 `ESCALATE/FACT_UNRESOLVED/P04`, `groundedness_failed:number` thành actual
 `AUTO_REPLY/P05`. V01–V04 đạt **4/4 semantic PASS** trên product pipeline/replay thật,
 **12/12 replay hits, 0 misses**, không sửa expected, cassette hoặc Gold.
+
+## Correction review 2026-10-14 — mismatch năm học email/draft
+
+Negative regression được viết và chạy trước correction trên đúng HEAD
+`0d970bd4271ec34d721c133d645aa66f33904f3b`:
+
+- Email hỏi năm học `2025-2026`.
+- Draft trả lời năm học `2026-2027`.
+- Evidence được cite có breadcrumb năm học `2026-2027`.
+- Expected: `ESCALATE/FACT_UNRESOLVED/P04`, `groundedness_failed:number`.
+- Actual before: `decision=None`, `grounded=True`, `failed_checks=[]` — **FAIL**, lỗi tái hiện.
+
+Correction nhỏ nhất tại Ground Guard dùng lại matcher năm học đã duyệt: khi email nêu ít nhất
+một cặp năm học rõ ràng, draft không được khẳng định cặp năm học nằm ngoài tập năm học trong
+email. Breadcrumb được cite vẫn có thể ground đúng cặp năm của draft, nhưng không còn được dùng
+để hợp thức hóa việc trả lời sai năm học người dùng yêu cầu. Không đổi public interface, policy,
+routing, citation/authority logic, cassette, Gold hoặc expected.
+
+After trên tested SHA `1696a3c415c44e53eb790b6e99c7c38ce22e3fde`:
+
+- Negative regression: **PASS** — `ESCALATE/FACT_UNRESOLVED/P04`,
+  `groundedness_failed:number`; draft giữ nguyên và `grounded=False`.
+- Targeted `tests/test_semantic_validator_compat.py tests/test_guards.py`: **136 PASS**.
+- Offline Verify V01–V04, `LLM_MODE=replay`, cache off, DB tạm riêng: **4/4 PASS**;
+  V01/V02 `AUTO_REPLY/P05`, V03 `ESCALATE/AUTHORITY_REQUIRED/P01`,
+  V04 `ESCALATE/OUT_OF_POLICY/P02`.
+- Black production file, Ruff targeted và `git diff --check`: **PASS**.
+- LIVE/API/email: **0/0/0**; không sửa cassette/Gold/expected.
+
+Self-review correction: production delta chỉ tách matcher năm học hiện hữu thành helper dùng
+chung và thêm một điều kiện fail-closed trước numeric grounding. V02 gốc vẫn PASS; numeric,
+citation và authority safety regressions vẫn PASS. Residual risk giữ nguyên: cách diễn đạt năm
+học ngoài ba pattern đã khai báo sẽ fail-closed theo numeric guard thay vì được normalize. Không
+cần nới scope. Remaining AC: Coordinator final-review và quyết định merge; task chưa được tuyên
+bố DONE.
 
 ## Môi trường và provenance
 
