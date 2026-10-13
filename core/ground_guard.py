@@ -77,22 +77,23 @@ def _without_grounded_clocks(body: str, evidence_text: str) -> str:
     return CLOCK_PATTERN.sub(replace_clock, body)
 
 
+def _academic_year_pairs(text: str) -> set[tuple[str, str]]:
+    return {
+        (match["start"], match["end"])
+        for pattern in ACADEMIC_YEAR_PATTERNS
+        for match in pattern.finditer(text)
+    }
+
+
 def _without_grounded_academic_years(body: str, draft: DraftReply, evidence: EvidenceResult) -> str:
     """Chỉ bỏ cặp năm học có đúng ngữ cảnh trong breadcrumb đã được trích dẫn."""
-
-    def year_pairs(text: str) -> set[tuple[str, str]]:
-        return {
-            (match["start"], match["end"])
-            for pattern in ACADEMIC_YEAR_PATTERNS
-            for match in pattern.finditer(text)
-        }
 
     cited_ids = set(draft.citations)
     grounded_pairs = {
         pair
         for chunk in evidence.chunks
         if chunk.chunk_id in cited_ids
-        for pair in year_pairs(chunk.breadcrumb)
+        for pair in _academic_year_pairs(chunk.breadcrumb)
     }
     for pattern in ACADEMIC_YEAR_PATTERNS:
         body = pattern.sub(
@@ -114,6 +115,9 @@ def _unsupported_value_failure(
 ) -> bool:
     evidence_text = "\n".join([extra_text] + [chunk.text for chunk in evidence.chunks]).casefold()
     body = CITATION_MARKER_PATTERN.sub("", draft.body)
+    requested_academic_years = _academic_year_pairs(input_text)
+    if requested_academic_years and _academic_year_pairs(body) - requested_academic_years:
+        return True
     values = {
         match.group().casefold().rstrip(".,/")
         for pattern in (ARTICLE_PATTERN, FORM_PATTERN)
