@@ -2,7 +2,7 @@
 
 ## 1. Kết luận
 
-**RESULT: READY_FOR_REVIEW (phạm vi M3-T07); chưa DONE, chưa merge, không phải product gate PASS.**
+**RESULT: BLOCKED ở bước GitHub handoff; code/evidence đạt targeted validation nhưng chưa có PR.**
 
 R11 FAIL đã được tái hiện trên baseline, nguyên nhân đã được xác nhận và bản sửa nhỏ nhất đã
 được kiểm chứng offline trên code commit `cd989677b28352fc29239cab6c85b5285260c790`.
@@ -11,9 +11,15 @@ R11 hiện tạo đúng một draft an toàn từ quyết định đã lưu, chu
 SQLite persistence và audit đều có targeted evidence. Không có LIVE/API, recording, email thật
 hoặc dữ liệu người tham gia.
 
-Kết luận chỉ áp dụng cho chuỗi R11 synthetic/replay được mô tả tại đây. Replay hit và pytest xanh
-không chứng minh complete product E2E, vận hành thật hoặc GO-STUDY/LIVE. F01, V02 và aggregate
-harness ngoài scope, không được sửa hay tái phân loại.
+Kết luận kỹ thuật chỉ áp dụng cho chuỗi R11 synthetic/replay được mô tả tại đây. Replay hit và
+pytest xanh không chứng minh complete product E2E, vận hành thật hoặc GO-STUDY/LIVE. F01, V02 và
+aggregate harness ngoài scope, không được sửa hay tái phân loại.
+
+Push không force lên `origin/sprint/m3-t07-safety-remediation` đã được thử sau validation nhưng
+dừng với `fatal: could not read Username for 'https://github.com': Device not configured`. Theo
+Stop Condition, không lưu credential của chủ máy và không bypass xác thực. Vì PR là deliverable bắt
+buộc, task chưa đủ điều kiện `READY_FOR_REVIEW` cho đến khi người có GitHub authorization push các
+commit local và mở PR nhắm `dev`.
 
 ## 2. Authorization, baseline và preflight
 
@@ -182,7 +188,7 @@ Trên synthetic SQLite của test R11:
 | AC5 | **PASS trong targeted cases** | choice/reason/actor giữ nguyên; 5 unsafe candidate classes và edited contradiction fail-closed |
 | AC6 | **PASS cho R11 synthetic/replay chain; product E2E NOT CLAIMED** | Preview, explicit simulated approval/send, fresh-process restart, SQLite persistence và audit có evidence; không LIVE/email |
 | AC7 | **PASS** | 134 targeted regressions PASS; stale/double approval, idempotency, payload binding và atomicity suites gồm trong selection |
-| AC8 | **READY_FOR_REVIEW** | Code/test commit, report, diff review, tested SHA, rollback/risk; PR/independent review vẫn là handoff step |
+| AC8 | **BLOCKED** | Code/test commit, report, diff review, tested SHA, rollback/risk đã có; push/PR thiếu vì GitHub credential không sẵn có |
 
 ## 8. Risks, giới hạn và rollback
 
@@ -206,9 +212,12 @@ Trên synthetic SQLite của test R11:
 - Reviewer cần kiểm tra `core/resume.py`, targeted test, giới hạn semantic ở Mục 8 và evidence hash.
 - PR phải nhắm `dev`, không force-push, không merge trong task này.
 - Coordinator quyết định acceptance/DONE và mọi product gate; báo cáo này không thay quyết định đó.
+- Blocker: GitHub HTTPS không có username/credential trên máy. Ảnh hưởng: remote branch và PR chưa
+  tồn tại. Owner: người có quyền GitHub push các commit local và mở PR vào `dev`. Coordinator cần
+  xác nhận sau khi PR hiện diện; không cần thay đổi production/contract để giải blocker này.
 
 **E2E STATUS:** R11 replay/synthetic human-control chain PASS trong phạm vi targeted; complete
 product E2E và LIVE **NOT VERIFIED / NOT AUTHORIZED**.
 
-**PR:** pending push/create; sẽ cập nhật handoff theo trạng thái GitHub thực tế, không lưu credential
-trên máy nếu xác thực không sẵn có.
+**PR:** **NOT CREATED / BLOCKED** — push bị từ chối do credential không sẵn có; không lưu credential
+trên máy, không force-push, không merge.
