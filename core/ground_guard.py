@@ -20,6 +20,20 @@ CLOCK_PATTERN = re.compile(
     r"(?P<period>[ap])\.?m\.?(?!\w)",
     re.IGNORECASE,
 )
+ACADEMIC_YEAR_PATTERNS = (
+    re.compile(
+        r"\bnăm\s+học\s+(?P<start>\d{4})\s*[-–—/]\s*(?P<end>\d{4})\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?P<start>\d{4})\s*[-–—/]\s*(?P<end>\d{4})\s+academic\s+year\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bacademic\s+year\s+(?P<start>\d{4})\s*[-–—/]\s*(?P<end>\d{4})\b",
+        re.IGNORECASE,
+    ),
+)
 FORBIDDEN_AUTHORITY_PHRASES = (
     "chúng tôi đồng ý",
     "đã được duyệt",
@@ -63,6 +77,33 @@ def _without_grounded_clocks(body: str, evidence_text: str) -> str:
     return CLOCK_PATTERN.sub(replace_clock, body)
 
 
+def _without_grounded_academic_years(body: str, draft: DraftReply, evidence: EvidenceResult) -> str:
+    """Chỉ bỏ cặp năm học có đúng ngữ cảnh trong breadcrumb đã được trích dẫn."""
+
+    def year_pairs(text: str) -> set[tuple[str, str]]:
+        return {
+            (match["start"], match["end"])
+            for pattern in ACADEMIC_YEAR_PATTERNS
+            for match in pattern.finditer(text)
+        }
+
+    cited_ids = set(draft.citations)
+    grounded_pairs = {
+        pair
+        for chunk in evidence.chunks
+        if chunk.chunk_id in cited_ids
+        for pair in year_pairs(chunk.breadcrumb)
+    }
+    for pattern in ACADEMIC_YEAR_PATTERNS:
+        body = pattern.sub(
+            lambda match: (
+                " " if (match["start"], match["end"]) in grounded_pairs else match.group()
+            ),
+            body,
+        )
+    return body
+
+
 def _unsupported_value_failure(
     draft: DraftReply,
     evidence: EvidenceResult,
@@ -86,6 +127,7 @@ def _unsupported_value_failure(
         normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(evidence_text)
     }
     numeric_body = _without_grounded_clocks(body, evidence_text)
+    numeric_body = _without_grounded_academic_years(numeric_body, draft, evidence)
     numeric_body = _without_input_course_code(numeric_body, course_code, input_text)
     draft_numbers = {
         normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(numeric_body)
