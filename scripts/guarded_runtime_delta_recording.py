@@ -89,6 +89,8 @@ def validate_delta_go(go: dict, sha: str, base: dict) -> tuple[AttemptBudget, De
         raise recording.RecordingStop("SOURCE_OR_FINGERPRINT_NOT_APPROVED")
     if go.get("config") != PROPOSED_CONFIG or go.get("repair_prompt_hashes") != TARGETS:
         raise recording.RecordingStop("CONFIG_OR_EXACT_REPAIR_SCOPE_MISMATCH")
+    if go.get("input_hashes") != base.get("input_hashes"):
+        raise recording.RecordingStop("BASE21_INPUT_HASHES_NOT_APPROVED")
     if (
         go.get("prior_attempts") != 21
         or usd(go.get("prior_reserved_usd")) != usd(base["reserved_cost_upper_usd"])

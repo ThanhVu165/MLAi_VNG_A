@@ -103,6 +103,7 @@ def test_delta_go_carries_prior_reservation_and_caps_cumulative_cost(
     monkeypatch.setattr(delta, "source_fingerprints", lambda: {"source": "hash"})
     base = {
         "reserved_cost_upper_usd": "7.5285",
+        "input_hashes": {"DEV_AUTHORITY": "input-hash"},
         "flow_attempts": {
             name: cap - (1 if name in TARGETS else 0)
             for name, cap in FINAL_FLOW_CAPS.items()
@@ -115,6 +116,7 @@ def test_delta_go_carries_prior_reservation_and_caps_cumulative_cost(
         "source_fingerprints": {"source": "hash"},
         "config": delta.PROPOSED_CONFIG,
         "repair_prompt_hashes": TARGETS,
+        "input_hashes": {"DEV_AUTHORITY": "input-hash"},
         "prior_attempts": 21,
         "prior_reserved_usd": "7.5285",
         "cumulative_flow_caps": FINAL_FLOW_CAPS,
@@ -145,6 +147,12 @@ def test_delta_go_carries_prior_reservation_and_caps_cumulative_cost(
     assert upper == Decimal("0.3585")
     assert budget.used == 21 and budget.reserved_usd == Decimal("7.5285")
     assert budget.flow_used == base["flow_attempts"]
+    go["input_hashes"] = {"DEV_AUTHORITY": "tampered"}
+    with pytest.raises(
+        recording.RecordingStop, match="BASE21_INPUT_HASHES_NOT_APPROVED"
+    ):
+        validate_delta_go(go, "implementation-sha", base)
+    go["input_hashes"] = base["input_hashes"]
     go["approved_usd_cap"] = "8.00"
     with pytest.raises(
         recording.RecordingStop, match="CUMULATIVE_WORST_CASE_NOT_FUNDED"
