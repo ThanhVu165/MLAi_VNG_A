@@ -303,3 +303,7 @@ def start_worker() -> None:
             thread = Thread(target=_loop, args=(dispatch_only,), name=name, daemon=True)
             thread.start()
             _threads.append(thread)
+        logger.warning(
+            "Background workers started and alive: %s",
+            ", ".join(thread.name for thread in _threads if thread.is_alive()),
+        )
