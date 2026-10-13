@@ -1,5 +1,76 @@
 # M6-T05 — Product Runtime Replay Coverage
 
+## Continuation checkpoint — 13/10/2026 (latest)
+
+**RESULT: PARTIAL_ONLY_BLOCKED.** Owner Minh; Final Reviewer Nam; Approver Coordinator.
+This section supersedes availability/readiness claims below; historical evidence bytes remain unchanged.
+
+### Preflight and authority
+
+- Verified `origin/dev`: `1251c3c116a302d519dd71d6c31c3191874d785b`; PR44 starting/tested source HEAD: `5f5ee5619143dfa627299c9faa5f89ad1fb013fd`.
+- PR [#44](https://github.com/ThanhVu165/MLAi_VNG_A/pull/44): OPEN / DRAFT, base `dev`, head `sprint/m6-t05-runtime-replay`; no reviews/comments at preflight.
+- Initial checkout was `codex/sprint2-doc-consistency` at `2c4813288c6a28f89b116f4600a8bf04d326fa53`. Selected the existing remote task branch with a local tracking branch in the same checkout. No new remote branch, clone/worktree, reset, stash, merge or history rewrite.
+- Preserved unrelated staged `reports/readiness/CURRENT_RUNTIME_SMOKE.md` and ten untracked SQLite WAL/SHM files. They are excluded from this commit; original staged content is retained.
+- Read AGENT, workflow, technical spec, roadmap, STATUS, runbook and live Task Contract. Latest [Coordinator comment](https://trello.com/c/7nEZN4bu#comment-6accbc2f1051ed46587d019f), 12/10 10:53:35 UTC, permits local capture reads and explicitly denies LIVE. No later GO observed; no provider/model probe.
+- M4-T01 also appears IN PROGRESS. User answered “có” to the continuation/parallel-authorization clarification; work proceeds under that direct instruction, without changing Trello or attributing a new Trello decision to Coordinator. Minh/Coordinator must reconcile the card states before human handoff.
+
+### Changes and verified source availability
+
+- `scripts/validate_recorded_replay_pack.py`: reject unreferenced files in the candidate cassette tree, duplicate `(prompt_hash, attempt_index)`, invalid attempt index, and manifest/authorization source SHA mismatch. Distinct retries may reuse a hash; each original is still validated against the shared cassette, so conflicting data fails. Pack findings prevent integrity PASS.
+- Privacy scan now covers the decoded full SDK payload, including metadata outside message content, without editing or publishing the original. Token counts must be nonnegative integers (booleans/floats/strings rejected) and reconcile across original usage and attempt metadata.
+- `tests/test_guarded_runtime_recording.py`: added inventory/retry/conflict, full-payload privacy preservation and token-type/usage-chain regressions. Unit markers are explicitly not provider responses or product cassettes.
+- `scripts/audit_runtime_replay.py` and its tests: retain actual persisted audit events, case status, draft count and per-flow calls/misses/errors before destroying the isolated DB. Cited NOT_RUN flows have zero calls and do not acquire invented audit/draft evidence.
+- **9/9 original M2 captures are now locally available and match all published SHA-256 checksums.** All nine local run manifests are available and fingerprinted. This corrects the prior workspace-availability blocker; it does not establish intermediate SDK-response provenance. Capture top-level fields are case/config/diagnostics/fixture hash/identity/observation/result. No conversion, re-key, raw capture publication or candidate promotion performed; valid product cassettes remain **0**.
+- New sanitized evidence/manifest and refreshed **NOT_AUTHORIZED** decision packet: [`M6_T05_CONTINUATION_20261013.json`](M6_T05_CONTINUATION_20261013.json). Old GO request/final preparation/Phase1/Phase2 JSON are preserved; the new packet binds current tool fingerprints, leaves `source_sha=null` for approval of the final PR head, and carries historical pricing only as an unverified proposal.
+
+### Runtime evidence and AC1–AC7
+
+Actual pipeline, Verify harness, approval page and worker ran with replay/cache=0, socket/provider/cache-read traps and a fresh temporary DEV DB. No product doubles supplied responses. All eight observed hashes equal the historical observed hashes; no prompt/schema/expected changes. Each call's flow/step/hash/model/source/error and full per-flow outcomes are in the new JSON; config/source fingerprints are pinned there. The complete static downstream matrix below remains applicable.
+
+| AC | Status | Concrete current evidence |
+|---|---|---|
+| AC1 | NOT VERIFIED | 8 actual R2/R11 hashes mapped; R4/R7 and cited R11 hashes unavailable without genuine upstream responses |
+| AC2 | FAIL | 0 eligible product cassettes; 9/9 M2 checksums verified, but output/telemetry cannot supply original intermediate responses |
+| AC3 | NOT VERIFIED | Validator safeguards/regressions PASS; no genuine pack to certify, no vacuous integrity PASS |
+| AC4 | FAIL | 8 requests / 8 misses: 7 R2, 1 standalone R11; cited Authority/Fact R11 are NOT_RUN due to upstream state |
+| AC5 | FAIL | Routine/Authority/Fact and V01–V04: technical ERROR; standalone human decision retained, job failed, drafts=0; business correctness NOT VERIFIED |
+| AC6 | PASS offline | LIVE attempts/tokens/USD=0/0/$0; synthetic/public DEV; unrelated DB files and raw captures untouched; no secrets/Gold/Set A/B committed |
+| AC7 | PASS checkpoint | New sanitized manifest, raw audit checksum/paths, source/config fingerprints, exact commands and final SHA in PR44; full recovery incomplete |
+
+Layer A replay coverage **FAIL**; Layer B business semantics **NOT VERIFIED**. Upstream replay failures do not establish new production business defects. Standalone R11 failure is observed; cited resume **NOT_RUN**, never downstream FAIL manufactured from missing context. No production safety/policy/provider/schema changes.
+
+### Reproduction and validation
+
+Windows / Python 3.11.9 from existing `.venv`; no dependency changes. Tested working tree = starting HEAD above plus exact source fingerprints in the new JSON. Final commit SHA and post-commit exact-source validation are recorded in PR44; a committed document cannot contain its own commit hash.
+
+```powershell
+New-Item -ItemType Directory -Force data/validation/m6-t05-continuation-temp | Out-Null
+$env:TEMP=(Resolve-Path data/validation/m6-t05-continuation-temp).Path
+$env:TMP=$env:TEMP
+$env:PYTHONIOENCODING='utf-8'
+& .venv/Scripts/python.exe -m scripts.runtime_recording_readiness --output data/validation/m6-t05-continuation-20261013-readiness.json
+# Program exit 2: NOT_AUTHORIZED; choose fresh output paths for reproduction.
+& .venv/Scripts/python.exe -m scripts.audit_runtime_replay --include-cited-r11 --output-dir data/validation/m6-t05-continuation-20261013-snapshot-replay
+# Program exit 2: 0 cassettes / 8 misses / LIVE0, two cited flows NOT_RUN.
+& .venv/Scripts/python.exe -m pytest -q --tb=short tests/test_guarded_runtime_recording.py tests/test_runtime_recording_readiness.py tests/test_runtime_replay_audit.py tests/test_openai_provider.py::test_model_hash_isolates_cache_and_cassettes tests/test_offline_isolation.py
+# PASS: 51 tests in 8.48s; logs data/validation/m6-t05-continuation-snapshot-final-tests.log.
+& .venv/Scripts/python.exe -m black --check --line-length 100 scripts/audit_runtime_replay.py scripts/validate_recorded_replay_pack.py tests/test_runtime_replay_audit.py tests/test_guarded_runtime_recording.py
+& .venv/Scripts/python.exe -m ruff check scripts/audit_runtime_replay.py scripts/validate_recorded_replay_pack.py tests/test_runtime_replay_audit.py tests/test_guarded_runtime_recording.py
+git diff --check
+```
+
+Black/Ruff/diff checks PASS. First pytest invocation: 26 PASS / 19 setup errors, all `WinError 5` reading the OS `pytest-of-admin` temp directory; rerun with workspace TEMP passed. Snapshot development initially failed (1 failed / 47 passed / 3 setup errors) due to a wrong audit-helper import; corrected to `infra.audit.events_for_case`, with failure log retained at `data/validation/m6-t05-continuation-snapshot-tests.log`. Final 51 tests PASS; no outstanding failed unit IDs. Product failed flow IDs: DEV_ROUTINE, DEV_AUTHORITY, DEV_FACT, V01–V04, DEV_HUMAN_R11. Genuine candidate-pack validator CLI, LIVE recording, Docker/full suite/browser/deployment E2E NOT RUN; no valid candidate pack or need to repeat unrelated suites. No-GO CLI, network isolation, quota/budget and checksum safeguards are exercised by targeted tests.
+
+### Decision packet and human handoff
+
+Problem → impact → resolution/owner: no original intermediate responses or recording GO → AC1–AC5 and M6-T03 remain blocked → Coordinator provides an independently valid original pack or approves bounded recording; Minh validates pack/privacy/runtime; Vũ handles any production change separately.
+
+Coordinator must choose BASE22 or explicitly supplemental cited24, approve **exact final SHA**, config/corpus/input hashes, account access/model/rate/tier/token maxima, verified worst-case USD cap, per-flow/global caps, SDK JSON capture/provenance/privacy, cache/retry/failure accounting and stop/operator authority. Historical $17.36/$18.93 and token/rate bounds remain proposals, **not reverified account facts or spending authority**. If a bound requires production adapter changes, assign the appropriate Owner; T05 does not change it. New source fingerprints invalidate a GO for the old tool revision. Guarded recording also requires a clean checkout: preserve/resolve unrelated staged work separately before any authorized recording.
+
+**Owner technical blocker handoff is reviewable; final READY_FOR_REVIEW handoff is not yet eligible.** Minh human self-review **PENDING** on final exact SHA; Minh reviews full diff/AC/provenance/privacy and posts their own blocker/handoff. Nam may inspect safeguards but final task acceptance review remains pending valid Owner handoff and pack evidence. Coordinator acceptance/DONE/merge **not eligible**. Coordinator GO is required before any LIVE next step; further independently authorized offline work does not need LIVE GO. No Trello comments/sign-offs posted by Codex; PR stays Draft targeting dev; STATUS/milestone gates unchanged.
+
+---
+
 **Result: PARTIAL ONLY — Phase 2A/2B offline checkpoint; replay recovery FAIL, recording BLOCKED.**
 Owner: Minh — Logic/Evaluation. Final reviewer: Nam. Approver: Project Coordinator.
 Ngày: 12/10/2026, Asia/Saigon. [Task Contract](https://trello.com/c/7nEZN4bu).

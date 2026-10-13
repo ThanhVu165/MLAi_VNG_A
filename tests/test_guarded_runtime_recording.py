@@ -30,6 +30,8 @@ from scripts.validate_recorded_replay_pack import (
     validate_attempt,
     privacy_flags,
     validate_inline_schema,
+    pack_findings,
+    validate_usage,
 )
 
 
@@ -242,3 +244,54 @@ def test_schema_reference_cannot_make_offline_validator_fetch_network() -> None:
     validate_inline_schema({"type": "object"}, {})
     with pytest.raises(Exception, match="Unresolvable"):
         validate_inline_schema({"$ref": "https://unit.example.invalid/schema"}, {})
+
+
+def test_pack_inventory_rejects_orphans_duplicates_and_source_drift(tmp_path) -> None:
+    manifest = {
+        "recorded_sha": "unit-sha",
+        "authorization": {"source_sha": "unit-sha"},
+        "attempts": [{"prompt_hash": "a" * 64, "attempt_index": 1}],
+    }
+    folder = tmp_path / "cassettes"
+    folder.mkdir()
+    (folder / ("a" * 64 + ".json")).write_text("unit inventory marker; NOT a response")
+    assert pack_findings(tmp_path, manifest) == []
+    manifest["attempts"].append({"prompt_hash": "a" * 64, "attempt_index": 2})
+    assert pack_findings(tmp_path, manifest) == []  # A genuine retry may reuse the hash.
+    manifest["attempts"].append(manifest["attempts"][0])
+    manifest["recorded_sha"] = "different-unit-sha"
+    (folder / "orphan.json").write_text("unit inventory marker")
+    assert pack_findings(tmp_path, manifest) == [
+        "DUPLICATE_ATTEMPT_IDENTITY",
+        "MANIFEST_SOURCE_SHA_MISMATCH",
+        "UNREFERENCED_CASSETTE_FILE",
+    ]
+
+
+def test_privacy_scan_covers_full_sdk_metadata_and_preserves_original(tmp_path) -> None:
+    raw = b'{"unit_metadata_NOT_PROVIDER_RESPONSE":"unit@unapproved.invalid"}'
+    file = tmp_path / "unit-metadata.json"
+    file.write_bytes(raw)
+    with pytest.raises(ValueError, match="PRIVACY_REVIEW_REQUIRED"):
+        parse_original_response(
+            tmp_path,
+            {"sdk_response": file.name, "sdk_response_sha256": hashlib.sha256(raw).hexdigest()},
+            {"authorized_senders": []},
+        )
+    assert file.read_bytes() == raw
+
+
+@pytest.mark.parametrize("invalid", [True, -1, 1.0, "1"])
+def test_token_usage_requires_nonnegative_integers(invalid) -> None:
+    with pytest.raises(ValueError, match="INVALID_TOKEN_USAGE"):
+        validate_usage(
+            {"prompt_tokens": invalid, "completion_tokens": 0, "total_tokens": invalid},
+            {"input_tokens": invalid, "output_tokens": 0},
+        )
+
+
+def test_token_usage_chain_must_reconcile() -> None:
+    usage = {"prompt_tokens": 2, "completion_tokens": 3, "total_tokens": 5}
+    validate_usage(usage, {"input_tokens": 2, "output_tokens": 3})
+    with pytest.raises(ValueError, match="USAGE_CHAIN_MISMATCH"):
+        validate_usage(usage, {"input_tokens": 3, "output_tokens": 2})

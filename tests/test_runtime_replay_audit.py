@@ -96,6 +96,21 @@ def test_missing_pack_preserves_human_decision(missing_run) -> None:
     assert human["job"]["state"] == "failed" and human["draft_count"] == 0
 
 
+def test_missing_pack_records_persisted_audit_and_drafts_for_every_flow(missing_run) -> None:
+    evidence, _ = missing_run
+    for row in evidence["outcomes"]:
+        assert row["prompt_calls"] == row["replay_misses"] == 1
+        assert row["replay_errors"] and row["draft_count"] == 0
+        actions = {event["action"] for event in row["audit_events"]}
+        assert "CASE_RECEIVED" in actions
+        if row["flow"] == "DEV_HUMAN_R11":
+            assert "HUMAN_DECISION" in actions
+            assert row["persisted_case"]["status"] == "HUMAN_DECIDED"
+        else:
+            assert "CASE_ERROR" in actions
+            assert row["persisted_case"]["status"] == "ERROR"
+
+
 def test_audit_refuses_to_overwrite_historical_evidence(tmp_path) -> None:
     artifact = tmp_path / "M6_T05_REPLAY_EVIDENCE.json"
     artifact.write_bytes(b"immutable observation")
@@ -133,3 +148,4 @@ def test_cited_r11_does_not_invent_missing_upstream_context(tmp_path) -> None:
     assert len(evidence["calls"]) == 8 and evidence["live_provider_calls"] == 0
     cited = [row for row in evidence["outcomes"] if row["flow"].endswith("_CITED_R11")]
     assert len(cited) == 2 and all(row["status"] == "NOT_RUN" for row in cited)
+    assert all(row["prompt_calls"] == 0 and "audit_events" not in row for row in cited)

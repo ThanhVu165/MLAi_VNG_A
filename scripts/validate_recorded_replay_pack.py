@@ -93,6 +93,10 @@ def parse_original_response(folder: Path, attempt: dict, authorization: dict) ->
     if hashlib.sha256(raw).hexdigest() != attempt["sdk_response_sha256"]:
         raise ValueError("ORIGINAL_RESPONSE_CHECKSUM_MISMATCH")
     response = json.loads(raw)
+    if privacy_flags(
+        json.dumps(response, ensure_ascii=False), set(authorization["authorized_senders"])
+    ):
+        raise ValueError("PRIVACY_REVIEW_REQUIRED; original response quarantined, not edited")
     if (
         not response.get("id")
         or response.get("model") not in authorization["allowed_response_models"]
@@ -101,25 +105,53 @@ def parse_original_response(folder: Path, attempt: dict, authorization: dict) ->
     choice = response["choices"][0]
     if choice["finish_reason"] != "stop" or choice["message"].get("refusal"):
         raise ValueError("REFUSED_OR_INCOMPLETE_RESPONSE")
-    if privacy_flags(choice["message"]["content"], set(authorization["authorized_senders"])):
-        raise ValueError("PRIVACY_REVIEW_REQUIRED; original response quarantined, not edited")
     data = json.loads(choice["message"]["content"])
     validate_inline_schema(attempt["schema"], data)
     validate_inline_schema(attempt["provider_schema"], data)
     usage = response["usage"]
+    validate_usage(usage, attempt["usage"])
+    return data
+
+
+def validate_usage(usage: dict, recorded_usage: dict) -> None:
+    counts = [usage[key] for key in ("prompt_tokens", "completion_tokens", "total_tokens")]
+    counts.extend(recorded_usage[key] for key in ("input_tokens", "output_tokens"))
+    if any(type(count) is not int or count < 0 for count in counts):
+        raise ValueError("INVALID_TOKEN_USAGE")
     if (
-        usage["prompt_tokens"] != attempt["usage"]["input_tokens"]
-        or usage["completion_tokens"] != attempt["usage"]["output_tokens"]
+        usage["prompt_tokens"] != recorded_usage["input_tokens"]
+        or usage["completion_tokens"] != recorded_usage["output_tokens"]
         or usage["total_tokens"] != usage["prompt_tokens"] + usage["completion_tokens"]
     ):
         raise ValueError("USAGE_CHAIN_MISMATCH")
-    return data
+
+
+def pack_findings(folder: Path, manifest: dict) -> list[str]:
+    """Account for every cassette and attempt without treating retries as duplicate hashes."""
+    findings = []
+    if manifest["recorded_sha"] != manifest["authorization"].get("source_sha"):
+        findings.append("MANIFEST_SOURCE_SHA_MISMATCH")
+    identities = set()
+    referenced = set()
+    for attempt in manifest["attempts"]:
+        identity = (attempt.get("prompt_hash"), attempt.get("attempt_index"))
+        if identity in identities:
+            findings.append("DUPLICATE_ATTEMPT_IDENTITY")
+        identities.add(identity)
+        if type(identity[1]) is not int or identity[1] < 1:
+            findings.append("INVALID_ATTEMPT_INDEX")
+        referenced.add(f"{identity[0]}.json")
+    for path in sorted((folder / "cassettes").rglob("*")):
+        if path.is_file() and path.relative_to(folder / "cassettes").as_posix() not in referenced:
+            findings.append("UNREFERENCED_CASSETTE_FILE")
+    return sorted(set(findings))
 
 
 def validate_pack(folder: Path) -> dict:
     manifest = json.loads((folder / "RECORDING_MANIFEST.json").read_text(encoding="utf-8"))
     checks = []
     authorization = manifest["authorization"]
+    findings = pack_findings(folder, manifest)
     source_match = authorization.get("source_fingerprints") == source_fingerprints()
     for attempt in manifest["attempts"]:
         try:
@@ -141,9 +173,13 @@ def validate_pack(folder: Path) -> dict:
     return {
         "recorded_sha": manifest["recorded_sha"],
         "checks": checks,
+        "pack_findings": findings,
         "integrity_status": (
             "PASS"
-            if source_match and checks and all(c["integrity_status"] == "PASS" for c in checks)
+            if source_match
+            and not findings
+            and checks
+            and all(c["integrity_status"] == "PASS" for c in checks)
             else "FAIL"
         ),
         "pack_status": "NOT_APPROVED",

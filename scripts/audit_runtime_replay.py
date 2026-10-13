@@ -187,6 +187,7 @@ def observe_runtime(
         outcomes.append(observe_human_resume(process_case, db))
         if include_cited:
             outcomes.extend(observe_cited_resumes(outcomes, active_flow, db))
+    attach_runtime_snapshots(outcomes, calls, db)
     schemas = {
         "R2_extract": extract.EXTRACTION_SCHEMA,
         "R4_select": retrieval.SELECT_SCHEMA,
@@ -195,6 +196,30 @@ def observe_runtime(
         "R11_resume": resume.RESUME_SCHEMA,
     }
     return calls, outcomes, schemas
+
+
+def attach_runtime_snapshots(outcomes: list[dict], calls: list[dict], db: ModuleType) -> None:
+    """Read persisted audit/drafts before the isolated DB is destroyed."""
+    from infra.audit import events_for_case
+
+    for outcome in outcomes:
+        flow_calls = [call for call in calls if call["flow"] == outcome["flow"]]
+        outcome["prompt_calls"] = len(flow_calls)
+        outcome["replay_misses"] = sum(not call["replay_ok"] for call in flow_calls)
+        outcome["replay_errors"] = [call["error"] for call in flow_calls if not call["replay_ok"]]
+        if outcome.get("status") == "NOT_RUN":
+            continue
+        case_id = outcome.get("case_ref")
+        if case_id is None:
+            result = outcome.get("result", outcome.get("intake_result", {}))
+            case_id = result.get("case_id") or outcome.get("verify_result", {}).get("case_ref")
+        outcome["persisted_case"] = dict(
+            db.fetch_one("SELECT status FROM cases WHERE case_id = ?", (case_id,))
+        )
+        outcome["audit_events"] = [asdict(event) for event in events_for_case(case_id)]
+        outcome["draft_count"] = db.fetch_one(
+            "SELECT COUNT(*) FROM drafts WHERE case_id = ?", (case_id,)
+        )[0]
 
 
 def observe_pipeline_cases(process_case: Callable, active_flow: list[str]) -> list[dict]:
