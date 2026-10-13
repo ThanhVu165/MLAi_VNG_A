@@ -1,8 +1,97 @@
 # M3-T07 — Remediation R11 Human Decision/Resume
 
+## 0. Change Request — MLAI review / PR #47
+
+**CURRENT RESULT: READY_FOR_FINAL_REVIEW sau khi correction được push lên PR #47; chưa merge,
+chưa DONE và không phải product gate PASS.**
+
+### Preflight correction
+
+- Reviewed SHA: `762520eb1de754c89c43c686c8fe6fd42b68a9cf`.
+- Correction code/test SHA: `37619ddec6e4f93489e518da778c7e4d401ea1a9` —
+  `fix(m3-t07): harden resume authority validation`.
+- PR: [#47](https://github.com/ThanhVu165/MLAi_VNG_A/pull/47), branch
+  `sprint/m3-t07-safety-remediation`, target `dev`.
+- Remote branch và `refs/pull/47/head` đều trỏ đúng reviewed SHA khi preflight.
+- `origin/dev` hiện tại: `348058f9c7c0f9d81ab38870271b4260fadbb79f`; merge base và parent
+  của code commit M3-T07 vẫn là baseline `9dfb33494cbf28e05651508ecfed145e5cc70fe7`.
+  Không rebase/merge/đổi baseline. Read-only merge-tree không phát hiện conflict; thay đổi mới trên
+  `dev` thuộc Docker và worker startup instrumentation, không chạm ba file correction.
+- Working tree sạch tại đầu lượt; diff chỉ có ba file được Task Contract cho phép.
+
+### Finding authority — before/after
+
+Regression dùng `choice="Yêu cầu bổ sung"`, trong khi `reason` chỉ nhắc hồ sơ tham chiếu
+"đã được duyệt"; candidate lại khẳng định case hiện tại "đã được duyệt".
+
+Trước fix, test mới **FAIL**: actual `PENDING_APPROVAL`, expected `HUMAN_DECIDED`. Cụm từ trong
+`reason` làm `human_authorizes=True`, đồng thời `_authority_failure(trusted)` cũng bị dùng như
+giấy phép. Candidate vượt thẩm quyền vì vậy lọt validator. JUnit SHA-256:
+`ad15c6018cb8dc32174c0d575532b7c0796a7c914232c61a1a14d3e615f2bb0c`.
+
+Fix chỉ suy quyền từ affirmative decision rõ ràng ở đầu `choice`; quyết định phủ định luôn thắng,
+và `reason`/`_authority_failure(trusted)` không còn cấp quyền. `reason` vẫn được bảo toàn làm dữ
+liệu tin cậy cho groundedness/unsupported-value checks. Positive choice `Chấp thuận` vẫn PASS;
+candidate mâu thuẫn, vượt thẩm quyền, bịa citation/số liệu tiếp tục fail-closed.
+
+### Correction validation trên exact SHA `37619dd`
+
+| Check | Kết quả | Evidence |
+|---|---|---|
+| Regression reason-only authority | **PASS — 1/1** | Sau fix giữ `HUMAN_DECIDED`, job failed, zero draft, một `CASE_ERROR`, không resume/approve |
+| Focused M3-T07 | **PASS — 9/9**, 0.51s | `/private/tmp/m3-t07-cr-postcommit-focused.xml`; SHA-256 `ca26035d27e6c896a57b825afa50e3722d1a259ee8d96f6596c1b5dc2b361011` |
+| Targeted blast radius | **PASS — 135/135**, 1 warning, 6.77s | JUnit SHA-256 `d95a71b8f06635b72d914cac908bf97a83383e68e15e2acf228023e3cd97e072` |
+| Black | **PASS** | Hai file code/test unchanged by formatter |
+| Ruff | **PASS** | Không có finding |
+| Diff check | **PASS** | Không whitespace error |
+| Mypy | **FAIL — baseline** | 4 lỗi `infra/llm.py:459,484,504,510`; không có lỗi M3-T07 |
+| Full suite | **NOT RUN** | Task Contract yêu cầu targeted regression; không nâng thành full-suite PASS |
+
+Targeted command giữ nguyên selection ở Mục 5.3 và thêm regression mới. Environment:
+Python 3.11.17, SQLite 3.53.1, `LLM_MODE=replay`, `LLM_CACHE=0`, model
+`gpt-6-luna`, synthetic SQLite/temp ngoài repository. R11 cassette không đổi, SHA-256
+`1f0df8886213ba84b7985e773ee949d0742be844afbd5e66550f7d97c4584417`.
+Không LIVE/API/recording/email thật.
+
+### Change Request AC mapping
+
+| AC | Disposition | Evidence / giới hạn |
+|---|---|---|
+| AC1 | **PASS** | Regression trước fix tái hiện bypass thật: `PENDING_APPROVAL` thay vì fail-closed |
+| AC2 | **PASS** | Cùng expected FAIL trước fix, PASS sau fix; không sửa expected để che lỗi |
+| AC3 | **PASS** | R11 replay, choice/reason/actor, approval, audit, restart, persistence và idempotency nằm trong 9 focused/135 targeted PASS |
+| AC4 | **PASS** | Reason-only authority giữ `HUMAN_DECIDED`, zero draft; R11 hợp lệ vẫn không auto-send |
+| AC5 | **PASS** | Black, Ruff, diff và targeted PASS; mypy baseline FAIL và full suite NOT RUN được công bố đúng |
+| AC6 | **PASS** | Report ghi PR #47, reviewed/correction SHA, validation mới và blocker cũ đã giải quyết |
+| AC7 | **PASS — handoff prepared** | Scope/self-review/secret scan và evidence hoàn tất; final reviewer/Coordinator acceptance còn pending |
+
+### Owner self-review và Trello handoff content
+
+- **Self-review: COMPLETED.** Full correction diff từ reviewed SHA chỉ sửa ba file allowed;
+  production change giới hạn ở authority gate trong `core/resume.py`.
+- Prompt/schema/cassette/replay identity, public interface, SQLite schema, audit action, workflow,
+  policy, expected tests và LLM call budget không đổi.
+- Scope/diff/secret scan: PASS; không có credential, PII thật, local DB/cache hoặc file ngoài scope.
+- F01, V02, aggregate harness và product gate giữ nguyên, không được xử lý trong correction này.
+
+Nội dung handoff để Owner đăng vào Trello (không thay Coordinator đánh DONE):
+
+```text
+M3-T07 CHANGE REQUEST / PR #47
+RESULT: READY_FOR_FINAL_REVIEW
+CORRECTION SHA: 37619ddec6e4f93489e518da778c7e4d401ea1a9
+AUTHORITY REGRESSION: FAIL trước fix (PENDING_APPROVAL bypass) -> PASS sau fix (fail-closed)
+VALIDATION: 9/9 focused PASS; 135/135 targeted PASS; Black/Ruff/diff PASS
+KNOWN CHECKS: mypy FAIL 4 lỗi baseline infra/llm.py; full suite NOT RUN
+SAFETY: R11 replay/PENDING_APPROVAL/approval/restart/persistence/idempotency PASS; LIVE/API/email=0
+PR: https://github.com/ThanhVu165/MLAi_VNG_A/pull/47
+LIMIT: R11 targeted PASS không phải product gate hoặc complete LIVE E2E PASS
+REQUEST: Final reviewer kiểm tra authority fix/evidence; Coordinator quyết định acceptance/merge.
+```
+
 ## 1. Kết luận
 
-**RESULT: BLOCKED ở bước GitHub handoff; code/evidence đạt targeted validation nhưng chưa có PR.**
+**RESULT: READY_FOR_FINAL_REVIEW trong phạm vi M3-T07; chưa DONE, chưa merge, không phải product gate PASS.**
 
 R11 FAIL đã được tái hiện trên baseline, nguyên nhân đã được xác nhận và bản sửa nhỏ nhất đã
 được kiểm chứng offline trên code commit `cd989677b28352fc29239cab6c85b5285260c790`.
@@ -15,11 +104,10 @@ Kết luận kỹ thuật chỉ áp dụng cho chuỗi R11 synthetic/replay đư
 pytest xanh không chứng minh complete product E2E, vận hành thật hoặc GO-STUDY/LIVE. F01, V02 và
 aggregate harness ngoài scope, không được sửa hay tái phân loại.
 
-Push không force lên `origin/sprint/m3-t07-safety-remediation` đã được thử sau validation nhưng
-dừng với `fatal: could not read Username for 'https://github.com': Device not configured`. Theo
-Stop Condition, không lưu credential của chủ máy và không bypass xác thực. Vì PR là deliverable bắt
-buộc, task chưa đủ điều kiện `READY_FOR_REVIEW` cho đến khi người có GitHub authorization push các
-commit local và mở PR nhắm `dev`.
+Lịch sử được giữ nguyên: push đầu tiên không force đã dừng với
+`fatal: could not read Username for 'https://github.com': Device not configured`; không credential
+nào được lưu hoặc bypass. Blocker sau đó đã được Owner giải quyết, branch được push và PR #47 đã
+được tạo. Correction này tiếp tục cập nhật đúng PR đó, không mở PR mới.
 
 ## 2. Authorization, baseline và preflight
 
@@ -28,13 +116,14 @@ commit local và mở PR nhắm `dev`.
   hoặc tuyên bố DONE trên Trello.
 - Đã đọc `AGENT.md`, `PROJECT_SPEC.md`, `docs/TEAM_WORKFLOW.md` và source/test liên quan.
 - Repository: `https://github.com/ThanhVu165/MLAi_VNG_A.git`.
-- Remote `dev` kiểm lại trước sửa và trước handoff:
+- Remote `dev` tại lượt triển khai ban đầu:
   `9dfb33494cbf28e05651508ecfed145e5cc70fe7`.
 - Baseline/source parent: `9dfb33494cbf28e05651508ecfed145e5cc70fe7`.
 - Branch: `sprint/m3-t07-safety-remediation`, tạo trực tiếp từ verified `origin/dev`; không có
   branch local/remote cùng tên tại preflight, không clone/worktree phụ, không reset/stash/clean.
-- Tested code/test SHA: `cd989677b28352fc29239cab6c85b5285260c790`.
-- Code/test commit: `fix(m3-t07): remediate human decision resume`.
+- Initial tested code/test SHA: `cd989677b28352fc29239cab6c85b5285260c790`.
+- Initial code/test commit: `fix(m3-t07): remediate human decision resume`; correction SHA và
+  remote preflight mới ở Mục 0.
 - Môi trường: macOS, Python 3.11.17, SQLite 3.53.1,
   `LLM_MODE=replay`, `LLM_CACHE=0`, `OPENAI_MODEL=gpt-6-luna`.
 - Database và pytest temp đều cách ly dưới `/private/tmp`; input chỉ là synthetic `.invalid`.
@@ -76,7 +165,7 @@ draft.
 | File | Thay đổi |
 |---|---|
 | `core/resume.py` | Kiểm tra candidate và render draft xác định từ quyết định đã lưu; giữ safety guards |
-| `tests/test_m3_t07_safety_remediation.py` | 8 targeted cases: replay R11, idempotency, unsafe candidates, human conflict, approval/send/restart/persistence/audit |
+| `tests/test_m3_t07_safety_remediation.py` | 9 targeted cases: replay R11, idempotency, authority bypass, unsafe candidates, human conflict, approval/send/restart/persistence/audit |
 | `reports/sprints/M3_T07_SAFETY_REMEDIATION.md` | Evidence và handoff này |
 
 Không đổi production file nào khác, cassette, manifest, corpus, policy, DB schema hoặc assertion
@@ -187,14 +276,16 @@ Trên synthetic SQLite của test R11:
 | AC4 | **PASS** | `HUMAN_DECIDED -> PENDING_APPROVAL`; không auto-send/dispatch trước approval |
 | AC5 | **PASS trong targeted cases** | choice/reason/actor giữ nguyên; 5 unsafe candidate classes và edited contradiction fail-closed |
 | AC6 | **PASS cho R11 synthetic/replay chain; product E2E NOT CLAIMED** | Preview, explicit simulated approval/send, fresh-process restart, SQLite persistence và audit có evidence; không LIVE/email |
-| AC7 | **PASS** | 134 targeted regressions PASS; stale/double approval, idempotency, payload binding và atomicity suites gồm trong selection |
-| AC8 | **BLOCKED** | Code/test commit, report, diff review, tested SHA, rollback/risk đã có; push/PR thiếu vì GitHub credential không sẵn có |
+| AC7 | **PASS** | Correction run 135 targeted regressions PASS; stale/double approval, idempotency, payload binding và atomicity suites gồm trong selection |
+| AC8 | **READY_FOR_FINAL_REVIEW** | Code/test commits, report, diff review, tested SHA, rollback/risk và PR #47 đã có; independent review/Coordinator acceptance pending |
 
 ## 8. Risks, giới hạn và rollback
 
 - Kiểm tra contradiction mới cố ý chỉ nhận diện các đảo ngược trực tiếp đã định nghĩa; không chứng
   minh hiểu mọi mâu thuẫn ngôn ngữ tự nhiên. Rủi ro được giới hạn bằng việc không dùng prose LLM
   trong draft cuối và vẫn yêu cầu human approval.
+- Authority helper cố ý chỉ chấp nhận affirmative decision rõ ràng ở đầu `choice`; lựa chọn tùy
+  biến mơ hồ hoặc chỉ yêu cầu cấp khác xem xét sẽ fail-closed thay vì suy quyền từ `reason`.
 - Candidate prose được validate rồi loại khỏi nội dung cuối. Điều này ưu tiên nguồn quyết định đã
   lưu; reviewer cần xác nhận trade-off UX/wording là phù hợp contract.
 - Test dùng actor/local, DB/input synthetic và simulated send. Không có evidence provider, inbox,
@@ -212,12 +303,11 @@ Trên synthetic SQLite của test R11:
 - Reviewer cần kiểm tra `core/resume.py`, targeted test, giới hạn semantic ở Mục 8 và evidence hash.
 - PR phải nhắm `dev`, không force-push, không merge trong task này.
 - Coordinator quyết định acceptance/DONE và mọi product gate; báo cáo này không thay quyết định đó.
-- Blocker: GitHub HTTPS không có username/credential trên máy. Ảnh hưởng: remote branch và PR chưa
-  tồn tại. Owner: người có quyền GitHub push các commit local và mở PR vào `dev`. Coordinator cần
-  xác nhận sau khi PR hiện diện; không cần thay đổi production/contract để giải blocker này.
+- Blocker GitHub credential ban đầu đã được Owner giải quyết; failure cũ vẫn được giữ ở Mục 1 để
+  bảo toàn audit trail. Không có blocker implementation hiện hành.
 
 **E2E STATUS:** R11 replay/synthetic human-control chain PASS trong phạm vi targeted; complete
 product E2E và LIVE **NOT VERIFIED / NOT AUTHORIZED**.
 
-**PR:** **NOT CREATED / BLOCKED** — push bị từ chối do credential không sẵn có; không lưu credential
-trên máy, không force-push, không merge.
+**PR:** [#47 — M3-T07 safety remediation](https://github.com/ThanhVu165/MLAi_VNG_A/pull/47),
+target `dev`; không force-push, không merge.
