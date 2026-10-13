@@ -98,7 +98,14 @@ def _choice_authorizes_authority_claim(choice: str) -> bool:
         if normalized_choice.startswith(prefix):
             normalized_choice = normalized_choice[len(prefix) :].lstrip()
             break
-    return normalized_choice.startswith(("chấp thuận", "đồng ý", "cho phép", "đã được duyệt"))
+    if any(
+        qualifier in normalized_choice
+        for qualifier in ("xem xét", "kiểm tra", "đánh giá", "thẩm định")
+    ):
+        return False
+    if normalized_choice.startswith("đồng ý "):
+        normalized_choice = normalized_choice.removeprefix("đồng ý ").lstrip()
+    return normalized_choice.startswith(("chấp thuận", "phê duyệt", "cho phép", "đã được duyệt"))
 
 
 def _validated_candidate(
