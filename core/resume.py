@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from contextlib import closing
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -10,7 +11,7 @@ from sqlite3 import Row
 from uuid import uuid4
 
 from corpus.api import get_chunk
-from core.ground_guard import _unsupported_value_failure, guard_groundedness
+from core.ground_guard import _authority_failure, _unsupported_value_failure, guard_groundedness
 from core.sanitize import mask_pii, strip_prompt_injection
 from core.types import CaseStatus, DraftReply, EvidenceResult, EvidenceStatus
 from infra.audit import log_event
@@ -42,6 +43,66 @@ RESUME_SCHEMA: dict[str, object] = {
         "citations": {"type": "array", "items": {"type": "string"}},
     },
 }
+TRUSTED_RESUME_SUBJECT = "Phản hồi quyết định của chuyên viên"
+
+
+def _trusted_human_body(choice: str, reason: str, citations: list[str]) -> str:
+    """Render phần quyết định từ dữ liệu đã lưu; prose LLM không phải nguồn thẩm quyền."""
+    body = "Kính gửi Anh/Chị,\n\n" f"Quyết định của chuyên viên: {choice}\n\n" f"Lý do: {reason}"
+    if citations:
+        body += "\n\nCăn cứ đã đối chiếu: " + " ".join(f"[{item}]" for item in citations)
+    return body + "\n\nTrân trọng,"
+
+
+def _contradicts_human_decision(body: str, choice: str, reason: str) -> bool:
+    """Chặn đảo ngược trực tiếp lựa chọn trong candidate hoặc draft đã chỉnh sửa."""
+    normalized_body = " ".join(mask_pii(body).casefold().split())
+    normalized_choice = " ".join(mask_pii(choice).casefold().split())
+    normalized_reason = " ".join(mask_pii(reason).casefold().split())
+    trusted_choice = f"quyết định của chuyên viên: {normalized_choice}"
+    trusted_reason = f"lý do: {normalized_reason}"
+    extra = normalized_body
+    if trusted_choice in extra:
+        extra = extra.replace(trusted_choice, " ", 1)
+    if trusted_reason in extra:
+        extra = extra.replace(trusted_reason, " ", 1)
+    opposites: tuple[str, ...] = ()
+    if "từ chối" in normalized_choice or any(
+        phrase in normalized_choice for phrase in ("không chấp thuận", "không đồng ý")
+    ):
+        opposites = ("được chấp thuận", "đã được duyệt", "chúng tôi đồng ý")
+    elif "chấp thuận" in normalized_choice or "đồng ý" in normalized_choice:
+        opposites = ("từ chối", "không chấp thuận", "chưa chấp thuận", "không đồng ý")
+    elif "yêu cầu" in normalized_choice or "đề nghị" in normalized_choice:
+        opposites = ("không yêu cầu", "không cần", "không phải bổ sung")
+    return any(phrase in extra for phrase in opposites)
+
+
+def _validated_candidate(
+    data: Mapping[str, object], choice: str, reason: str, evidence: EvidenceResult
+) -> list[str]:
+    """Validate response replay nhưng không trao thẩm quyền cho prose do LLM tạo."""
+    _required_string(data.get("subject"), "subject")
+    body = _required_string(data.get("body"), "body")
+    citations = _citations(data.get("citations"), evidence)
+    candidate = DraftReply("candidate", mask_pii(body), citations, False, [])
+    trusted = DraftReply("trusted", f"{mask_pii(choice)}\n{mask_pii(reason)}", citations, False, [])
+    normalized_trusted = trusted.body.casefold()
+    negative_authority = any(
+        phrase in normalized_trusted
+        for phrase in ("từ chối", "không chấp thuận", "chưa chấp thuận", "không đồng ý")
+    )
+    human_authorizes = not negative_authority and any(
+        phrase in normalized_trusted
+        for phrase in ("chấp thuận", "đồng ý", "cho phép", "đã được duyệt")
+    )
+    if _contradicts_human_decision(body, choice, reason):
+        raise ValueError("Bản nháp mâu thuẫn với quyết định của chuyên viên.")
+    if _authority_failure(candidate) and not (human_authorizes or _authority_failure(trusted)):
+        raise ValueError("Bản nháp thêm kết luận vượt thẩm quyền của chuyên viên.")
+    if _unsupported_value_failure(candidate, evidence, trusted.body):
+        raise ValueError("Bản nháp thêm dữ kiện không có trong quyết định hoặc căn cứ.")
+    return citations
 
 
 def _required_string(value: object, field: str) -> str:
@@ -110,6 +171,8 @@ def validate_human_draft(case_id: str, draft: DraftReply) -> DraftReply:
     trusted = {key: mask_pii(str(human[key])) for key in ("choice", "reason")}
     if any(trusted[key].casefold() not in masked_body.casefold() for key in trusted):
         failures.append("human_decision")
+    if _contradicts_human_decision(masked_body, trusted["choice"], trusted["reason"]):
+        failures.append("human_conflict")
     if not set(draft.citations) <= {chunk.chunk_id for chunk in chunks}:
         failures.append("citation")
     if _unsupported_value_failure(
@@ -142,14 +205,13 @@ def resume_case(case_id: str, choice: str, reason: str, actor: str) -> DraftRepl
         )
     if not result.ok:
         raise ValueError(result.error or "LLM không diễn đạt được quyết định.")
-    body = _required_string(result.data.get("body"), "body")
+    citations = _validated_candidate(result.data, choice, reason, evidence)
+    body = _trusted_human_body(choice, reason, citations)
     masked_body = mask_pii(body)
-    if any(mask_pii(value).casefold() not in masked_body.casefold() for value in (choice, reason)):
-        raise ValueError("Bản nháp phải giữ nguyên quyết định và lý do của chuyên viên.")
     draft = DraftReply(
-        _required_string(result.data.get("subject"), "subject"),
+        TRUSTED_RESUME_SUBJECT,
         body,
-        _citations(result.data.get("citations"), evidence),
+        citations,
         False,
         [],
     )
