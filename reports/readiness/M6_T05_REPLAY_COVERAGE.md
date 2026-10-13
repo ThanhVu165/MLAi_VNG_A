@@ -1,5 +1,31 @@
 # M6-T05 — Product Runtime Replay Coverage
 
+## Authorized BASE execution — 13/10/2026 (current result)
+
+**RESULT: PARTIAL COVERAGE; NOT DONE.** This section supersedes the pre-dispatch state below. Recording ran at exact HEAD `8371b34385c39696d8ccfd06dae93311fd3e58fa` after the Coordinator's conditional GO requirements were satisfied. The shared checkout was clean: the runtime-smoke Owner preserved `CURRENT_RUNTIME_SMOKE.md` on `codex/pytest-blocker-remediation` at `a7efface6c7ca2021664ff3bfcf75a71fa13290f`; the database Owner verified all five M16 databases with `integrity_check=ok`, empty checkpoints and unchanged logical/byte hashes, after which SQLite removed the ten unlocked WAL/SHM sidecars on close.
+
+The authenticated `Default project` binding, `gpt-6-luna`, Standard/Global tier, source/config/input fingerprints and `$10` hard cap were rechecked before execution. The guard reserved `$0.3585` before each request. Actual execution used **21/22 attempts**, reserved worst-case **$7.5285**, and returned **42,993 input + 2,922 output tokens**. A conservative usage-priced upper bound at the approved maximum rates is **$0.01293975**; exact billed cost is unavailable in response metadata. Every response reported model `gpt-6-luna`, `service_tier=default`, a request ID and numeric usage. There were no provider failures, SDK retries, cache hits, Gold/Set A/B inputs or real PII.
+
+[`M6_T05_BASE21_RECORDED_PACK.json`](M6_T05_BASE21_RECORDED_PACK.json) publishes sanitized provenance for 21 cassettes. Original SDK payloads remain in ignored quarantine. The validator checked original-response checksums, request/model/source/config/input bindings, both schemas, usage reconciliation and cassette equality: **21/21 PASS**, zero unreferenced files, and no privacy flags across 85 JSON artifacts. The validated parsed cassettes are in `tests/cassettes/`; Nam's independent provenance/privacy review remains pending.
+
+Offline product replay used a fresh isolated DB per flow with socket, provider-live and cache-read traps. [`M6_T05_BASE21_REPLAY_RESULT.json`](M6_T05_BASE21_REPLAY_RESULT.json) records **24 observed calls: 21 hits, 3 misses, LIVE=0**. Five flows are zero-miss: `DEV_ROUTINE`, `V01`, `V02`, `V04`, `DEV_HUMAN_R11`. Three flows are blocked: `DEV_AUTHORITY`, `DEV_FACT`, `V03`. In each blocked flow, the recorded R7 question failed the strict contiguous-basis validator; replay then generated a new repair prompt. LIVE recording had already consumed that flow's fixed three-attempt cap, so no authorized provider response exists for the repair prompt. Quota was not transferred, the unused global attempt was not used, and no cassette was fabricated.
+
+Business correctness is separate from cassette integrity. `DEV_ROUTINE`, `V01` and `V04` match. `V02` replays with zero miss but remains the known `5:00 p.m.` versus `17 giờ 00` groundedness false positive. `DEV_AUTHORITY`, `DEV_FACT` and `V03` end `TECHNICAL_ERROR` after basis validation. `DEV_HUMAN_R11` replays with zero miss, preserves the human decision, but the worker rejects the generated draft because it does not preserve the decision/reason; job=`failed`, drafts=0. These are production semantic/validator defects outside M6-T05's authorized scope; no production fix was made.
+
+| AC | Current status | Evidence |
+|---|---|---|
+| AC1 Coverage matrix | PASS | All eight BASE flows, 21 recorded identities and three newly observed repair gaps are mapped with exact hashes |
+| AC2 Provenance | PARTIAL | 21 genuine SDK-response chains PASS; three repair responses do not exist under the approved per-flow caps |
+| AC3 Integrity/schema | PASS for recorded pack | 21/21 original → parsed cassette checks PASS; source/config/model/usage/privacy bindings verified |
+| AC4 No critical miss | FAIL | 21/24 observed calls hit; three repair prompts miss in Authority, Fact and V03 |
+| AC5 Runtime evidence | FAIL | Five zero-miss flows; three technical errors, V02 semantic mismatch and R11 failed draft |
+| AC6 Data/cost safety | PASS | Synthetic/public inputs, no prohibited datasets/PII, 21/22 attempts, `$7.5285` reserved `< $10`, offline replay LIVE=0 |
+| AC7 Reproducibility | PASS technical | Exact recording SHA, fingerprints, sanitized pack/replay manifests, cassettes and commands retained; human reviews pending |
+
+The exact completion blocker is now evidenced rather than speculative: achieving zero-miss BASE replay requires valid responses for the three repair prompts, but the approved per-flow caps are exhausted. Resolving it requires a production semantic fix that prevents invalid basis output or a new Coordinator decision authorizing additional per-flow repair attempts. Both are outside the current M6-T05 authority. Minh self-review, Nam final review and Coordinator ACCEPT/DONE remain pending; PR #44 stays Draft and this task must not be marked DONE.
+
+---
+
 ## Coordinator BASE22 directive — 13/10/2026 (latest authority)
 
 Direct Coordinator instruction in this chat supersedes the earlier HOLD on implementation: **prioritize M6-T05; pause M4-T01 implementation; BASE_PACK_V1 scope approved, maximum22 attempts and fixed per-flow caps; no quota transfer; supplemental cited-R11 recording NOT approved.** The latest `$10 HARD CAP` decision grants conditional LIVE/API execution once every preflight condition passes; it does not require another budget approval. Coordinator owns Trello state changes. Historical code/reports/evidence remain preserved.
