@@ -54,13 +54,15 @@ def go_metadata() -> tuple[dict, dict]:
         allowed_response_models=["gpt-6-luna"],
         cost_bound={
             "basis": "VERIFIED_PROVIDER_ENFORCED_MAXIMA_AND_MAXIMUM_BILLED_RATES",
+            "service_tier": "standard",
+            "processing_region": "global",
             "max_input_tokens": 1050000,
             "max_output_tokens": 128000,
-            "max_input_usd_per_million": "0.55",
-            "max_output_usd_per_million": "1.65",
+            "max_input_usd_per_million": "0.25",
+            "max_output_usd_per_million": "0.75",
         },
-        verified_upper_cost_usd="0.7887",
-        approved_usd_cap="17.3514",
+        verified_upper_cost_usd="0.3585",
+        approved_usd_cap="10",
     )
     return go, readiness
 
@@ -110,8 +112,19 @@ def test_assumed_thousand_output_tokens_is_not_a_provider_bound() -> None:
 def test_documented_worst_case_calculation_is_not_account_authorization() -> None:
     go, readiness = go_metadata()
     budget, upper = validate_go(go, readiness, "unit-sha-NOT-AUTHORIZATION")
-    assert upper == Decimal("0.7887") and budget.max_usd == upper * 22
+    assert upper == Decimal("0.3585") and budget.max_usd > upper * 22
     # This tests math/completeness only; unit:// references do not authorize a run.
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [("service_tier", "fast"), ("processing_region", "regional")],
+)
+def test_cost_bound_requires_verified_standard_global_project(field, value) -> None:
+    go, readiness = go_metadata()
+    go["cost_bound"][field] = value
+    with pytest.raises(RecordingStop, match="STANDARD_GLOBAL"):
+        validate_go(go, readiness, "unit-sha-NOT-AUTHORIZATION")
 
 
 def test_cited_r11_requires_explicit_scope_and_matching_24_attempt_budget() -> None:
@@ -185,6 +198,25 @@ def test_sdk_metadata_bytes_preserved_before_rejecting_missing_origin(
         saved == raw.encode()
         and observer.pending["sdk_response_sha256"] == hashlib.sha256(saved).hexdigest()
     )
+
+
+def test_nonstandard_response_tier_stops_after_preserving_original(tmp_path, monkeypatch) -> None:
+    observer, _ = observer_fixture(tmp_path, monkeypatch)
+    observer.pending = {"prompt_hash": "b" * 64, "attempt_index": 1}
+    observer.original_usage = lambda response: {
+        "input_tokens": 1,
+        "output_tokens": 1,
+        "service_tier": "priority",
+    }
+    response = SimpleNamespace(
+        model_dump_json=lambda: '{"kind":"unit_nonstandard_tier"}',
+        _request_id="unit-request",
+        id="unit-response",
+        model="gpt-6-luna",
+    )
+    with pytest.raises(RecordingStop, match="NOT_STANDARD_TIER"):
+        observer.usage(response)
+    assert next(tmp_path.glob("*.sdk-response-*.json")).is_file()
 
 
 def test_same_hash_conflicting_unit_metadata_cannot_replace_file(tmp_path, monkeypatch) -> None:

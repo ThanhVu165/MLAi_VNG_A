@@ -38,8 +38,8 @@ from scripts.runtime_recording_readiness import (
 LOGGER = logging.getLogger(__name__)
 PROVIDER_CONTEXT_MAX = 1_050_000  # Official gpt-6-luna model limits; reverify before GO.
 PROVIDER_OUTPUT_MAX = 128_000
-MAX_PUBLIC_INPUT_RATE = Decimal("0.55")  # Cache-write x long-context x Fast x regional.
-MAX_PUBLIC_OUTPUT_RATE = Decimal("1.65")  # Long-context x Fast x regional, before account proof.
+MAX_STANDARD_GLOBAL_INPUT_RATE = Decimal("0.25")  # Cache-write, long-context maximum.
+MAX_STANDARD_GLOBAL_OUTPUT_RATE = Decimal("0.75")  # Long-context maximum.
 
 
 class RecordingStop(BaseException):
@@ -122,14 +122,16 @@ def validate_cost_bound(go: dict, total_cap: int) -> Decimal:
     bound = go.get("cost_bound", {})
     if bound.get("basis") != "VERIFIED_PROVIDER_ENFORCED_MAXIMA_AND_MAXIMUM_BILLED_RATES":
         raise RecordingStop("TOKEN_ASSUMPTION_IS_NOT_ENFORCEABLE_COST_BOUND")
+    if bound.get("service_tier") != "standard" or bound.get("processing_region") != "global":
+        raise RecordingStop("BOUND_REQUIRES_VERIFIED_STANDARD_GLOBAL_PROJECT")
     token_caps = [bound.get(key) for key in ("max_input_tokens", "max_output_tokens")]
     if any(type(n) is not int or n <= 0 for n in token_caps):
         raise RecordingStop("INVALID_PROVIDER_TOKEN_MAXIMA")
     if token_caps[0] < PROVIDER_CONTEXT_MAX or token_caps[1] < PROVIDER_OUTPUT_MAX:
         raise RecordingStop("BOUND_BELOW_UNCAPPED_PROVIDER_MAXIMUM")
     if (
-        usd(bound["max_input_usd_per_million"]) < MAX_PUBLIC_INPUT_RATE
-        or usd(bound["max_output_usd_per_million"]) < MAX_PUBLIC_OUTPUT_RATE
+        usd(bound["max_input_usd_per_million"]) < MAX_STANDARD_GLOBAL_INPUT_RATE
+        or usd(bound["max_output_usd_per_million"]) < MAX_STANDARD_GLOBAL_OUTPUT_RATE
     ):
         raise RecordingStop("BOUND_BELOW_DOCUMENTED_MAXIMUM_BILLED_RATES")
     upper = sum(
@@ -276,6 +278,8 @@ class ProviderObserver:
             raise RecordingStop("RESPONSE_USAGE_OR_ORIGIN_METADATA_MISSING; original preserved")
         if getattr(response, "model", None) not in self.go["allowed_response_models"]:
             raise RecordingStop("RESPONSE_MODEL_NOT_APPROVED; original preserved")
+        if usage.get("service_tier") != "default":
+            raise RecordingStop("RESPONSE_NOT_STANDARD_TIER; original preserved")
         if (
             usage["input_tokens"] > bound["max_input_tokens"]
             or usage["output_tokens"] > bound["max_output_tokens"]

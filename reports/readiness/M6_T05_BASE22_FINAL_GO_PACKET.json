@@ -2,9 +2,9 @@
   "task": "M6-T05",
   "date_local": "2026-10-13",
   "timezone": "Asia/Saigon",
-  "decision": "NOT_AUTHORIZED",
-  "readiness": "NOT_READY_FOR_BASE22_WITH_CURRENT_BOUND",
-  "directive_source": "Direct Coordinator message in this Codex chat: [M6-T05] COORDINATOR DIRECTIVE — COMPLETE TASK, NOT CHECKPOINT",
+  "decision": "CONDITIONAL_GO_GRANTED",
+  "readiness": "READY_FOR_BASE22_AFTER_CLEAN_CHECKOUT",
+  "directive_source": "Direct Coordinator message in this Codex chat: [M6-T05] COORDINATOR DECISION — $10 HARD CAP",
   "scope_decision": {
     "scope": "BASE_PACK_V1",
     "scope_approved": true,
@@ -42,7 +42,7 @@
     "data/seed_docs/RL-2026-3150.json": "e9d5649628751b1ff6843dab9fc7e17f44f198c44391aeb1e53d72d229937bd4",
     "scripts/audit_runtime_replay.py": "70799a8008eb499750f3fa884fddff6de3952f42c9c5c448ac6825a08e63ad87",
     "scripts/runtime_recording_readiness.py": "25ed7d4718a4bae3f57765c0d0f239322b3d42f6e1039b73011a0b81bee2c202",
-    "scripts/guarded_runtime_recording.py": "a21f48075333ab95af9a876140367b413fcf1894fa02aedfb91a321e28b37272",
+    "scripts/guarded_runtime_recording.py": "f423a27661ec62b3f040fab923e1745937af2f50b459782060021dd7455469d3",
     "scripts/validate_recorded_replay_pack.py": "f2abda7c59cca0394f5ae5de398d66e2b2a91cfbd383bbbabe41cd5f10562b96"
   },
   "config": {
@@ -229,52 +229,51 @@
     "standard_input_usd_per_million": "0.10",
     "standard_output_usd_per_million": "0.50",
     "cache_write_usd_per_million": "0.125",
-    "maximum_public_input_rate_calculation": "0.125 * 2 long-context * 2 Fast * 1.1 regional = 0.55",
-    "maximum_public_output_rate_calculation": "0.50 * 1.5 long-context * 2 Fast * 1.1 regional = 1.65",
-    "bound_note": "Conservative sum of full context and full output, not predicted token use. Account-specific higher rates or changed maxima invalidate this envelope.",
-    "snapshot_status": "Alias configured; exact returned model allow-list must be verified and approved before execution"
+    "maximum_standard_global_input_rate_calculation": "0.125 cache-write * 2 long-context = 0.25",
+    "maximum_standard_global_output_rate_calculation": "0.50 * 1.5 long-context = 0.75",
+    "bound_note": "Conservative sum of full context and full output at the verified project Standard/Global tier, not predicted token use. A changed project tier or region invalidates this envelope.",
+    "snapshot_status": "Official model page lists gpt-6-luna as the request and snapshot identifier"
   },
   "cost_bound": {
     "basis": "VERIFIED_PROVIDER_ENFORCED_MAXIMA_AND_MAXIMUM_BILLED_RATES",
+    "service_tier": "standard",
+    "processing_region": "global",
     "max_input_tokens": 1050000,
     "max_output_tokens": 128000,
-    "max_input_usd_per_million": "0.55",
-    "max_output_usd_per_million": "1.65",
+    "max_input_usd_per_million": "0.25",
+    "max_output_usd_per_million": "0.75",
     "public_documentation_status": "VERIFIED",
-    "account_status": "NOT_VERIFIED"
+    "account_status": "VERIFIED_READ_ONLY; matching active project key, Standard/Global project, model allowed"
   },
-  "public_upper_cost_usd_per_attempt": "0.7887",
-  "public_total_reservation_usd": "17.3514",
+  "public_upper_cost_usd_per_attempt": "0.3585",
+  "public_total_reservation_usd": "7.887",
   "approved_usd_cap": "10.00",
-  "verified_upper_cost_usd": null,
+  "verified_upper_cost_usd": "0.3585",
   "account_readiness": {
     "dashboard_observation": "Authenticated account/project settings inspected read-only; raw account identifiers and billing balance are ignored private evidence only",
-    "account_project_key_binding": "NOT_VERIFIED; Coordinator budget reply does not attest credential association or custom pricing/maxima",
-    "model_access": "PROJECT_ALLOWED; org/system restrictions and recording-key binding not fully established",
+    "account_project_key_binding": "VERIFIED; local sk-proj credential suffix matches the dashboard Active OPENAI_API_KEY row in Default project; no key value published",
+    "model_access": "PROJECT_ALLOWED; gpt-6-luna request identifier documented and enabled",
     "usage_tier": "Build",
     "rpm": 5000,
     "tpm": 2000000,
     "project_service_tier": "Standard",
     "billing_currency": "USD",
-    "maximum_effective_input_rate": null,
-    "maximum_effective_output_rate": null,
-    "token_maxima_account_exceptions": "NOT_VERIFIED",
-    "available_funds_at_least_cap": "NOT_PROVEN_FOR_USD10; observed balance below10; auto-reload OFF",
-    "credential_presence": "OPENAI_API_KEY defined in local .env; presence only, not validity/account/access proof; no value or fingerprint published",
-    "needed_private_evidence": [
-      "Correct recording-key account/project association attested by account administrator without revealing key",
-      "Model access and exact permitted returned model IDs",
-      "Usage tier and applicable RPM/TPM; project service tier and any region/custom contract rates",
-      "USD rate ceilings no greater than approved envelope, provider token maxima, and enough balance/quota for approved cap"
-    ],
+    "maximum_effective_input_rate": "0.25 USD per million at Standard/Global long-context cache-write maximum",
+    "maximum_effective_output_rate": "0.75 USD per million at Standard/Global long-context maximum",
+    "token_maxima_account_exceptions": "No lower assumption used; official provider maxima 1050000 input and 128000 output are reserved",
+    "available_funds_at_least_cap": "VERIFIED_ABOVE_FULL_BASE22_RESERVATION_7.887; below the unused10 hard cap is acceptable because reserved cost cannot exceed7.887",
+    "credential_presence": "OPENAI_API_KEY defined in local .env; sk-proj shape and Active dashboard suffix match verified without publishing either value",
+    "needed_private_evidence": [],
     "tpd": 20000000,
     "project_residency": "Global"
   },
-  "go_reference": null,
-  "account_evidence_reference": "data/validation/m6-t05-account-readiness-private.json (partial dashboard evidence, not complete key/rate proof)",
-  "bound_evidence_reference": null,
+  "go_reference": "Direct Coordinator message in this Codex chat: [M6-T05] COORDINATOR DECISION — $10 HARD CAP",
+  "account_evidence_reference": "data/validation/m6-t05-account-readiness-private.json (ignored read-only dashboard evidence plus local suffix-match result; no secret published)",
+  "bound_evidence_reference": "Official gpt-6-luna model/pricing and Chat Completions service_tier documentation verified 2026-10-13; runner tests on this change",
   "sdk_capture_format": "SDK_JSON_PAYLOAD_NOT_HTTP_WIRE_BYTES",
-  "allowed_response_models": null,
+  "allowed_response_models": [
+    "gpt-6-luna"
+  ],
   "safeguards": {
     "pre_dispatch": "Reserve per-flow/global attempt and worst-case USD before original production SDK request; stop on drift or cap",
     "failures": "No refund of unknown/failed usage; no automatic flow reruns or quota transfers; SDK retries=0; product retry/repair consumes same cap",
@@ -285,12 +284,8 @@
   },
   "local_execution_blocker": "Unrelated staged CURRENT_RUNTIME_SMOKE.md and ten untracked SQLite WAL/SHM files remain preserved. Runner requires fully clean checkout. Do not move/delete SQLite sidecars without associated DB owner and stopped writers.",
   "acceptance_scope_limit": "BASE22 excludes two cited-R11 responses. Original full cited-context coverage cannot be declared PASS without separately valid responses and/or explicit future contract/scope decision; no supplemental call authorized now.",
-  "final_go_required": [
-    "Exact final PR44 SHA plus unchanged fingerprints/config/input hashes",
-    "Private account evidence verified, rates/token maxima and allowed returned model IDs pinned",
-    "Approved USD cap and verified per-attempt upper cost",
-    "Synthetic input/provenance/privacy/SDK format, stop conditions and operator approval",
-    "Authoritative GO reference; booleans in this proposal do not authenticate Coordinator",
+  "execution_remaining": [
+    "Commit this cost guard and bind the ignored execution authorization to the resulting exact PR44 SHA plus fresh fingerprints/config/input hashes",
     "Clean checkout after safe reconciliation of unrelated work"
   ],
   "next_execution": [
@@ -318,27 +313,25 @@
   "human_self_review": "PENDING",
   "nam_final_review": "PENDING",
   "coordinator_acceptance": "NOT_GRANTED",
-  "budget_decision_source": "Direct Coordinator message in this chat: [M6-T05] COORDINATOR BUDGET DECISION; maximum USD10, BASE22, no final LIVE GO",
-  "budget_scope_approval_is_final_live_go": false,
+  "budget_decision_source": "Direct Coordinator message in this chat: [M6-T05] COORDINATOR DECISION — $10 HARD CAP; LIVE permitted once listed execution conditions pass",
+  "budget_scope_approval_is_final_live_go": true,
   "budget_analysis": {
     "approved_usd_cap": "10.00",
-    "full_base22_broad_reservation_usd": "17.3514",
-    "base22_fits_current_guarded_envelope": false,
-    "conditional_max_attempts_at_public_upper": 12,
-    "conditional_12_attempt_reservation_usd": "9.4644",
+    "full_base22_standard_global_reservation_usd": "7.887",
+    "base22_fits_current_guarded_envelope": true,
+    "maximum_attempts_at_verified_upper_within_hard_cap": 27,
     "current_authorized_dispatch_attempts": 0,
-    "qualification": "12 is arithmetic capacity only, conditional on account evidence and final GO. It is not authorization, a replacement BASE scope or AC completion.",
-    "lower_standard_global_conditional_envelope": {
+    "qualification": "Scope still limits execution to22 attempts. Current dispatch remains0 only because the checkout is dirty; the Coordinator has granted conditional GO and no further budget approval is needed.",
+    "standard_global_envelope": {
       "max_input_usd_per_million": "0.25",
       "max_output_usd_per_million": "0.75",
       "per_attempt_usd": "0.3585",
       "base22_usd": "7.887",
-      "status": "NOT_CURRENTLY_ENFORCEABLE_BY_EXISTING_RUNNER; omitted service_tier is auto; current guard requires broader rate floors. Do not use this as approved dispatch bound."
+      "status": "ENFORCED_BY_RECORDING_RUNNER; pre-dispatch bound requires Standard/Global evidence and each response must report service_tier=default"
     }
   },
   "outside_scope_decisions": [
-    "Budget remains maximum10; do not request/use17.36 or run partial12 as a substitute for BASE22.",
-    "If full BASE22 must run under10, Coordinator must assign authoritative account-bound verification and separately scoped infra work if explicit request tier/output caps or provider-interface changes are needed. No such change is authorized here.",
+    "Budget remains maximum10; runner reserves7.887 for BASE22 and never expands above22 attempts.",
     "Original cited-R11 full acceptance requires separately valid responses or explicit future contract/scope decision; BASE22 excludes their recording.",
     "Associated owners must safely reconcile unrelated staged smoke report and live SQLite sidecars before clean-checkout execution; no reset/clean/stash or sidecar moves performed."
   ]
