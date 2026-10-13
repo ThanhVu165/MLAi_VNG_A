@@ -1,5 +1,29 @@
 # M6-T05 — Product Runtime Replay Coverage
 
+## DELTA_REPAIR_V1 completion — 14/10/2026
+
+**TECHNICAL ACCEPTANCE PACK COMPLETE; TASK NOT YET DONE.** Coordinator granted DELTA LIVE GO on exact SHA `dfcdec2f6d557a72f5adf742bb4fc1bb36fa5359` for exactly three allowlisted `R7_question_repair` hashes. Preflight verified clean local/remote HEAD, BASE21 manifest and cassette bytes, current source/config/input fingerprints, the active project credential binding, `gpt-6-luna` access, Standard/Global tier, available credit `$9.86`, and cumulative worst-case reservation `$8.6040 < $10`.
+
+The delta runner replayed nine existing upstream cassettes and dispatched exactly **3 provider attempts**, with no retry or extra request. All three returned `gpt-6-luna`, `service_tier=default`, request IDs and numeric usage: **3,239 input + 803 output tokens**. Cumulative recording is **24 attempts**, **46,232 input + 3,725 output tokens**, with conservative usage-priced upper bound `$0.01435175`; exact billed cost is unavailable from response metadata. The runner stopped with one unused global slot and no authority to spend it.
+
+Original SDK payloads remain in ignored quarantine. Original-response checksums, prompt/schema identity, strict schema, request/model/source/config/input bindings, usage reconciliation and cassette equality pass for all three delta responses. Automated privacy scanning covered 13 delta JSON files with zero flags. The three parsed cassette bytes were copied without overwrite or transformation. [`M6_T05_BASE24_RECORDED_PACK.json`](M6_T05_BASE24_RECORDED_PACK.json) records the combined 24-cassette provenance chain; BASE21 evidence remains unchanged as historical input.
+
+Offline replay used the product pipeline on a fresh isolated DB per flow with socket, provider-live and cache-read traps. [`M6_T05_BASE24_REPLAY_RESULT.json`](M6_T05_BASE24_REPLAY_RESULT.json) records **24 observed calls / 24 hits / 0 misses / LIVE=0** across `DEV_ROUTINE`, `DEV_AUTHORITY`, `DEV_FACT`, `V01`–`V04` and `DEV_HUMAN_R11`. The aggregate audit first reached all seven pipeline flows and then stopped at an R11 Streamlit element lookup `KeyError`; isolated per-flow reruns reproduced all eight flows with zero misses and no provider access. This harness observation does not change cassette coverage.
+
+Business evidence is reported separately from replay coverage. `DEV_ROUTINE`, `V01`, `V03` and `V04` match their expected outcomes; `DEV_AUTHORITY` and `DEV_FACT` reach the expected escalation classes. `V02` remains the known clock-normalization mismatch (`5:00 p.m.` versus `17 giờ 00`). `DEV_HUMAN_R11` preserves the human choice/reason and reaches `HUMAN_DECIDED`, but its worker job fails because the generated draft does not preserve that choice/reason; drafts=0. These defects are outside the authorized M6-T05 production scope and were not modified.
+
+| AC | Status | Final evidence |
+|---|---|---|
+| AC1 Coverage matrix | **PASS** | Eight approved critical flows and all 24 observed prompt identities are mapped |
+| AC2 Provenance | **PASS** | 24 genuine authorized SDK-response chains; BASE21 21/21 plus delta 3/3 |
+| AC3 Integrity/schema | **PASS** | Original → parsed cassette, schema, model, usage, checksums and privacy checks pass |
+| AC4 No critical miss | **PASS** | 24/24 hits, 0 misses, 0 LIVE calls during replay |
+| AC5 Runtime evidence | **PASS — defects reported** | Actual decisions, drafts, audit/worker states and V02/R11 defects recorded without changing production |
+| AC6 Data/cost safety | **PASS** | Synthetic DEV only; 24/25 attempts; `$8.6040 < $10`; raw payloads ignored; no prohibited datasets/PII |
+| AC7 Reproducibility | **PASS technical** | Exact recording SHA, fingerprints, immutable cassettes, manifests, commands and isolated replay artifacts retained |
+
+Required human gate remains external: Trello still has to record the valid Owner transfer/review waiver, or Nam must complete the existing final review. Coordinator alone decides ACCEPT/DONE and merge. No Trello state, merge or acceptance claim is made here.
+
 ## Authorized BASE execution — 13/10/2026 (current result)
 
 **RESULT: PARTIAL COVERAGE; NOT DONE.** This section supersedes the pre-dispatch state below. Recording ran at exact HEAD `8371b34385c39696d8ccfd06dae93311fd3e58fa` after the Coordinator's conditional GO requirements were satisfied. The shared checkout was clean: the runtime-smoke Owner preserved `CURRENT_RUNTIME_SMOKE.md` on `codex/pytest-blocker-remediation` at `a7efface6c7ca2021664ff3bfcf75a71fa13290f`; the database Owner verified all five M16 databases with `integrity_check=ok`, empty checkpoints and unchanged logical/byte hashes, after which SQLite removed the ten unlocked WAL/SHM sidecars on close.
