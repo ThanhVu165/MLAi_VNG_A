@@ -1044,6 +1044,69 @@ def test_ground_guard_escalates_unsupported_number_without_editing_draft(
     assert [event.action for event in events] == ["GROUNDEDNESS_FAILED"]
 
 
+def test_ground_guard_accepts_v02_cited_academic_year_breadcrumb(monkeypatch) -> None:
+    monkeypatch.setattr("core.ground_guard.is_active", lambda chunk_id: chunk_id == "chunk-1")
+    evidence = EvidenceResult(
+        EvidenceStatus.OK,
+        [
+            replace(
+                _evidence_chunk(domain=Domain.COURSE_WITHDRAWAL),
+                breadcrumb="Quy chế rút học phần năm học 2026-2027 · Điều 2",
+                text="Hạn chót là 17 giờ 00 thứ Sáu của tuần học thứ 8.",
+            )
+        ],
+        [],
+    )
+    draft = _draft("For the 2026–2027 academic year, the deadline is 5:00 p.m. [chunk-1].")
+
+    result = guard_groundedness(
+        case_id="offline-v02",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=draft,
+        evidence=evidence,
+        record_event=False,
+    )
+
+    assert result.decision is None
+    assert result.failed_checks == []
+    assert result.draft.grounded and result.draft.body == draft.body
+
+
+def test_ground_guard_rejects_academic_year_mismatching_email(monkeypatch) -> None:
+    monkeypatch.setattr("core.ground_guard.is_active", lambda chunk_id: chunk_id == "chunk-1")
+    evidence = EvidenceResult(
+        EvidenceStatus.OK,
+        [
+            replace(
+                _evidence_chunk(domain=Domain.COURSE_WITHDRAWAL),
+                breadcrumb="Quy chế rút học phần năm học 2026-2027 · Điều 2",
+                text="Hạn chót là 17 giờ 00 thứ Sáu của tuần học thứ 8.",
+            )
+        ],
+        [],
+    )
+    draft = _draft("For the 2026–2027 academic year, the deadline is 5:00 p.m. [chunk-1].")
+
+    result = guard_groundedness(
+        case_id="offline-academic-year-mismatch",
+        actor="SYSTEM",
+        corpus_version="cv_test",
+        draft=draft,
+        evidence=evidence,
+        record_event=False,
+        input_text="Cho em hỏi hạn rút học phần trong năm học 2025-2026.",
+    )
+
+    assert result.decision is not None
+    assert result.decision.decision is Decision.ESCALATE
+    assert result.decision.escalation_type is EscalationType.FACT_UNRESOLVED
+    assert result.decision.rule_id == "P04"
+    assert result.decision.reason == "groundedness_failed:number"
+    assert result.failed_checks == ["number"]
+    assert not result.draft.grounded and result.draft.body == draft.body
+
+
 @pytest.mark.parametrize(
     ("body", "course_code", "input_text", "source", "number_failure"),
     [

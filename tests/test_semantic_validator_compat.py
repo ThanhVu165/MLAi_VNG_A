@@ -41,11 +41,11 @@ def offline(monkeypatch):
     monkeypatch.setenv("LLM_CACHE", "0")
 
 
-def evidence(text="Câu đầu.\nĐiểm a) Câu sau."):
+def evidence(text="Câu đầu.\nĐiểm a) Câu sau.", breadcrumb="Điều 1"):
     chunk = EvidenceChunk(
         "chunk-1",
         "doc-1",
-        "Điều 1",
+        breadcrumb,
         text,
         Domain.GRADE_APPEAL,
         ChunkLabel.AUTO_ANSWERABLE,
@@ -90,6 +90,100 @@ def test_clock_is_removed_only_when_exact_equivalent_is_grounded(draft, source, 
     result = DraftReply("Synthetic", draft, ["chunk-1"], True, [])
     assert ground_guard._unsupported_value_failure(result, evidence(source)) is failed
     assert result.body == draft
+
+
+def test_v02_accepts_cited_academic_year_breadcrumb_and_equivalent_clock():
+    draft = DraftReply(
+        "Course Withdrawal",
+        "For the 2026–2027 academic year, the deadline is 5:00 p.m. [chunk-1].",
+        ["chunk-1"],
+        True,
+        [],
+    )
+    source = evidence(
+        "Hạn chót là 17 giờ 00 thứ Sáu của tuần học thứ 8.",
+        "Quy chế rút học phần năm học 2026-2027 · Điều 2",
+    )
+
+    assert ground_guard._unsupported_value_failure(draft, source) is False
+
+
+@pytest.mark.parametrize(
+    "breadcrumb",
+    [
+        "Quy chế rút học phần · Điều 2",
+        "Quyết định số 2026-2027 · Điều 2",
+        "Quy chế rút học phần năm học 2025-2026 · Điều 2",
+    ],
+)
+def test_academic_year_must_be_proven_as_context_by_cited_breadcrumb(breadcrumb):
+    draft = DraftReply(
+        "Course Withdrawal",
+        "For the 2026–2027 academic year, the deadline is 5:00 p.m. [chunk-1].",
+        ["chunk-1"],
+        True,
+        [],
+    )
+
+    assert (
+        ground_guard._unsupported_value_failure(
+            draft,
+            evidence("Hạn chót là 17 giờ 00.", breadcrumb),
+        )
+        is True
+    )
+
+
+def test_academic_year_in_uncited_breadcrumb_is_not_grounding():
+    cited = evidence("Hạn chót là 17 giờ 00.", "Quy chế rút học phần · Điều 2").chunks[0]
+    uncited = EvidenceChunk(
+        "chunk-2",
+        "doc-2",
+        "Quy chế khác năm học 2026-2027 · Điều 1",
+        "Nội dung không liên quan.",
+        Domain.COURSE_WITHDRAWAL,
+        ChunkLabel.AUTO_ANSWERABLE,
+        1.0,
+        date(2026, 1, 1),
+        None,
+        [],
+        [],
+        False,
+        False,
+    )
+    draft = DraftReply(
+        "Course Withdrawal",
+        "For the 2026–2027 academic year, the deadline is 5:00 p.m. [chunk-1].",
+        ["chunk-1"],
+        True,
+        [],
+    )
+
+    assert (
+        ground_guard._unsupported_value_failure(
+            draft,
+            EvidenceResult(EvidenceStatus.OK, [cited, uncited], []),
+        )
+        is True
+    )
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "The fee is 2,026 dollars [chunk-1].",
+        "The deadline is 2,026 days [chunk-1].",
+        "The completion rate is 2,026% [chunk-1].",
+    ],
+)
+def test_academic_year_breadcrumb_does_not_ground_other_numeric_claims(body):
+    draft = DraftReply("Unsupported value", body, ["chunk-1"], True, [])
+    source = evidence(
+        "Hạn chót là 17 giờ 00.",
+        "Quy chế rút học phần năm học 2026-2027 · Điều 2",
+    )
+
+    assert ground_guard._unsupported_value_failure(draft, source) is True
 
 
 def payload(quote="Câu đầu.", chunk_id="chunk-1"):
