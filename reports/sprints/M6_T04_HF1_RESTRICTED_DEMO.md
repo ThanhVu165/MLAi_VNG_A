@@ -1,7 +1,81 @@
 # M6-T04-HF1 — Restricted Public DEMO Access Hotfix
 
 Ngày xác minh: 2026-10-14
-Kết quả self-review của Coordinator/Owner: **READY_FOR_COORDINATOR_ACCEPTANCE** — chưa merge, chưa deploy public, chưa đánh DONE.
+Kết quả self-review HF1 trước deploy (lịch sử): **READY_FOR_COORDINATOR_ACCEPTANCE** — tại thời điểm đó chưa merge, chưa deploy public và chưa đánh DONE.
+
+## Final public runtime acceptance checkpoint
+
+Checkpoint này cập nhật evidence sau khi HF1 được merge và deploy; phần evidence HF1 phía dưới được giữ nguyên như lịch sử review trước deploy. **Không đánh M6-T04 DONE** trong checkpoint này.
+
+### Deployment cuối
+
+| Hạng mục | Giá trị |
+|---|---|
+| Railway workspace | `aivietnam-aio-minhthuw's Projects` |
+| Project / service / environment | `exodia-restricted-demo` / `exodia-web` / `production` |
+| Public URL | `https://exodia-web-production.up.railway.app` |
+| Final deployed SHA | `fe8c2dbca013e9344a678ba52f70588495c897ef` |
+| Deployment trước restart | `7c25f17a-ade9-48b4-b9e7-2e9b04002057` — `SUCCESS` |
+| Deployment sau controlled restart | `6ea7928c-2aa4-4ff9-bc23-aaece3db04a9` — `SUCCESS` |
+| Runtime | Railway Runtime V2; Docker `python:3.11-slim` |
+| Mode / replay model | `restricted_demo` / `gpt-6-luna` |
+
+Docker packaging fix tại PR #54 / merge SHA `fe8c2dbca013e9344a678ba52f70588495c897ef` đổi `.dockerignore` từ loại toàn bộ `tests/` sang loại `tests/*` nhưng include lại `tests/cassettes/`. Runtime image vì vậy chứa đúng replay pack mà không đưa toàn bộ test suite vào image. Không đổi cassette, model, policy, schema hoặc expected labels.
+
+### Public functional evidence
+
+- Public landing trả HTTP 200, không traceback hoặc secret/config leakage rõ ràng.
+- Canonical public: routine `AUTO_REPLY`; authority `ESCALATE`; missing facts `ESCALATE`; không `TECHNICAL_ERROR`.
+- Verify public chỉ expose bộ 4 ca bắt buộc và đạt **4/4 PASS**.
+- Free-form unseen input fail closed trước persistence; không tạo business decision giả; LIVE/API = 0.
+- Restricted public UI không expose ADMIN, APPROVER, corpus mutation, privileged approve/override hoặc global pause/resume.
+
+### Multi-session và isolation
+
+Ba browser context độc lập chạy canonical đồng thời:
+
+| Session | Canonical | Kết quả |
+|---|---|---|
+| A | Hỏi lệ phí phúc khảo | `AUTO_REPLY` |
+| B | Xin phúc khảo trễ | `ESCALATE` |
+| C | Văn bản rèn luyện áp dụng | `ESCALATE` |
+
+- Mỗi DOM chỉ chứa case ID/audit link của chính session đó; recent-case view không hiện case của hai session còn lại.
+- Ba phép thử deep link chéo bằng `?case_id=` đều bị trả về landing không case ID, không decision và không nội dung case.
+- Không có SQLite lock, traceback, crash hoặc HTTP 5xx trong lượt concurrent.
+
+### Controlled restart
+
+- Chạy đúng một Railway redeploy từ deployment hiện hành, không dùng `--from-source`, không đổi source SHA hoặc runtime configuration.
+- Service hồi phục `SUCCESS`; public URL trả HTTP 200 và không crash loop.
+- Ba browser session cũ không còn quyền xem case trước restart và đều fail closed về landing. Không session nào xem được case cũ của session khác.
+- Sau restart: canonical routine `AUTO_REPLY`; Verify4 **4/4 PASS** trong 0,4 giây.
+- Privilege boundary vẫn giữ: trang corpus ghi rõ quản trị bị khóa phía server, không file input/form mutation, ADMIN/APPROVER/global controls không xuất hiện.
+
+### Post-restart safety
+
+| Kiểm tra | Kết quả |
+|---|---:|
+| Cassette errors | 0 |
+| `OPENAI_MODEL` errors | 0 |
+| Runtime traceback | 0 |
+| SQLite lock errors | 0 |
+| HTTP 5xx | 0 |
+| Provider attempt markers | 0 |
+| OpenAI DNS events | 0 |
+| Real-email send markers | 0 |
+| Secret-shaped log content | 0 |
+| LIVE/API/email thật | 0 / 0 / 0 |
+| Provider cost | $0 |
+
+### Phạm vi chưa được tuyên bố
+
+- Controlled LIVE new-input chưa hoạt động; free-form vẫn fail closed theo thiết kế.
+- Escalation5 chưa PASS.
+- BASE24 replay coverage trước đó đạt hit đầy đủ nhưng provenance/authorization của recorded pack vẫn chưa được Coordinator approve.
+- Session ownership không durable; mất quyền xem case cũ sau restart là limitation được chấp nhận vì fail closed.
+
+Kết luận checkpoint: **READY_FOR_M6_T04_COORDINATOR_ACCEPTANCE / ACCEPT recommendation**. Đây là handoff cho Coordinator, không phải tuyên bố DONE.
 
 ## Security remediation
 
