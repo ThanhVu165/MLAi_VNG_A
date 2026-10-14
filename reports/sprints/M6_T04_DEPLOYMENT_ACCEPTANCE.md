@@ -1,11 +1,11 @@
 # M6-T04 — Nghiệm thu triển khai và khả năng tái lập
 
-> Checkpoint mới nhất: xem **Public deployment follow-up — 14/10/2026** ở cuối file.
-> Railway đã connected và cấu hình mới chỉ staged; public deployment vẫn BLOCKED.
+> Checkpoint mới nhất: xem **Private container acceptance — 14/10/2026** ở cuối file.
+> Railway private runtime/replay đã kiểm trực tiếp; public deployment vẫn BLOCKED.
 > Toàn bộ image/test evidence phía dưới đến trước follow-up là historical checkpoint.
 > Phase D recheck 15:12: deletion đã hủy; public-access finding được tái hiện trên SHA được duyệt.
 > Phase D execution 15:18: Trello approval đã có; Apply/Deploy bị lớp xác nhận công cụ hủy, chưa build.
-> Latest: manual private deployment SUCCESS, Docker build/startup/internal health PASS; public URL và container acceptance còn pending.
+> Latest: private Docker build/health, container source/pack scan và critical replay/Verify PASS có giới hạn; public access và exact deployed SHA chưa đạt.
 
 ## Kết luận checkpoint
 
@@ -588,3 +588,95 @@ identified as the personal workspace, so was not used as an SSH target.
 Await the current Service Instance ID from the approved service's command palette.
 Image filesystem, container replay/Verify and remote DB checks remain NOT VERIFIED.
 AC1–AC8 statuses above remain unchanged; public domain remains STOP at the access gate.
+
+## Private container acceptance — 14/10/2026, 16:19 UTC+07
+
+**RESULT: PRIVATE_RUNTIME_PASS có giới hạn; PUBLIC_URL_NOT_READY; M6-T04 NOT DONE.**
+
+User cung cấp Service Instance ID đúng `19c74e1f-de9a-4833-9854-a73a11f50a95`.
+SSH với task key riêng, IdentitiesOnly và StrictHostKeyChecking=yes vào được container.
+Actual service/environment/deployment env khớp đúng service đã duyệt, không tạo domain.
+
+| Check trực tiếp trong container | Actual result |
+| --- | --- |
+| Python | 3.11.17 |
+| Actual environment | replay/openai/gpt-6-luna/none/cache0; PORT=8511 |
+| Runtime DB | /runtime/demo.db; SQLite quick_check=ok |
+| Demo seed | 6 sources, 6 synthetic, 72 chunks, 6 original source contents; 0 cases / 0 audit events |
+| Internal HTTP health | 200, body `ok` |
+| API/email credential presence | OPENAI_API_KEY, ANTHROPIC_API_KEY, SMTP_PASSWORD, GMAIL_TOKEN absent; values never displayed |
+| Artifact scan /app | 0 findings for .env/.env.*, DB/key/bytecode/vector-cache patterns, .git/.venv/.pytest*/secrets.toml |
+| Credential-literal/private-key-marker scan | 0 findings in text files under /app, size below 2 MB; narrow automated scan, not complete PII/security certification |
+| Source identity comparison | 72/72 application/config files checked match Git bytes at approved b7a0658; scope core/corpus/infra/ui/pages/policies/verify plus Dockerfile/requirements/entrypoints |
+| Accepted BASE24 pack | Exactly 24 files; 24/24 SHA-256 match manifest, no extra cassette |
+| Actual runtime commit environment | **61e31e8db1784fb2f387efceaaf013a45401204e**, matching deployment metadata, differing from approved b7a0658 |
+
+The application-byte comparison supports content equivalence in the checked scope;
+it does not satisfy the exact-SHA deployment requirement. No new source/build was staged.
+
+### Real replay, Verify and human resume
+
+Fresh temporary DB under `/tmp`, configured before infra/corpus imports; live DEMO DB
+was read-only during the probe. Socket connect/connect_ex/sendto/DNS and `_call_live`
+were denied; `_load_cache` was denied by the existing audit observer. No cassette bytes,
+business functions, schema, policy or expected Verify labels were changed.
+
+| Flow | Actual result | Replay hits |
+| --- | --- | --- |
+| DEV_ROUTINE | AUTO_REPLY / PENDING_SEND | 3 |
+| DEV_AUTHORITY | ESCALATE / AUTHORITY_REQUIRED / AWAITING_HUMAN | 4 |
+| DEV_FACT | ESCALATE / FACT_UNRESOLVED / AWAITING_HUMAN | 4 |
+| Verify V01–V04 | 4/4 semantic matches; V04 supplies OUT_OF_POLICY critical path | 12 |
+| DEV_HUMAN_R11 | Real AppTest decision + worker; PENDING_APPROVAL, 1 draft, job state `done` | 1 |
+
+Critical decision paths AUTO_REPLY/AUTHORITY_REQUIRED/FACT_UNRESOLVED/OUT_OF_POLICY:
+4/4 observed. Total replay **24/24 hit, 0 miss, LIVE=0**. Eight observed flows persisted
+to the isolated DB, SQLite quick_check=ok. DEMO DB before/after hash unchanged:
+`57560fde0eae79f68974325ccda8d33185f02efc6af9b0f4023963cd89ba8561`;
+still 0 cases / 0 audit events and 6/6 synthetic sources. Temp DB removed afterward.
+
+Probe corrections are disclosed: the initial scratch seed assertion used wrong dataclass
+fields, then assumed seed insertion happened after corpus import (corpus.__init__ seeds
+on import). The existing audit human helper also assumed its case was already selected;
+the current UI shows a selected case. The task-local probe explicitly selected the actual
+human case via `selected_case_id_select` before its real decision widgets. A scratch
+assertion initially expected uppercase DONE, while core/worker.py stores lowercase `done`;
+the pre-correction JSON is retained. Only the validation driver was corrected, then the
+complete probe reran; no production code or response was substituted to obtain PASS.
+
+### Isolated volume data checks
+
+A newly created `m6-t04-validation-*` directory under the approved `/runtime` volume
+held disposable synthetic test databases. Seed initialized to 6 synthetic sources/72
+chunks. A synthetic settings marker survived reopening in a separate Python process;
+SQLite backup and restore to a new path preserved the marker and corpus. A separate
+fresh DB had no marker/cases and seed remained idempotent. All assertions PASS.
+The exact temporary directory was removed; live DEMO DB hash remained unchanged.
+**Service restart/volume persistence across container replacement and live DEMO reset
+remain NOT RUN**; process reopening is not evidence for those gates.
+
+Raw evidence retained locally under ignored `data/validation/m6-t04/`:
+`20261014-container-readback.json`, `20261014-container-source-check.json`,
+`20261014-container-runtime.json`, `20261014-container-runtime.stderr.log`,
+`20261014-container-runtime-before-assertion-correction.json`,
+`container_runtime_probe.py`, `20261014-container-recovery.json`.
+No private key, credential or DB is committed. Local data/app.db remains unchanged.
+
+### Updated AC1–AC8 and handoff
+
+| AC | Current status |
+| --- | --- |
+| AC1 Deployment | PARTIAL — private SUCCESS/health 200; public HTTPS/external browser/uptime acceptance missing |
+| AC2 Reproducibility | PARTIAL — real image/source/pack scan and Python measured; exact deployed SHA mismatches approval |
+| AC3 Fresh Clone | NOT VERIFIED — independent reviewer run remains pending |
+| AC4 Data | PARTIAL — actual isolated DEMO seed + disposable reopen/backup/restore PASS; service restart/reset gate pending |
+| AC5 Runtime | PASS in observed private scope — critical 4/4, Verify 4/4, human R11, 24/24 replay hit, LIVE 0 |
+| AC6 Sessions | NOT VERIFIED — AppTest is not 2–3 independent browser sessions |
+| AC7 Safety | PARTIAL / PUBLIC_ACCESS_GATE_BLOCKED — artifact scan/keyless replay/data isolation PASS; anonymous privileged intake still unsafe |
+| AC8 Evidence | PARTIAL — actual container evidence/report/PR updated; final acceptance evidence incomplete |
+
+Coordinator/Reviewer next actions: resolve exact-SHA disposition and select an authorized
+access-control or restricted-demo revision before public exposure. Then verify the new
+accepted deployment/domain from an external browser, real independent sessions, and
+remaining restart/reset/fresh-clone gates. Current public URL: **none**.
+No paid billing, LIVE/email, merge of PR #51 or DONE action was performed.

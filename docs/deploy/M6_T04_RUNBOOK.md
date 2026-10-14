@@ -5,8 +5,10 @@
 > health passed. No public domain exists. Current OCI image digest is
 > `sha256:1611638a236fc6299b321ae0bfca9f0c966a42557441d9c6df9385a2f773a585`.
 > Source-config pin is b7a0658; deployment metadata says 61e31e8 (excluded report-only
-> difference). Exact revision acceptance and container replay/data/image scans remain
-> pending. The rejected image warning below is historical and still applies to that image.
+> difference). Python 3.11.17, actual replay env, 24/24 cassette integrity, narrow /app
+> artifact scan, critical paths/Verify and 24/24 runtime replay hits were checked by SSH.
+> Exact revision acceptance, safe public access and remaining reviewer gates are pending.
+> The rejected image warning below is historical and still applies to that image.
 
 > **BLOCKED CHECKPOINT:** Không dùng hoặc phân phối image
 > `sha256:8e408bd7aa6462bb412a8211b12075c84abf795cc7d35462660c7d892b9e40b8`.
@@ -78,7 +80,8 @@ Logs must include the two-worker startup marker and no provider, API, or email c
 
 ## Replay and Verify
 
-The image excludes `tests/`, so mount the accepted cassette pack read-only. Use a fresh
+The current image includes only the accepted `tests/cassettes/` subtree from tests;
+the read-only pack mount below can explicitly supply the verified bytes. Use a fresh
 synthetic DB in `/tmp`, no network, a read-only container filesystem, and an evidence
 directory created for this task:
 
@@ -183,8 +186,8 @@ remain the reviewer's separately authorized steps.
 
 ## Inspect the private Railway container
 
-The previously supplied target `f6d42f27-6b73-4336-a477-a4d413c1c779` returns
-`No active deployment` after successful SSH authentication. Obtain the current
+Verified Service Instance ID at the latest checkpoint is
+`19c74e1f-de9a-4833-9854-a73a11f50a95`. If it changes, obtain the current
 Service Instance ID from the approved service's command palette before proceeding;
 the workspace, Service ID and Deployment ID are not substitutes. A corresponding
 local private key must be available and its public key registered on Railway. Keep
@@ -193,7 +196,7 @@ private keys outside the repository and do not disable SSH host verification.
 After SSH authentication/host identity are established, the first read-only probe is:
 
 ```powershell
-ssh -i "$env:USERPROFILE\.ssh\id_ed25519_railway_m6_t04" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$env:USERPROFILE\.ssh\known_hosts_railway_m6_t04" '<current-service-instance-id>@ssh.railway.com' 'python --version'
+ssh -i "$env:USERPROFILE\.ssh\id_ed25519_railway_m6_t04" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$env:USERPROFILE\.ssh\known_hosts_railway_m6_t04" '19c74e1f-de9a-4833-9854-a73a11f50a95@ssh.railway.com' 'python --version'
 ```
 
 Then verify actual environment identity, cassette bytes, `/app` artifact hygiene and
