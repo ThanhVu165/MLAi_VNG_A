@@ -23,10 +23,12 @@ from corpus.store import (
 )
 from infra.audit import log_event
 from infra.db import transaction
+from infra.demo_access import authorize_demo_action
 
 
 def materialize_source(source: SourceRecord, *, database_path: DatabasePath = None) -> int:
     """Chuẩn hóa bản trích xuất và lưu đơn vị pháp lý thật, không áp số đoạn cố định."""
+    authorize_demo_action("chuẩn bị nội dung corpus")
     source = _pending_source(source.doc_id, database_path=database_path)
     original = get_source_content(source.doc_id, database_path=database_path)
     if original is None:
@@ -63,6 +65,7 @@ def prepare_source(
     source: SourceRecord, *, actor: str, database_path: DatabasePath = None
 ) -> MetadataProposal:
     """Trích xuất và đề xuất; mọi đề xuất đều phải qua xác nhận của người quản trị."""
+    authorize_demo_action("đề xuất metadata corpus")
     count = materialize_source(source, database_path=database_path)
     original = get_source_content(source.doc_id, database_path=database_path)
     assert original is not None
@@ -87,6 +90,7 @@ def approve_source(
     database_path: DatabasePath = None,
 ) -> SourceRecord:
     """Người quản trị xác nhận một lần ở cấp nguồn, không cần đổi nhãn từng đoạn."""
+    authorize_demo_action("duyệt nguồn corpus")
     with transaction(database_path):
         source = _pending_source(source.doc_id, database_path=database_path)
         if not reason.strip() or not actor.startswith("ADMIN:") or not actor[6:].strip():

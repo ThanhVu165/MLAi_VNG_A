@@ -17,6 +17,7 @@ from typing import cast
 from uuid import uuid4
 
 from infra.db import execute, fetch_one, now_iso
+from infra.demo_access import is_restricted_demo
 from infra.provider_observability import (
     current_correlation,
     sanitize_case_id,
@@ -167,6 +168,8 @@ def _run_mode(
     provider: str = "openai",
 ) -> LLMResult:
     mode = os.getenv("LLM_MODE", "live").lower()
+    if is_restricted_demo() and mode != "replay":
+        return _failure("Restricted DEMO hiện không cho phép LIVE hoặc record.", prompt_hash, model)
     if mode == "replay":
         return _replay(prompt_hash, model)
     if mode not in {"live", "record"}:

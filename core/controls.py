@@ -23,6 +23,7 @@ from core.types import (
 from infra.audit import log_event
 from corpus.api import get_chunk
 from infra.db import execute, fetch_one, get_connection, now_iso, transaction
+from infra.demo_access import authorize_demo_action
 
 AUTOMATION_PAUSED_KEY = "automation_paused"
 PAUSED_VALUE = "1"
@@ -38,6 +39,7 @@ __all__ = (
 
 
 def _require_admin(actor: str) -> None:
+    authorize_demo_action("điều khiển quản trị")
     if not actor.startswith("ADMIN:") or not actor.removeprefix("ADMIN:").strip():
         raise ValueError("Chỉ ADMIN:<user> được dùng thao tác này.")
 
@@ -179,7 +181,9 @@ def _store_manual_decision(
         extraction = connection.execute(
             "SELECT payload_json FROM extractions WHERE case_id = ?", (case_id,)
         ).fetchone()
-        facts = json.loads(extraction["payload_json"]).get("critical_facts", {}) if extraction else {}
+        facts = (
+            json.loads(extraction["payload_json"]).get("critical_facts", {}) if extraction else {}
+        )
         basis = [
             (chunk.breadcrumb, chunk.text)
             for cid in evidence_ids
@@ -192,7 +196,11 @@ def _store_manual_decision(
                 case_id,
                 escalation_type,
                 mask_pii(case["subject"]),
-                json.dumps([f"Lý do dừng gửi: {reason}"] + [mask_pii(f"{key}: {value}") for key, value in facts.items()], ensure_ascii=False),
+                json.dumps(
+                    [f"Lý do dừng gửi: {reason}"]
+                    + [mask_pii(f"{key}: {value}") for key, value in facts.items()],
+                    ensure_ascii=False,
+                ),
                 json.dumps(basis, ensure_ascii=False),
                 f"Với email “{mask_pii(case['subject'])}” đang dừng vì “{reason}”, anh/chị xác nhận phản hồi đã soạn hay yêu cầu bổ sung trước khi trả lời?",
                 json.dumps(["Xác nhận phản hồi", "Yêu cầu bổ sung"], ensure_ascii=False),
@@ -227,13 +235,22 @@ def override_decision(
         if case is None:
             raise ValueError("Không tìm thấy email cần thay đổi.")
         if case["status"] not in (
-            CaseStatus.PENDING_SEND, CaseStatus.AWAITING_HUMAN, CaseStatus.PENDING_APPROVAL,
+            CaseStatus.PENDING_SEND,
+            CaseStatus.AWAITING_HUMAN,
+            CaseStatus.PENDING_APPROVAL,
             CaseStatus.NEEDS_RECHECK,
         ):
-            raise ValueError("Không được ghi đè email đã kết thúc, đang xử lý hoặc đã có quyết định của chuyên viên.")
+            raise ValueError(
+                "Không được ghi đè email đã kết thúc, đang xử lý hoặc đã có quyết định của chuyên viên."
+            )
         decision = _store_manual_decision(
-            connection, case, new_decision, actor, reason,
-            rule_id="ADMIN_OVERRIDE", action="OVERRIDE_DECISION",
+            connection,
+            case,
+            new_decision,
+            actor,
+            reason,
+            rule_id="ADMIN_OVERRIDE",
+            action="OVERRIDE_DECISION",
         )
         updated = connection.execute("SELECT * FROM cases WHERE case_id = ?", (case_id,)).fetchone()
         assert updated is not None

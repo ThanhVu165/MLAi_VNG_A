@@ -10,6 +10,7 @@ from urllib.parse import quote
 import streamlit as st
 
 from core.types import Decision
+from infra.demo_access import is_restricted_demo
 from ui.deterministic_fixtures import get_deterministic_fixtures
 from ui.presentation import (
     decision_badge_html,
@@ -20,7 +21,7 @@ from ui.presentation import (
     pass_fail_badge_html,
     stop_reason_badge_html,
 )
-from verify.harness import CASE_SETS, load_cases, run_cases
+from verify.harness import CASE_SETS, VerifyResult, load_cases, run_cases
 
 
 SET_LABELS: dict[str, str] = {
@@ -78,16 +79,23 @@ def main() -> None:
 
     col_select, col_btn = st.columns([7, 3], vertical_alignment="bottom")
     with col_select:
+        allowed_sets = ["verify4"] if is_restricted_demo() else list(SET_LABELS.keys())
         case_set = st.selectbox(
             "Lựa chọn bộ kiểm thử",
-            list(SET_LABELS.keys()),
+            allowed_sets,
             format_func=lambda k: SET_LABELS[k],
             index=0,
             key="verify_case_set_selector",
         )
     with col_btn:
-        run_clicked = st.button("▶ Chạy kiểm thử", type="primary", use_container_width=True, key="run_verify_main_btn")
+        run_clicked = st.button(
+            "▶ Chạy kiểm thử", type="primary", use_container_width=True, key="run_verify_main_btn"
+        )
         st.caption("Thời gian dự kiến: ~5–15 giây")
+
+    results: tuple[VerifyResult, ...] | None
+    elapsed: float
+    active_set: str
 
     # 3. Execution logic
     if run_clicked:
@@ -97,16 +105,25 @@ def main() -> None:
         with st.spinner("Đang chạy kiểm thử qua pipeline chuẩn..."):
             started = perf_counter()
             try:
-                results = run_cases(CASE_SETS[case_set], run_name=case_set)
+                run_results = run_cases(CASE_SETS[case_set], run_name=case_set)
                 elapsed = perf_counter() - started
-                st.session_state["verification_result"] = (results, elapsed, case_set)
+                st.session_state["verification_result"] = (run_results, elapsed, case_set)
+                if is_restricted_demo():
+                    owned = st.session_state.setdefault("restricted_demo_case_ids", [])
+                    if isinstance(owned, list):
+                        owned.extend(
+                            result.case_ref
+                            for result in run_results
+                            if result.case_ref not in owned
+                        )
             except Exception as error:
                 st.error(f"Sự cố khi thực thi bộ kiểm thử: {error}")
 
     # 4. Determine Active Data (Real vs Deterministic Fixture)
-    fixture_param = st.query_params.get("fixture")
+    fixture_param = None if is_restricted_demo() else st.query_params.get("fixture")
     is_synthetic = fixture_param in {"all_pass", "with_fail"}
     if is_synthetic:
+        assert isinstance(fixture_param, str)
         results, elapsed, active_set = get_deterministic_fixtures(fixture_param)
     elif "verification_result" in st.session_state:
         results, elapsed, active_set = st.session_state["verification_result"]
@@ -134,7 +151,9 @@ def main() -> None:
                     "Mã ca": c.case_id,
                     "Tiêu đề email": c.input.subject,
                     "Quyết định kỳ vọng": decision_label(c.expected_decision, c.expected_type),
-                    "Nội dung tóm tắt": (c.input.body[:90] + "...") if len(c.input.body) > 90 else c.input.body,
+                    "Nội dung tóm tắt": (
+                        (c.input.body[:90] + "...") if len(c.input.body) > 90 else c.input.body
+                    ),
                 }
                 for idx, c in enumerate(cases_manifest)
             ]
@@ -261,12 +280,19 @@ def main() -> None:
         elif active_filter.startswith("FAIL"):
             filtered_results = [r for r in filtered_results if not r.passed]
         elif active_filter == "AUTO_REPLY":
-            filtered_results = [r for r in filtered_results if r.expected_decision == Decision.AUTO_REPLY]
+            filtered_results = [
+                r for r in filtered_results if r.expected_decision == Decision.AUTO_REPLY
+            ]
         elif active_filter == "ESCALATE":
-            filtered_results = [r for r in filtered_results if r.expected_decision == Decision.ESCALATE]
+            filtered_results = [
+                r for r in filtered_results if r.expected_decision == Decision.ESCALATE
+            ]
 
     # 9. Compact Case Results Table (Render trực tiếp HTML đồng bộ, màu sắc chuẩn mockup)
-    st.markdown('<div class="ex-card-title" style="margin-top: 14px;">📋 Bảng kết quả chi tiết từng tình huống</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="ex-card-title" style="margin-top: 14px;">📋 Bảng kết quả chi tiết từng tình huống</div>',
+        unsafe_allow_html=True,
+    )
     rows_html: list[str] = []
     for idx, r in enumerate(filtered_results, start=1):
         row_bg = "#FEF2F2" if not r.passed else ("#FFFFFF" if idx % 2 != 0 else "#F8FAFC")
@@ -279,13 +305,13 @@ def main() -> None:
             f'<td style="padding: 10px 14px;">{decision_badge_html(r.actual_decision.value)}</td>'
             f'<td style="padding: 10px 14px;">{pass_fail_badge_html(r.passed)}</td>'
             f'<td style="padding: 10px 14px; color: #64748B;">{r.elapsed_ms / 1000:.1f}s</td>'
-            f'</tr>'
+            f"</tr>"
         )
     table_rows = "".join(rows_html)
     table_html = (
         '<div style="overflow-x: auto; border: 1px solid #E2E8F0; border-radius: 8px; background: #FFFFFF; margin-bottom: 16px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);">'
         '<table style="width: 100%; border-collapse: collapse; font-size: 13.5px; text-align: left;">'
-        '<thead>'
+        "<thead>"
         '<tr style="background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #475569; font-weight: 600;">'
         '<th style="padding: 11px 14px; width: 40px;">#</th>'
         '<th style="padding: 11px 14px; width: 140px;">Mã ca kiểm thử</th>'
@@ -294,17 +320,20 @@ def main() -> None:
         '<th style="padding: 11px 14px; width: 190px;">Kết quả thực tế</th>'
         '<th style="padding: 11px 14px; width: 100px;">Trạng thái</th>'
         '<th style="padding: 11px 14px; width: 90px;">Thời gian</th>'
-        '</tr>'
-        '</thead>'
-        f'<tbody>{table_rows}</tbody>'
-        '</table>'
-        '</div>'
+        "</tr>"
+        "</thead>"
+        f"<tbody>{table_rows}</tbody>"
+        "</table>"
+        "</div>"
     )
     st.markdown(table_html, unsafe_allow_html=True)
 
     # 10. Đối chiếu ca đã chọn
     st.markdown("<hr style='margin: 20px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
-    st.markdown('<div class="ex-card-title">🔍 Đối chiếu chi tiết kỳ vọng và thực tế</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="ex-card-title">🔍 Đối chiếu chi tiết kỳ vọng và thực tế</div>',
+        unsafe_allow_html=True,
+    )
 
     case_ids = [r.case_id for r in filtered_results]
     if not case_ids:
@@ -316,13 +345,17 @@ def main() -> None:
         default_idx = case_ids.index(inspect_target)
     else:
         # Default to first failure if failures exist, otherwise 0
-        first_fail = next((r.case_id for r in filtered_results if not r.passed and r.case_id in case_ids), None)
+        first_fail = next(
+            (r.case_id for r in filtered_results if not r.passed and r.case_id in case_ids), None
+        )
         if first_fail:
             default_idx = case_ids.index(first_fail)
         else:
             default_idx = 0
 
-    inspector_key = f"select_case_inspector_{inspect_target or ('fail' if fail_count > 0 else 'all')}"
+    inspector_key = (
+        f"select_case_inspector_{inspect_target or ('fail' if fail_count > 0 else 'all')}"
+    )
     selected_id = st.selectbox(
         "Chọn test case để đối chiếu",
         case_ids,
@@ -335,7 +368,9 @@ def main() -> None:
         label_visibility="collapsed",
         key=inspector_key,
     )
-    selected_result = next((r for r in filtered_results if r.case_id == selected_id), filtered_results[0])
+    selected_result = next(
+        (r for r in filtered_results if r.case_id == selected_id), filtered_results[0]
+    )
 
     # Thẻ so sánh kỳ vọng và thực tế
     with st.container():

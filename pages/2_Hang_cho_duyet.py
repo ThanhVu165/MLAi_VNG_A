@@ -18,6 +18,7 @@ from core.worker import queue_resume
 from corpus.api import get_chunk, get_corpus_version
 from infra.audit import log_event
 from infra.db import execute, fetch_all, fetch_one, get_connection, now_iso, transaction
+from infra.demo_access import authorize_demo_action, is_restricted_demo
 from infra.settings import PENDING_STATUS_REFRESH_SECONDS
 from ui.presentation import (
     TYPE_LABELS,
@@ -171,6 +172,7 @@ def _preview_drafts() -> tuple[PreviewDraft, ...]:
 
 
 def _open_decision(case_id: str) -> Row:
+    authorize_demo_action("mở quyết định chuyên viên")
     case = fetch_one("SELECT status FROM cases WHERE case_id = ?", (case_id,))
     if case is not None and case["status"] == CaseStatus.HUMAN_DECIDED:
         decided = fetch_one(
@@ -212,6 +214,7 @@ def _open_decision(case_id: str) -> Row:
 
 
 def _record_decision(case: QueueCase, record: Row, choice: str, reason: str) -> None:
+    authorize_demo_action("lưu quyết định chuyên viên")
     reason = reason.strip()
     if not reason:
         raise ValueError("Cần nhập lý do trước khi ghi quyết định.")
@@ -251,6 +254,7 @@ def _record_decision(case: QueueCase, record: Row, choice: str, reason: str) -> 
 
 
 def _save_draft(preview: PreviewDraft, subject: str, body: str) -> None:
+    authorize_demo_action("sửa bản nháp chuyên viên")
     with transaction() as connection:
         draft = validate_human_draft(
             preview.case_id,
@@ -285,6 +289,7 @@ def _save_draft(preview: PreviewDraft, subject: str, body: str) -> None:
 
 
 def _approve_send(preview: PreviewDraft) -> None:
+    authorize_demo_action("duyệt gửi")
     version = get_corpus_version()
     checked = validate_human_draft(
         preview.case_id,
@@ -334,6 +339,7 @@ def _approve_send(preview: PreviewDraft) -> None:
 
 
 def _return_to_queue(preview: PreviewDraft) -> None:
+    authorize_demo_action("trả case về hàng duyệt")
     with transaction() as connection:
         changed = connection.execute(
             "UPDATE cases SET status = ? WHERE case_id = ? AND status = ?",
@@ -393,7 +399,9 @@ def _render_card(case: QueueCase) -> None:
     # C. Yêu cầu gốc <-> Căn cứ áp dụng (Evidence near decision)
     col_orig, col_basis = st.columns(2, gap="medium")
     with col_orig:
-        st.markdown('<div class="ex-card-title">📩 Yêu cầu gốc từ sinh viên</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="ex-card-title">📩 Yêu cầu gốc từ sinh viên</div>', unsafe_allow_html=True
+        )
         st.text_area(
             "Nội dung email",
             value=case.body_masked,
@@ -408,7 +416,9 @@ def _render_card(case: QueueCase) -> None:
                     st.markdown(f"• {readable_text(fact)}")
 
     with col_basis:
-        st.markdown('<div class="ex-card-title">📖 Căn cứ quy chế đối chiếu</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="ex-card-title">📖 Căn cứ quy chế đối chiếu</div>', unsafe_allow_html=True
+        )
         if case.basis:
             for breadcrumb, excerpt in case.basis:
                 st.markdown(
@@ -421,7 +431,9 @@ def _render_card(case: QueueCase) -> None:
                     unsafe_allow_html=True,
                 )
         else:
-            st.info("Chưa có quy định nào trong bộ dữ liệu hiện hành khớp với yêu cầu này. Chuyên viên cần xác nhận căn cứ hoặc hướng xử lý ngoài quy chế.")
+            st.info(
+                "Chưa có quy định nào trong bộ dữ liệu hiện hành khớp với yêu cầu này. Chuyên viên cần xác nhận căn cứ hoặc hướng xử lý ngoài quy chế."
+            )
 
     # D. Missing information / Question
     st.markdown(
@@ -440,7 +452,9 @@ def _render_card(case: QueueCase) -> None:
         with st.expander("Phần trả lời dự kiến (chưa hoàn thiện, chưa gửi)", expanded=False):
             st.text(reply_text(prepared.body, prepared.citations))
             if not prepared.grounded:
-                st.warning("Bản nháp dự kiến này chưa vượt qua kiểm tra căn cứ (Ground Guard); cần chỉnh sửa khi duyệt gửi.")
+                st.warning(
+                    "Bản nháp dự kiến này chưa vượt qua kiểm tra căn cứ (Ground Guard); cần chỉnh sửa khi duyệt gửi."
+                )
 
 
 def _render_decision_form(case: QueueCase, record: Row) -> None:
@@ -465,7 +479,9 @@ def _render_decision_form(case: QueueCase, record: Row) -> None:
             unsafe_allow_html=True,
         )
         if pending:
-            st.info("Hệ thống đang chạy worker nền để soạn thảo lại phản hồi theo chỉ đạo của bạn...")
+            st.info(
+                "Hệ thống đang chạy worker nền để soạn thảo lại phản hồi theo chỉ đạo của bạn..."
+            )
         else:
             st.caption("Quyết định đã lưu. Nếu cần tạo lại phản hồi, bạn có thể bấm nút bên dưới:")
         if job is not None and job["state"] == "failed":
@@ -484,7 +500,9 @@ def _render_decision_form(case: QueueCase, record: Row) -> None:
                 st.rerun()
         return
 
-    st.markdown('<div class="ex-card-title">⚖️ Quyết định chuyên môn của bạn</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="ex-card-title">⚖️ Quyết định chuyên môn của bạn</div>', unsafe_allow_html=True
+    )
     choices_options = (*case.options, "Quyết định khác") if case.options else CHOICES
     choice = st.radio(
         "Lựa chọn hướng giải quyết",
@@ -514,11 +532,15 @@ def _render_decision_form(case: QueueCase, record: Row) -> None:
         unsafe_allow_html=True,
     )
     with st.expander("Chi tiết kỹ thuật & dấu vết kiểm toán", expanded=False):
-        st.caption("Chuyển trạng thái: HUMAN_DECIDED · Người thao tác: HUMAN:local · Sự kiện kiểm toán: HUMAN_DECISION · Xếp lịch tác tử nền")
+        st.caption(
+            "Chuyển trạng thái: HUMAN_DECIDED · Người thao tác: HUMAN:local · Sự kiện kiểm toán: HUMAN_DECISION · Xếp lịch tác tử nền"
+        )
 
     can_submit = choice is not None and bool(reason.strip())
     if not can_submit:
-        st.caption("ℹ️ Hãy chọn một hướng giải quyết và nhập lý do nghiệp vụ để kích hoạt nút ghi quyết định.")
+        st.caption(
+            "ℹ️ Hãy chọn một hướng giải quyết và nhập lý do nghiệp vụ để kích hoạt nút ghi quyết định."
+        )
 
     if st.button(
         "Ghi quyết định và soạn phản hồi",
@@ -527,6 +549,7 @@ def _render_decision_form(case: QueueCase, record: Row) -> None:
         key=f"decide_{case.case_id}",
     ):
         try:
+            assert choice is not None
             _record_decision(case, record, choice, reason)
         except (RuntimeError, ValueError) as error:
             st.error(readable_text(str(error)))
@@ -569,9 +592,13 @@ def _render_preview(preview: PreviewDraft) -> None:
 
     # B. Grounding & Stale validation alert
     if preview.grounded:
-        st.caption("✓ Bản nháp đã vượt qua kiểm tra căn cứ. Hệ thống sẽ đối chiếu lại nguyên văn và phiên bản quy chế khi bạn bấm duyệt.")
+        st.caption(
+            "✓ Bản nháp đã vượt qua kiểm tra căn cứ. Hệ thống sẽ đối chiếu lại nguyên văn và phiên bản quy chế khi bạn bấm duyệt."
+        )
     else:
-        st.warning("⚠️ Bản nháp này chưa đạt tiêu chuẩn căn cứ (Ground Guard). Bạn cần chỉnh sửa nội dung hoặc bổ sung trích dẫn và bấm 'Lưu và kiểm tra' trước khi được phép duyệt gửi.")
+        st.warning(
+            "⚠️ Bản nháp này chưa đạt tiêu chuẩn căn cứ (Ground Guard). Bạn cần chỉnh sửa nội dung hoặc bổ sung trích dẫn và bấm 'Lưu và kiểm tra' trước khi được phép duyệt gửi."
+        )
 
     # C. Editors
     subject = st.text_input(
@@ -586,7 +613,10 @@ def _render_preview(preview: PreviewDraft) -> None:
     )
 
     if preview.citations:
-        st.markdown('<div class="ex-card-title" style="margin-top: 12px;">📚 Các điều khoản được trích dẫn trong thư</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="ex-card-title" style="margin-top: 12px;">📚 Các điều khoản được trích dẫn trong thư</div>',
+            unsafe_allow_html=True,
+        )
         for index, citation in enumerate(preview.citations, start=1):
             chunk = get_chunk(citation)
             if chunk:
@@ -595,7 +625,9 @@ def _render_preview(preview: PreviewDraft) -> None:
 
     unsaved = subject != preview.subject or body != display_body
     if unsaved:
-        st.info("ℹ️ Bạn đã chỉnh sửa nội dung. Hãy bấm 'Lưu và kiểm tra' để đối chiếu lại căn cứ trước khi duyệt gửi.")
+        st.info(
+            "ℹ️ Bạn đã chỉnh sửa nội dung. Hãy bấm 'Lưu và kiểm tra' để đối chiếu lại căn cứ trước khi duyệt gửi."
+        )
 
     # CR2: Professional Action Preview
     st.markdown(
@@ -610,7 +642,9 @@ def _render_preview(preview: PreviewDraft) -> None:
         unsafe_allow_html=True,
     )
     with st.expander("Chi tiết kỹ thuật & dấu vết kiểm toán", expanded=False):
-        st.caption("Trạng thái chuyển tiếp: SENT (nếu duyệt) hoặc AWAITING_HUMAN (nếu trả lại) · Sự kiện kiểm toán: HUMAN_APPROVED_SEND / HUMAN_REJECTED_DRAFT")
+        st.caption(
+            "Trạng thái chuyển tiếp: SENT (nếu duyệt) hoặc AWAITING_HUMAN (nếu trả lại) · Sự kiện kiểm toán: HUMAN_APPROVED_SEND / HUMAN_REJECTED_DRAFT"
+        )
 
     confirm_key = f"confirm_pending_{preview.draft_id}"
     is_confirming = st.session_state.get(confirm_key, False)
@@ -636,7 +670,9 @@ def _render_preview(preview: PreviewDraft) -> None:
             st.rerun()
 
         if col_confirm.button(
-            "Xác nhận gửi", type="primary", key=f"confirm_send_{preview.draft_id}",
+            "Xác nhận gửi",
+            type="primary",
+            key=f"confirm_send_{preview.draft_id}",
             disabled=stale or not preview.grounded or unsaved,
         ):
             try:
@@ -691,6 +727,9 @@ def main() -> None:
         ),
         unsafe_allow_html=True,
     )
+    if is_restricted_demo():
+        st.info("Hàng duyệt là khu vực đặc quyền và không mở trong bản DEMO công khai.")
+        return
 
     cases = _queue_cases()
     previews = _preview_drafts()
@@ -713,19 +752,28 @@ def main() -> None:
 
     with col_queue:
         if cases:
-            st.markdown('<div class="ex-card-title">📋 Yêu cầu cần quyết định</div>', unsafe_allow_html=True)
-            search_query = st.text_input(
-                "Tìm kiếm yêu cầu",
-                placeholder="Tìm tiêu đề, người gửi...",
-                label_visibility="collapsed",
-                key="search_cases_queue",
-            ).strip().lower()
+            st.markdown(
+                '<div class="ex-card-title">📋 Yêu cầu cần quyết định</div>', unsafe_allow_html=True
+            )
+            search_query = (
+                st.text_input(
+                    "Tìm kiếm yêu cầu",
+                    placeholder="Tìm tiêu đề, người gửi...",
+                    label_visibility="collapsed",
+                    key="search_cases_queue",
+                )
+                .strip()
+                .lower()
+            )
 
             filtered_cases = cases
             if search_query:
                 filtered_cases = tuple(
-                    c for c in filtered_cases
-                    if search_query in c.subject.lower() or search_query in c.sender.lower() or search_query in c.case_id.lower()
+                    c
+                    for c in filtered_cases
+                    if search_query in c.subject.lower()
+                    or search_query in c.sender.lower()
+                    or search_query in c.case_id.lower()
                 )
 
             if not filtered_cases:
@@ -736,19 +784,23 @@ def main() -> None:
                     "Email cần quyết định",
                     [c.case_id for c in filtered_cases],
                     format_func=lambda cid: next(
-                        f"{c.subject} · {c.sender}"
-                        for c in filtered_cases
-                        if c.case_id == cid
+                        f"{c.subject} · {c.sender}" for c in filtered_cases if c.case_id == cid
                     ),
                     label_visibility="collapsed",
                     key="selected_case_id_select",
                 )
-                selected_case = next((c for c in filtered_cases if c.case_id == case_id), filtered_cases[0])
+                selected_case = next(
+                    (c for c in filtered_cases if c.case_id == case_id), filtered_cases[0]
+                )
 
         if previews:
             if cases:
-                st.markdown("<hr style='margin: 16px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
-            st.markdown('<div class="ex-card-title">📬 Bản nháp chờ duyệt gửi</div>', unsafe_allow_html=True)
+                st.markdown(
+                    "<hr style='margin: 16px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True
+                )
+            st.markdown(
+                '<div class="ex-card-title">📬 Bản nháp chờ duyệt gửi</div>', unsafe_allow_html=True
+            )
             draft_id = st.selectbox(
                 "Phản hồi chờ duyệt gửi",
                 [p.draft_id for p in previews],

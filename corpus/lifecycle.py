@@ -22,6 +22,7 @@ from corpus.store import (
 )
 from infra.audit import log_event
 from infra.db import execute, fetch_all, now_iso, transaction
+from infra.demo_access import authorize_demo_action
 
 
 @dataclass(frozen=True)
@@ -45,12 +46,15 @@ def reject_source(
     source: SourceRecord, *, actor: str, reason: str, database_path: DatabasePath = None
 ) -> SourceRecord:
     """Từ chối nguồn chờ duyệt với lý do bắt buộc."""
+    authorize_demo_action("từ chối nguồn corpus")
     with transaction(database_path):
         _require_reason(reason)
         _require_admin_actor(actor)
         stored = get_source(source.doc_id, database_path=database_path)
         if stored is None or stored.status is not SourceStatus.PENDING_REVIEW:
-            raise ValueError("Nguồn không còn chờ xác nhận. Hãy tải lại danh sách trước khi thao tác.")
+            raise ValueError(
+                "Nguồn không còn chờ xác nhận. Hãy tải lại danh sách trước khi thao tác."
+            )
         affected = execute(
             "UPDATE sources SET status = ? WHERE doc_id = ? AND status = ?",
             (SourceStatus.REJECTED, stored.doc_id, SourceStatus.PENDING_REVIEW),
@@ -75,6 +79,7 @@ def request_change(
     source: SourceRecord, *, actor: str, reason: str, database_path: DatabasePath = None
 ) -> None:
     """Lưu yêu cầu chỉnh sửa; nguồn vẫn ở PENDING_REVIEW."""
+    authorize_demo_action("yêu cầu sửa nguồn corpus")
     _require_reason(reason)
     log_event(
         case_id=None,
@@ -91,6 +96,7 @@ def approve_for_activation(
     source: SourceRecord, *, actor: str, reason: str, database_path: DatabasePath = None
 ) -> None:
     """Ghi nhận duyệt, vẫn để nguồn ở PENDING_REVIEW cho B-11 kích hoạt."""
+    authorize_demo_action("duyệt kích hoạt corpus")
     _require_reason(reason)
     log_event(
         case_id=None,
@@ -107,6 +113,7 @@ def activate_source(
     source: SourceRecord, *, actor: str, reason: str, database_path: DatabasePath = None
 ) -> SourceRecord:
     """Kích hoạt nguồn đã duyệt, hạ nguồn bị thay và tăng phiên bản corpus."""
+    authorize_demo_action("kích hoạt corpus")
     with transaction(database_path):
         _require_reason(reason)
         _require_admin_actor(actor)
@@ -114,7 +121,9 @@ def activate_source(
         if stored is None:
             raise KeyError(f"Không tìm thấy nguồn {source.doc_id}.")
         if stored.status is not SourceStatus.PENDING_REVIEW:
-            raise ValueError("Chỉ có thể đưa vào sử dụng nguồn đang chờ xác nhận. Hãy tải lại danh sách.")
+            raise ValueError(
+                "Chỉ có thể đưa vào sử dụng nguồn đang chờ xác nhận. Hãy tải lại danh sách."
+            )
         if not list_chunks(stored.doc_id, database_path=database_path):
             raise ValueError("Tài liệu chưa có nội dung; hãy chuẩn bị bản gốc trước khi duyệt.")
         _validate_approval(stored, database_path=database_path)
@@ -231,6 +240,7 @@ def flag_cases_for_recheck(
     doc_id: str, *, actor: str, database_path: DatabasePath = None
 ) -> list[str]:
     """Đánh dấu case 30 ngày gần nhất đã trích dẫn chunk của nguồn bị hạ cấp."""
+    authorize_demo_action("đánh dấu case theo thay đổi corpus")
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat().replace("+00:00", "Z")
     rows = fetch_all(
         """SELECT c.case_id, d.evidence_ids_json FROM cases c
@@ -269,6 +279,7 @@ def rollback_source(
     source: SourceRecord, *, actor: str, reason: str, database_path: DatabasePath = None
 ) -> SourceRecord:
     """Khôi phục nguồn SUPERSEDED và hạ nguồn đang thay thế nó."""
+    authorize_demo_action("khôi phục phiên bản corpus")
     with transaction(database_path):
         _require_reason(reason)
         _require_admin_actor(actor)
@@ -288,7 +299,9 @@ def rollback_source(
                 database_path=database_path,
             )
             flag_cases_for_recheck(replacement.doc_id, actor=actor, database_path=database_path)
-        restored = replace(stored, status=SourceStatus.ACTIVE, superseded_by=None, superseded_at=None)
+        restored = replace(
+            stored, status=SourceStatus.ACTIVE, superseded_by=None, superseded_at=None
+        )
         update_source(restored, database_path=database_path)
         flag_active_conflicts(actor=actor, database_path=database_path)
         corpus_version = bump_corpus_version(

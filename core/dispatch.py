@@ -15,6 +15,7 @@ from core.sanitize import mask_pii
 from core.types import CaseStatus, Decision, DraftReply, PolicyDecision
 from infra.audit import log_event
 from infra.db import execute, fetch_one, get_connection, now_iso, to_utc_iso, transaction
+from infra.demo_access import authorize_demo_action
 from infra.settings import PENDING_SEND_SECONDS
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ def schedule_auto_reply(case_id: str, *, decision: PolicyDecision, actor: str) -
 
 def cancel_send(case_id: str, actor: str, reason: str) -> None:
     """Hủy một lần gửi còn trong khoảng chờ và giữ lại lý do của người dùng."""
+    authorize_demo_action("hủy gửi")
     if not reason.strip():
         raise ValueError("Hãy ghi lý do hủy gửi.")
     _pending_case(case_id, _utc_now())
@@ -107,6 +109,7 @@ def cancel_send(case_id: str, actor: str, reason: str) -> None:
 
 def escalate_from_pending(case_id: str, *, actor: str, reason: str) -> None:
     """Chuyển một lần gửi còn chờ sang hàng đợi người duyệt."""
+    authorize_demo_action("chuyển chuyên viên thủ công")
     from core.controls import _store_manual_decision
 
     if not reason.strip():
@@ -131,6 +134,7 @@ def escalate_from_pending(case_id: str, *, actor: str, reason: str) -> None:
 
 def dispatch_due(case_id: str, *, actor: str = "SYSTEM", now: datetime | None = None) -> bool:
     """Gửi mô phỏng khi mốc DB đã hết hạn, trả ``True`` nếu đã chuyển trạng thái."""
+    authorize_demo_action("gửi phản hồi")
     with transaction() as connection:
         # Chặn sửa nguồn/tạm dừng xen giữa kiểm tra cuối và chuyển trạng thái gửi.
         row = connection.execute("SELECT * FROM cases WHERE case_id = ?", (case_id,)).fetchone()
@@ -245,6 +249,7 @@ def _finalization_valid(case: Row, draft: Row) -> bool:
 
 def create_correction_email(parent_case_id: str, *, actor: str, draft: DraftReply) -> str:
     """Tạo Correction Email mới cho một case SENT, không sửa case gốc."""
+    authorize_demo_action("tạo thư đính chính")
     with transaction():
         parent = _case(parent_case_id)
         if parent["status"] != CaseStatus.SENT:

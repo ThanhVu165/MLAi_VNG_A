@@ -15,6 +15,7 @@ from corpus.metadata import MetadataDraft
 from corpus.store import SourceRecord, get_source, get_source_content, list_chunks, list_sources
 from corpus.workflow import approve_source, prepare_source
 from infra.db import fetch_all
+from infra.demo_access import authorize_demo_action, is_restricted_demo
 from ui.presentation import (
     badge_html,
     decision_badge_html,
@@ -79,7 +80,9 @@ def _show_content(source: SourceRecord, key: str) -> None:
         )
         text = original.extracted_text
         if not text.strip():
-            st.info("Chưa có nội dung đã đọc. Hãy bấm Đọc lại và đề xuất thông tin hoặc nạp bản văn bản.")
+            st.info(
+                "Chưa có nội dung đã đọc. Hãy bấm Đọc lại và đề xuất thông tin hoặc nạp bản văn bản."
+            )
     else:
         st.warning(
             "Nguồn cũ chưa lưu bản gốc. Nội dung dưới đây được ghép từ các đoạn đã lưu, không thay thế bản gốc."
@@ -111,6 +114,7 @@ def _proposal(source: SourceRecord) -> MetadataDraft:
 
 
 def _prepare(source: SourceRecord, actor: str) -> None:
+    authorize_demo_action("chuẩn bị nguồn từ giao diện")
     with st.spinner("Đang đọc tài liệu và đề xuất thông tin nguồn..."):
         proposal = prepare_source(source, actor=actor)
     if proposal.draft is not None:
@@ -122,8 +126,11 @@ def _prepare(source: SourceRecord, actor: str) -> None:
 
 
 def _upload(actor: str, identified: bool) -> None:
+    authorize_demo_action("nạp nguồn từ giao diện")
     st.markdown("#### Nạp quy định mới vào hệ thống")
-    st.caption("Hệ thống trích xuất nội dung gốc, lập chỉ mục ngữ nghĩa và đề xuất thông tin trước khi duyệt.")
+    st.caption(
+        "Hệ thống trích xuất nội dung gốc, lập chỉ mục ngữ nghĩa và đề xuất thông tin trước khi duyệt."
+    )
     method = st.radio("Cách nạp tài liệu", ["Dán văn bản", "Chọn tệp"], horizontal=True)
     title = st.text_input("Tên tài liệu", key="new-title")
     text = st.text_area("Nội dung văn bản", height=220) if method == "Dán văn bản" else ""
@@ -141,7 +148,9 @@ def _upload(actor: str, identified: bool) -> None:
             else:
                 raise ValueError("Hãy chọn tệp trước khi nạp.")
             if not result.created and result.source.status is not SourceStatus.PENDING_REVIEW:
-                st.info("Nội dung này đã có trong Kho quy định. Không tạo bản sao hoặc thay đổi nguồn đã lưu.")
+                st.info(
+                    "Nội dung này đã có trong Kho quy định. Không tạo bản sao hoặc thay đổi nguồn đã lưu."
+                )
                 return
             if result.created or result.source.status is SourceStatus.PENDING_REVIEW:
                 _prepare(result.source, actor)
@@ -156,6 +165,7 @@ def _upload(actor: str, identified: bool) -> None:
 
 
 def _review(source: SourceRecord, actor: str, identified: bool) -> None:
+    authorize_demo_action("duyệt nguồn từ giao diện")
     _show_content(source, f"review:{source.doc_id}")
     if st.button(
         "Đọc lại và đề xuất thông tin", key=f"prepare:{source.doc_id}", disabled=not identified
@@ -199,7 +209,8 @@ def _edit_fields(draft: MetadataDraft) -> MetadataDraft:
     start = st.date_input("Hiệu lực từ", value=_date(draft.effective_from), format="DD/MM/YYYY")
     end = st.date_input(
         "Hiệu lực đến, để trống nếu chưa xác định",
-        value=_date(draft.effective_to), format="DD/MM/YYYY",
+        value=_date(draft.effective_to),
+        format="DD/MM/YYYY",
     )
     domains = st.multiselect(
         "Lĩnh vực áp dụng",
@@ -251,6 +262,25 @@ st.markdown(
     ),
     unsafe_allow_html=True,
 )
+
+if is_restricted_demo():
+    public_sources = [
+        {
+            "Mã nguồn": source.doc_id,
+            "Tên quy định": source.title,
+            "Trạng thái": STATUS_NAMES.get(source.status, source.status.value),
+            "Lĩnh vực": ", ".join(
+                DOMAIN_NAMES.get(domain.value, domain.value) for domain in source.domains
+            ),
+        }
+        for source in list_sources()
+        if source.is_synthetic
+    ]
+    st.info(
+        "Chế độ công khai chỉ cho phép tra cứu corpus synthetic; mọi thao tác quản trị đã bị khóa phía máy chủ."
+    )
+    st.dataframe(public_sources, hide_index=True, use_container_width=True)
+    st.stop()
 
 # Admin Reviewer Identity
 name = st.text_input("Tên người quản trị để ghi nhận thao tác", key="source-reviewer")
@@ -654,7 +684,9 @@ with browse_tab:
                         f"Tìm thấy {len(cases_cited)} ca xử lý đã trích dẫn {selected_source.doc_id} làm căn cứ pháp lý:"
                     )
                     for c in cases_cited:
-                        safe_reason = escape_html(readable_text(c["reason"] or "").strip()).replace("\n", "<br/>")
+                        safe_reason = escape_html(readable_text(c["reason"] or "").strip()).replace(
+                            "\n", "<br/>"
+                        )
                         st.markdown(
                             f"""
                             <div class="ex-card" style="margin-bottom: 8px; padding: 10px 14px;">
