@@ -5,9 +5,9 @@
 - Task ID: `M5-T03-HF1`
 - Owner/Approver: Project Coordinator
 - Baseline: `2ce699c6a0d5b3d4ac6252a394468fb2aab329cd`
-- Final tested implementation SHA: `PENDING_COMMIT`
+- Final tested implementation SHA: `3b9983a57613d191d08f7082adadacb6d057cf9f`
 - Branch: `sprint/m5-t03-hf1-study-app-mode`
-- Pull request: `PENDING_PR`
+- Pull request: [#56](https://github.com/ThanhVu165/MLAi_VNG_A/pull/56)
 - LIVE/API calls: `0`
 
 ## Problem and reproduction
