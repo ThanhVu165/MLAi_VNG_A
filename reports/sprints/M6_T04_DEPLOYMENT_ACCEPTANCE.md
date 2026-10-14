@@ -4,6 +4,7 @@
 > Railway đã connected và cấu hình mới chỉ staged; public deployment vẫn BLOCKED.
 > Toàn bộ image/test evidence phía dưới đến trước follow-up là historical checkpoint.
 > Phase D recheck 15:12: deletion đã hủy; public-access finding được tái hiện trên SHA được duyệt.
+> Phase D execution 15:18: Trello approval đã có; Apply/Deploy bị lớp xác nhận công cụ hủy, chưa build.
 
 ## Kết luận checkpoint
 
@@ -419,3 +420,40 @@ không chỉ ẩn trang/nút và không tự sửa UI/business logic trong lư�
 
 Deployment source vẫn pin approved b7a0658; commit report sau đó không thay image target.
 Không bật billing, không LIVE/email, không merge PR #51 hoặc đánh DONE.
+
+## Phase D execution attempt — 14/10/2026, 15:18 UTC+07
+
+- Trello đã có decision mới **PHASE D PUBLIC DEPLOYMENT AUTHORIZED**,
+  action `6acf3a401409fc9f84f4dc87`, timestamp `2026-10-14T08:16:00.261Z`.
+  Decision khớp repo/branch, exact SHA b7a0658, Railway project/service/environment,
+  Dockerfile/8511/health, replay/offline và isolated `/runtime/demo.db`.
+- User xác nhận account là **Trial, còn $5 credit**. Đây là account observation do user
+  cung cấp; không phải independent billing read qua connector. Không bật paid billing.
+- Staged patch đọc lại **destructive=false**, chỉ create service DEMO + volume riêng;
+  không có delete resource và không có public domain.
+- Codex đã gọi Railway accept-deploy cho environment production,
+  commit message `M6-T04: private Docker build approved b7a0658, replay synthetic DEMO; no public domain`.
+- **Tool action CANCELLED**. Full tool result:
+  `Cancelled — the user did not approve this action. No changes were made.`
+  Structured error `INVALID_ARGUMENT`; không kết luận đây là lỗi config Docker.
+- Readback sau cancellation: patch vẫn **STAGED**, destructive=false;
+  list-deployments của intended service trả `[]`. Không retry bằng đường khác để
+  vượt qua lớp xác nhận; không create service/source live hoặc gọi redeploy thay thế.
+
+### Current status
+
+Approval Coordinator đã được xác minh, không còn blocker “thiếu bản ghi Trello”.
+Credit: USER-CONFIRMED Trial/$5, được giới hạn trong Free/Trial theo authorization.
+Execution blocker mới là **connector action confirmation cancelled**.
+Private Docker build/startup/replay/Verify/DB health vẫn **NOT RUN**; chưa có image/build ref.
+Public domain vẫn bị chặn độc lập bởi admin-access finding đã tái hiện ở mục trước.
+
+Next: user chấp thuận thao tác Apply/Deploy tại lớp xác nhận thực thi của Railway,
+hoặc tự apply đúng non-destructive pending patch trên dashboard và báo deployment ID
+để Codex kiểm logs. Đây không phải yêu cầu Coordinator duyệt lại Task Contract.
+Không tạo public domain khi access boundary chưa đáp ứng.
+
+AC1 BLOCKED; AC2 PARTIAL; AC3 NOT VERIFIED; AC4/AC5 PARTIAL;
+AC6 NOT VERIFIED; AC7 PUBLIC_ACCESS_GATE_BLOCKED; AC8 PARTIAL.
+Không build PASS từ trigger bị hủy, không startup PASS từ staged config.
+LIVE LLM/email=0, không billing upgrade, không merge/DONE.
