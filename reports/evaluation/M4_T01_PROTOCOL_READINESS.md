@@ -12,13 +12,16 @@ The earlier local preflight report is preserved verbatim below as historical evi
 - Repository/remote: `ThanhVu165/MLAi_VNG_A`, HTTPS GitHub origin verified.
 - Branch: `sprint/m4-t01-evaluation-protocol`, newly created from verified origin/dev.
 - Initial checkout: local dev `1251c3c116a302d519dd71d6c31c3191874d785b`.
-- Tested source: baseline above plus new protocol/schema/helper/tests; exact committed
-  tested SHA and final PR references will be added in the closing evidence section.
+- Tested implementation SHA: `8ebb9f1091e132ce3238563eb220c89d8dc0e8d2`;
+  post-commit unit rerun passed. Final evidence-only commit is the task branch tip
+  (`git rev-parse HEAD`); exact tip is also recorded in PR #52 and final chat handoff.
 - Initial index/tracked tree clean; pre-existing untracked mandatory report and two slide
   decks preserved. Slides are outside task scope and will not be staged.
 - Pre-existing report SHA-256: `7f5a161209bbb47f08163c6058400d5f2648eb01706812fd542105bc0414e2c8`.
   Its original bytes are retained after the historical checkpoint marker below; the
   new leading report supersedes its old current-status claims, not its observations.
+  Hash preservation refers to working-tree bytes; Git applies its configured line-ending
+  filters to text blobs. The committed historical text is retained without editing.
 - No local/remote task branch; exact-head GitHub search returned no task PR. Broad
   M4-T01 search returned planning PR #28 only. No duplicate PR is being reused/overwritten.
 - Fresh dev adds runtime/replay/Docker changes; foundation documents, types, policy and
@@ -152,7 +155,7 @@ Manifest tests reject altered bytes/count/IDs/Gold version/digests or claimed GO
 | AC4 Protocol | **BLOCKED** final lock | Draft protocol/manifest/output specification complete for preparation; official model/config/corpus/adaptation/collector/authorization not locked |
 | AC5 Reproducibility | **PASS** offline scope | Source schema alignment, synthetic manifest/schema checks and 2 existing harness tests; no product replay/official collector claim |
 | AC6 Safety | **PASS** session boundary | Read-only production, no private payload/Gold read, Set B untouched, no tuning/LLM/provider/email; final scope/privacy check required |
-| AC7 Evidence | **BLOCKED** until closing packet | Current report and logs exist; exact commit/PR/final validation recorded in closing evidence; human self-review/final acceptance pending |
+| AC7 Evidence | **PASS** preparation packet | Report, exact tested implementation SHA, logs, final checks and Draft PR #52 are present; human self-review/final acceptance pending, no DONE claim |
 
 ## 8. Risks, limitations and Coordinator decision packets
 
@@ -200,8 +203,34 @@ Protocol PASS ≠ evaluation PASS; synthetic PASS ≠ held-out accuracy; PR ≠ 
 
 ## 10. Closing evidence
 
-Commit, exact tested SHA, final scope/privacy/link validation and PR are appended here
-after validation/commit. Nothing in the historical checkpoint below overrides this report.
+- Implementation commit and exact post-commit tested SHA: `8ebb9f1091e132ce3238563eb220c89d8dc0e8d2`.
+- [Draft PR #52](https://github.com/ThanhVu165/MLAi_VNG_A/pull/52), head
+  `sprint/m4-t01-evaluation-protocol`, base `dev`; attached to this chat. Not merged.
+- Final source revision: implementation SHA above; closing commit changes only this
+  report/validation artifacts. Final branch-tip SHA is resolvable from PR #52 or
+  `git rev-parse HEAD`; do not conflate the evidence commit with a new runtime test.
+- Post-commit unit rerun: **13 PASS**, exact implementation commit; raw log refreshed.
+- Existing harness tests: **2 PASS** on the same unchanged runtime baseline using the
+  repository network/provider guard and isolated DB; no further rerun needed.
+- Black (`--workers 1 --check --line-length 100`): **PASS**, two files unchanged.
+  Ruff: **PASS**. Staged and branch `git diff --check`: **PASS**.
+- [Validation inventory](M4_T01_VALIDATION_EVIDENCE.json): link/UTF-8/whitespace/secret-pattern
+  scan passed; historical working-tree suffix digest preserved. Artifact digests are
+  exact working-tree bytes at validation, not a historical dataset commitment.
+- Scope self-review: exactly 8 task files, all under docs/evaluation and reports/evaluation;
+  no production, policy, infra, verify, cassette, Gold, STATUS or interface changes.
+  Both pre-existing slide decks remain untracked and excluded from staging/PR.
+- Manual review found no private cases/Gold, credentials or PII in added task content.
+  Pattern scan is limited to known credential signatures; no claim of perfect detection.
+- Remote dev recheck after push still equals baseline. Task branch push verified.
+- Agent implementation self-review completed. **Minh human self-review PENDING**;
+  **Thư final review PENDING**; **Coordinator ACCEPT/DONE/merge/GO-A not granted**.
+- **LLM/provider/email LIVE/API calls = 0**, attempts/tokens/cost = 0/0/0.
+  Read-only Trello/GitHub/Git coordination APIs were used; Git push and PR creation
+  were performed as explicitly requested. No official Set A/B execution.
+
+Use the PR and SHA above in the owner handoff draft; status stays **PARTIAL_ONLY**.
+Nothing in the historical checkpoint below overrides this current report.
 
 
 <!-- HISTORICAL_CHECKPOINT_20261013_ORIGINAL_BYTES -->

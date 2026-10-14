@@ -3,7 +3,7 @@
   "baseline_sha": "eaaeea88a59618b49219a20ae01a3cf3227cec87",
   "evidence_mode": "OFFLINE_UNIT_AND_MOCKED_HARNESS",
   "result": "PASS",
-  "local_links_checked": 28,
+  "local_links_checked": 29,
   "broken_links": [],
   "secret_pattern_matches": [],
   "trailing_whitespace": [],
@@ -33,8 +33,15 @@
     "docs/evaluation/M4_T01_SCHEMA.json": "56988a81a7973e3cedcb93656c45cdb27434c46eca2a56eff3e139eed635f220",
     "docs/evaluation/protocol_validation.py": "9a1798afbcb0fd945014b29a18475f7be95cdd2cd24ab0a762488327be505937",
     "docs/evaluation/test_protocol.py": "ffe75212154edda66139b6474d5a138e2afa07c44d7699bb0c2fe00fb25dd205",
-    "reports/evaluation/M4_T01_PROTOCOL_READINESS.md": "df1c6f4c4a35d132982d5de8d4273be1075e8bb5ee0a8d3b99e8c4c2cf71c139",
-    "reports/evaluation/M4_T01_UNIT_VALIDATION.txt": "f11a8978ca1fd5390a0d11aeca9940be5ef0061c665a39081d6fbbf72eaae867",
+    "reports/evaluation/M4_T01_PROTOCOL_READINESS.md": "da3b261bdb79f40473ad9bebc9801f52aca31eb1115c2e656323ee72655a9903",
+    "reports/evaluation/M4_T01_UNIT_VALIDATION.txt": "f534bab89bddf64df13d02dd7f5453a2e1c9d4e2cb2ed040dc7d33fb8e95d832",
     "reports/evaluation/M4_T01_HARNESS_VALIDATION.txt": "1dd2fc613d7591f7e1cef025cd936e43dc3de1987c8141294c5fd13b4231bd0e"
-  }
+  },
+  "tested_implementation_sha": "8ebb9f1091e132ce3238563eb220c89d8dc0e8d2",
+  "artifact_hash_scope": "Working-tree bytes at validation; Git text filters may change line endings on checkout",
+  "pr": "https://github.com/ThanhVu165/MLAi_VNG_A/pull/52",
+  "black_check": "PASS: 2 files unchanged",
+  "ruff_check": "PASS",
+  "scope_review": "PASS: 8 files in docs/evaluation and reports/evaluation; slides excluded",
+  "post_commit_unit_rerun": "PASS: 13/13 on tested implementation SHA"
 }
