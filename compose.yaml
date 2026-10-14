@@ -1,11 +1,15 @@
 x-app: &app
   build:
     context: .
-  image: exodia:m6-t02
+  image: ${EXODIA_IMAGE:-exodia:m6-t02}
   environment:
     DATABASE_PATH: /runtime/app.db
     LLM_MODE: replay
+    LLM_PROVIDER: openai
+    OPENAI_MODEL: gpt-6-luna
+    OPENAI_REASONING_EFFORT: none
     LLM_CACHE: "0"
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
   healthcheck:
     test:
       ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8511/_stcore/health', timeout=3).read()"]

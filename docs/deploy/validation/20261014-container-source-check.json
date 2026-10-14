@@ -1,0 +1,11 @@
+{
+  "approved_sha": "b7a0658ded496a0b88938f79da32da526ca5dc53",
+  "files_checked": 72,
+  "source_mismatches": [],
+  "cassette_check": {
+    "expected": 24,
+    "actual": 24,
+    "mismatches": [],
+    "extra": []
+  }
+}

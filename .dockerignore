@@ -10,6 +10,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.pytest-*/
 .mypy_cache/
 .ruff_cache/
 .venv/
@@ -27,4 +28,5 @@ data/vector_cache/
 .streamlit/secrets.toml
 docs/
 reports/
-tests/
+tests/*
+!tests/cassettes/
