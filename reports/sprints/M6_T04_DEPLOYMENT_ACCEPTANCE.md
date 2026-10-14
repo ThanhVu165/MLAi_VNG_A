@@ -5,6 +5,7 @@
 > Toàn bộ image/test evidence phía dưới đến trước follow-up là historical checkpoint.
 > Phase D recheck 15:12: deletion đã hủy; public-access finding được tái hiện trên SHA được duyệt.
 > Phase D execution 15:18: Trello approval đã có; Apply/Deploy bị lớp xác nhận công cụ hủy, chưa build.
+> Latest: manual private deployment SUCCESS, Docker build/startup/internal health PASS; public URL và container acceptance còn pending.
 
 ## Kết luận checkpoint
 
@@ -470,3 +471,98 @@ Không quy kết lỗi cho Dockerfile hoặc credit. Không lặp thêm hay dùn
 deployment API khác để né cancellation. User cần tự apply đúng pending changes trên
 Railway dashboard rồi cung cấp deployment ID hoặc báo đã apply; Codex tiếp tục đọc
 build/startup logs. Giữ service private, chưa tạo public domain.
+
+## Private Railway deployment — manual apply, 14/10/2026
+
+**RESULT: PARTIAL — PRIVATE_BUILD_AND_STARTUP_PASS; PUBLIC_URL_NOT_READY.**
+
+User tự bấm Deploy trên Railway. Readback xác nhận staged patch đã được áp dụng,
+service và volume hiện live; không có domain được tạo.
+
+| Field | Evidence thực tế |
+| --- | --- |
+| Deployment ID | `c8930474-219b-4d9f-b736-2f0803888cb9` |
+| Snapshot ID | `e03c8df7-7308-4bc2-830a-eea5c7c174c3` |
+| Branch trong deployment metadata | `sprint/m6-t04-deployment-acceptance` |
+| Authorized/source-config pin | `b7a0658ded496a0b88938f79da32da526ca5dc53` |
+| Actual deployment metadata commit | `61e31e8db1784fb2f387efceaaf013a45401204e` |
+| Builder | DOCKERFILE; log load build definition from Dockerfile |
+| Base image resolved | `python:3.11-slim@sha256:e88e9763f943ec1834f992a4b51e0f24500486803e8bc534e5767af9ea65f6ce` |
+| New OCI image digest | `sha256:1611638a236fc6299b321ae0bfca9f0c966a42557441d9c6df9385a2f773a585` |
+| Image config digest | `sha256:337ca9414a2d26e6c62152e846b3284bc936354508b17d3e3084a3ae3e23908a` |
+| Deployment status | **SUCCESS**, 15:33:43 UTC+07 |
+| Container startup | **PASS**, Streamlit URL in container `http://0.0.0.0:8511` |
+| Background workers | **PASS**, email-processing + email-dispatch startup/alive marker |
+| Internal provider healthcheck | **PASS**, log `[1/1] Healthcheck succeeded!` at 15:33:41 UTC+07 |
+| Replica observation | 1 running / 0 crashed, no active warnings/criticals |
+| Volume | m6-t04-demo, 500 MB, iad, mounted at /runtime |
+| Memory sample | ~0.060 GB current; single observation, not load-test evidence |
+| Public HTTPS / external health / browser UI | **NOT RUN**; serviceDomains=[] and customDomains=[] |
+
+### Revision discrepancy
+
+Railway source config pin đọc lại là b7a0658 nhưng deployment metadata commitHash là
+61e31e8. Không coi source config riêng lẻ là chứng minh checkout SHA.
+Git diff hai SHA chỉ có `reports/sprints/M6_T04_DEPLOYMENT_ACCEPTANCE.md`;
+`reports/` bị loại trong Docker context. Source/runtime bytes trong Git giống nhau
+cho phần ứng dụng và pack, nhưng **exact commit identity vẫn NOT VERIFIED**.
+Cần provider proof/Owner giải quyết mismatch hoặc Coordinator disposition trước
+exact-revision acceptance. Không đổi branch, rewrite history hoặc tự chấp nhận SHA khác.
+
+### Limits của các check đã thực hiện
+
+- Logs chứng minh Docker build/image export/push, startup và internal health.
+  `containerimage.digest` là OCI manifest digest, không phải local Docker image ID.
+- Python base là 3.11-slim; exact Python patch chưa chạy `python --version` trong image.
+- Direct requirements/CPU Torch không đổi; build log lưu resolved transitive versions.
+- Log marker worker bị Railway gắn severity=error vì stderr; message nói workers alive,
+  không có startup exception trong retrieved deploy logs. Không gọi mọi error-level row
+  là lỗi runtime, cũng không tuyên bố full log sạch.
+- Credential-literal/private-key-marker scan trên retrieved build/deploy messages:
+  **0 findings**. Không thay thế filesystem scan hoặc PII review.
+- Config prepared giữ replay/openai/gpt-6-luna/none/cache0, keyless và DB /runtime/demo.db.
+  OAuth tools chỉ cho đọc variable names; actual env/path/seed readback trong container
+  vẫn pending. Không phát sinh synthetic business input hay LIVE/email trong lượt theo dõi.
+- DB local hash vẫn unchanged; remote DB migration/seed/reset/persistence chưa đo trực tiếp.
+- Build response có 501 entries khi request limit=500; raw log là provider-limited response,
+  không chứng nhận full build-log completeness.
+
+### SSH / container verification access
+
+User cung cấp Service Instance ID `f6d42f27-6b73-4336-a477-a4d413c1c779`.
+Kết nối SSH với StrictHostKeyChecking=yes dừng ở host-key verification trước authentication.
+Không hạ host verification để tiếp tục.
+
+Kiểm tra vị trí thông thường: Windows không có .ssh/default Ed25519/RSA key,
+ssh-agent stopped; Downloads/Documents/Desktop/OneDrive và hai thư mục .ssh trên F:
+không tìm thấy file key theo mẫu tên đã kiểm. WSL Ubuntu-24.04 user vu không có
+/home/vu/.ssh hoặc Railway CLI config. Đây là bounded search, không chứng minh mọi vị trí
+trên máy đều không có key. Không đọc hoặc hiển thị private key.
+
+Tools không có container exec. Local Railway CLI/auth cũng chưa có. Đã hỏi user chỉ ra
+key hiện có hoặc cho phép tạo key riêng ngoài repository để đăng ký public key.
+Theo [Railway SSH docs](https://docs.railway.com/cli/ssh), service private có thể truy cập
+bằng Service Instance ID, không cần public domain. Không cài CLI, tạo key hay đăng ký
+quyền SSH mới trong checkpoint này.
+
+Raw local evidence (ignored):
+`data/validation/m6-t04/20261014-1538-private-runtime.json` và
+`20261014-1538-provider-build-log.json`.
+
+### AC1–AC8 tại private deployment checkpoint
+
+| AC | Current status |
+| --- | --- |
+| AC1 Deployment | PARTIAL — private online/internal health; public URL và external UI chưa có |
+| AC2 Reproducibility | PARTIAL — real image digest/build PASS; commit mismatch + Python/fs scan pending |
+| AC3 Fresh Clone | NOT VERIFIED |
+| AC4 Data | PARTIAL — dedicated volume mounted; container DB readback/reset/recovery pending |
+| AC5 Runtime | NOT VERIFIED in new image — cassette integrity host PASS, container critical replay/Verify pending |
+| AC6 Sessions | NOT VERIFIED |
+| AC7 Safety | PUBLIC_ACCESS_GATE_BLOCKED; image filesystem scan pending; no domain/key/LIVE/email |
+| AC8 Evidence | PARTIAL — actual build/startup/health evidence recorded; acceptance evidence incomplete |
+
+Next technical work: establish approved SSH access, inspect actual image/env/pack/DB,
+then isolated critical replay/Verify and recovery. Public domain remains STOP until
+access control/restricted demo policy is enforced; do not infer PUBLIC_URL_READY from SUCCESS.
+Không bật billing, không merge PR #51, không tự DONE.
