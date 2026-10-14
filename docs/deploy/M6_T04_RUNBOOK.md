@@ -141,3 +141,34 @@ backup/restore, and an image rollback mechanism.
 Current prices, quotas, credentials, region, data-retention policy, and exposure controls
 must be verified by the Coordinator before choosing an option. No account or public URL is
 created by this runbook.
+
+## Follow-up Railway readiness — 14/10/2026
+
+Provider access is now connected. The observed project is `sweet-perfection`, service
+`invigorating-fascination`, environment `production`. Configuration remains staged;
+there is no new build, running service or public URL at this checkpoint.
+
+The context fix excludes `.pytest-*/` and permits `tests/cassettes/` while excluding
+other test directories. Verify the directory contains exactly the 24 canonical BASE24
+files and every SHA-256 matches the manifest before any build. The old rejected image
+remains unusable. Source checks do not replace an image filesystem scan.
+
+Prepared settings use the root Dockerfile and its existing CMD/8511, replay identity
+from BASE24, `PORT=8511`, health `/_stcore/health`, and a dedicated 500 MB DEMO volume at
+`/runtime` with `DATABASE_PATH=/runtime/demo.db`. No API/email key is configured.
+
+Before applying the Railway environment patch, inspect all staged changes. A deletion
+of the old `MLAi_VNG_A` service was already staged when this session started; applying
+the patch would also delete that service. The project admin must remove that pending
+deletion or authorize it separately. Do not apply a destructive batch as a deploy shortcut.
+
+Coordinator must approve project/access/safety, candidate SHA and build networking;
+the user must verify available Free/Trial credit without activating paid billing.
+After those gates, pin the published candidate commit, build privately and inspect logs
+for Dockerfile usage. Scan the actual image, test startup and critical replay/Verify,
+then create a domain targeting port 8511 only after the exposure decision. Verify HTTPS
+health and Streamlit UI from outside the container before declaring PUBLIC_URL_READY.
+
+Current results, three retained fixture-hash failures and AC1–AC8 are in
+`reports/sprints/M6_T04_DEPLOYMENT_ACCEPTANCE.md`. Fresh clone and browser acceptance
+remain the reviewer's separately authorized steps.

@@ -1,5 +1,9 @@
 # M6-T04 — Nghiệm thu triển khai và khả năng tái lập
 
+> Checkpoint mới nhất: xem **Public deployment follow-up — 14/10/2026** ở cuối file.
+> Railway đã connected và cấu hình mới chỉ staged; public deployment vẫn BLOCKED.
+> Toàn bộ image/test evidence phía dưới đến trước follow-up là historical checkpoint.
+
 ## Kết luận checkpoint
 
 - **KẾT QUẢ: BLOCKED / PARTIAL ONLY**
@@ -148,3 +152,191 @@ artifact `.pytest-*` không được đưa vào commit.
    nghiệm thu nếu công cụ GUI hoạt động.
 3. Quyết định riêng cho hosting/provider/budget/access để thực hiện AC1.
 4. Quyền fresh clone độc lập cho reviewer để thực hiện AC3.
+
+## Public deployment follow-up — 14/10/2026, 14:49 UTC+07
+
+### RESULT / TASK STATUS
+
+**BLOCKED / PARTIAL — PUBLIC_URL_READY chưa đạt; M6-T04 CHƯA DONE.**
+Checkpoint mới này không thay thế historical image evidence phía trên.
+Execution Owner theo Trello: **Project Coordinator, tiếp nhận từ Nam**.
+Vũ vẫn là Final Reviewer; Codex hỗ trợ kỹ thuật, không đăng quyết định thay các vai trò.
+
+### Authorization và dependencies
+
+Đã đọc trực tiếp [Task Contract](https://trello.com/c/MENWGSkO), bao gồm comment
+`[M6-T04] COORDINATOR AUTHORIZATION` ngày 14/10/2026, 06:01 UTC+07:
+
+> Hosting: NOT SELECTED.
+> Public deployment / LIVE LLM / API / email: NOT AUTHORIZED.
+> Phase D: chỉ triển khai sau khi Coordinator duyệt hosting, access policy và safety.
+
+Comment cho phép phase A–C offline readiness trên verified baseline
+`eaaeea88a59618b49219a20ae01a3cf3227cec87`.
+User yêu cầu hỗ trợ public deployment từ đúng task branch và đã cài/kết nối Railway
+trong phiên này. Chưa có quyết định mới về access policy, quota/billing hoặc quyền
+áp dụng lệnh xóa đang staged. Vì vậy chưa trigger provider build/deploy hoặc tạo domain.
+
+M6-T02, M6-T03, M6-T05 đều nằm trong list **Done - Đã nghiệm thu** khi đọc Trello.
+M6-T03 comment xác nhận M6-T02/M6-T05 được nghiệm thu; Git history hiện hành chứa
+integration M6-T03 (PR #48). Không dùng số tests/cassette trong memory làm current evidence.
+
+### HOSTING / PUBLIC URL
+
+| Trường | Kết quả quan sát |
+| --- | --- |
+| Provider | Railway — connected; hosting approval chưa được xác minh |
+| Workspace | Thành Vũ's Projects (personal) |
+| Project | sweet-perfection — `445f0a61-eff6-4f86-a83b-5ca7ef4a0e4c` |
+| Environment | production — `04b4c112-4685-44a3-921a-5f3fdd45c596` |
+| Prepared service | invigorating-fascination — `589b10fc-df1b-4c0b-82f8-8d5e5139c6f3` |
+| Service state | staged-create, chưa có deployment |
+| Builder | DOCKERFILE trong staged config; path `Dockerfile` |
+| Start command | Không override; giữ Docker CMD `python run_local.py ... --server.port 8511` |
+| Health | Configured `/_stcore/health`, timeout 120s; HTTP chưa chạy |
+| Public HTTPS URL | Không có; không tạo domain |
+| Billing | Không kích hoạt/nâng plan/thêm payment; actual plan/quota NOT VERIFIED |
+| DEMO storage | `m6-t04-demo`, 500 MB, mount `/runtime`; staged, chưa provision |
+| Runtime DB | `/runtime/demo.db`; chưa tạo DB trên hosting |
+
+Old service `MLAi_VNG_A` (`2077676c-af59-4a45-8bdc-a20e9cafb8df`) có deployment
+`c551b9f4-d172-4202-8db3-6a89153cf81c` FAILED.
+Build logs 14:41 UTC+07 ghi `using build driver railpack-v0.40.1` và
+`No start command detected`; old service source là `main`.
+Đây là deployment có sẵn trước khi Codex kiểm tra; không phải Docker build của M6-T04.
+Không áp dụng hướng dẫn đoán start command từ log; service mới giữ Dockerfile.
+
+### GIT REVISION / BUILD
+
+- Repo xác minh: `https://github.com/ThanhVu165/MLAi_VNG_A.git`.
+- Verified remote dev: `eaaeea88a59618b49219a20ae01a3cf3227cec87`.
+- Verified remote task head trước thay đổi: `212fc622031e6dfa48c01b7e242155df144eb847`.
+- Checkout đầu phiên: `sprint/m3-t06-human-control-e2e@eaaeea8`, working tree sạch.
+- Đã checkout cùng repository sang task branch bằng tracking ref đã tồn tại;
+  không ghi đè remote branch, clone/worktree, reset/stash/rebase/merge/force-push.
+- PR [#51](https://github.com/ThanhVu165/MLAi_VNG_A/pull/51): OPEN, DRAFT, base `dev`.
+- GitHub account có permission `admin`; quyền repository không thay thế Coordinator approval.
+- Host-tested SHA: `eaaeea88a59618b49219a20ae01a3cf3227cec87`.
+  `core corpus infra pages policies ui verify tests` không có diff với task head `212fc62`.
+- Deployed SHA / new image tag / new digest: **không có**.
+- New Docker build / container startup / public HTTP / application UI: **NOT RUN** từng bước.
+- Python host và .venv: **3.11.9**; Python image mới: **NOT VERIFIED**.
+- Docker/Railway CLI không nằm trong PATH; không tìm thấy Docker ở default Program Files path.
+- Image cũ `sha256:8e408bd7...40b8` vẫn **không được dùng**. Chưa inspect lại image đó.
+- Dockerfile Git blob SHA-256: `324dcfcce544b69a5893970034eb1c2085a26196473ee1766cc658ddb0bd5128`.
+
+### Thay đổi và cấu hình đã chuẩn bị
+
+1. `.dockerignore`: thêm `.pytest-*/`; thay `tests/` bằng `tests/*` +
+   `!tests/cassettes/` để Docker context có accepted replay pack, giữ phần test code khác ngoài image.
+   Không sửa bytes/provenance của cassette hoặc manifest.
+2. Railway staged source: `ThanhVu165/MLAi_VNG_A@sprint/m6-t04-deployment-acceptance`.
+   Pin source commit sau khi publish checkpoint; phải đọc lại source trước accept-deploy.
+3. Railway staged config: Dockerfile path, health và ON_FAILURE/max retries=3.
+4. Railway staged variables: toàn bộ identity/config từ canonical BASE24,
+   override `LLM_MODE=replay`, `LLM_CACHE=0`, `DATABASE_PATH=/runtime/demo.db`,
+   `PORT=8511`, usage telemetry=false. Không set API key hoặc email credential.
+5. Railway staged volume: 500 MB, chưa provision hoặc chạy workload.
+
+`LLM_MODE=replay` đơn lẻ chưa đủ: source cần OPENAI_MODEL và đúng cassette path.
+Folder `tests/cassettes` hiện chỉ có đúng 24 file canonical, không có extra file.
+Source fix chưa chứng minh actual Docker context/image sạch.
+
+[Docker docs](https://docs.docker.com/build/concepts/context/) mô tả exclusion/exception
+trong .dockerignore. [Railway Dockerfiles](https://docs.railway.com/builds/dockerfiles)
+xác nhận root Dockerfile detection; [domain docs](https://docs.railway.com/networking/domains/working-with-domains)
+có target-port mapping. Port dự kiến 8511; chưa có domain được cấu hình.
+[Railway Free Trial](https://docs.railway.com/pricing/free-trial) không chứng minh
+tài khoản hiện hành có quota khả dụng; không tự nâng Hobby/paid plan.
+
+### Validation commands và kết quả mới
+
+Chạy bằng PowerShell tại repo root; `PYTHONDONTWRITEBYTECODE=1` được set trước pytest.
+`tests/conftest.py` tạo fresh absolute temporary SQLite DB trước import,
+ép replay và deny socket/provider constructors. Các runner tên LIVE trong tests dùng mocks.
+
+```powershell
+git remote -v
+git ls-remote origin refs/heads/dev refs/heads/sprint/m6-t04-deployment-acceptance
+git diff --name-only HEAD origin/sprint/m6-t04-deployment-acceptance -- core corpus infra pages policies ui verify tests
+
+.\.venv\Scripts\python.exe -m pytest tests/test_m3_t06_human_control.py tests/test_r2_validation_diagnostics.py tests/test_guards.py::test_extraction_schema_normalizes_for_openai_without_mutation tests/test_guards.py::test_extract_retries_invalid_payload_once_then_records_error tests/test_guards.py::test_extract_timeout_is_fail_safe_and_records_error tests/test_telemetry.py -q --tb=short
+
+.\.venv\Scripts\python.exe -m pytest tests/test_workflow_migrations.py tests/test_seed_fidelity.py tests/test_runtime_worker.py -q --tb=short
+
+git diff --check
+Get-FileHash -LiteralPath data/app.db -Algorithm SHA256
+```
+
+| Check | Fresh result |
+| --- | --- |
+| Human Control/R2/extraction/telemetry suite | **33 PASS / 3 FAIL / 3 SKIP**, exit 1, 19.61s |
+| Migration/seed/worker suite | **42 PASS**, exit 0, 23.93s |
+| BASE24 inventory/hash check | **24/24 matches, 0 extra files, 0 mismatches**, assert-based check exit 0 |
+| Six source seed metadata | **6/6 is_synthetic=true** |
+| .dockerignore config/entrypoint checks | PASS for source configuration only; real Docker matcher/image NOT VERIFIED |
+| Tracked text secret patterns | 0 credential-literal/private-key-marker findings; narrow automated scan only |
+| Existing local DB | Same SHA-256 before/after checks: `7c1b78dba687a7780b71a2300dbcc8d416e64cb6b1aa62adf953eb6054de5752` |
+| Public/UI/browser sessions/fresh clone | NOT RUN |
+| LIVE LLM/provider/email operations in this session | **0 / 0 / 0**; GitHub/Trello/Railway connector calls did occur |
+
+Three failures:
+`test_r2_logger_to_live_capture_and_summary[invalid_invalid]`,
+`[invalid_valid]`, `[provider_failure]`.
+All stop at `verify/m2_dev_execution.py:107` with
+`ValueError: BLOCKED_FIXTURE_HASH_MISMATCH`, before mocked artifact capture.
+Không sửa frozen fixture, expected/hash hoặc business logic.
+Ba SKIP ghi rõ historical LIVE artifacts local không phải required CI fixtures.
+Không dùng historical 39 PASS để thay current result.
+
+Manifest SHA-256:
+`2a3c80855923010e3ead807424bc1d2e904c01422ab08eade7655fe30aa280c8`.
+Hash verification chỉ chứng minh bytes khớp accepted manifest, không phải fresh image replay.
+Test outputs được ghi trong tool transcript và bảng trên; không có new build/startup logs.
+
+### ACCEPTANCE CRITERIA — checkpoint mới
+
+| AC | Status | Evidence / còn thiếu |
+| --- | --- | --- |
+| AC1 Deployment | BLOCKED / NOT RUN | Service/config chỉ staged; chưa URL/health/uptime |
+| AC2 Reproducibility | PARTIAL | Python 3.11 host, pin deps, corrected context config; image mới chưa build/scan |
+| AC3 Fresh Clone | NOT VERIFIED | Reviewer chưa có authorization hoặc run độc lập |
+| AC4 Data | PARTIAL | 42 host migration/seed/worker tests PASS; provider reset/restart/persistence chưa chạy |
+| AC5 Runtime | PARTIAL / NOT RUN in new image | 24/24 pack integrity; historical critical/Verify được giữ phía trên; new-image replay chưa chạy |
+| AC6 Sessions | NOT VERIFIED | Worker tests không thay 2–3 real browser sessions |
+| AC7 Safety | PARTIAL / BLOCKED | Narrow source scan PASS; old image rejected; new image/public access chưa kiểm chứng |
+| AC8 Evidence | PARTIAL | Report/runbook/PR có checkpoint; chưa build/image/public/reviewer evidence |
+
+### BLOCKERS / NEXT ACTION / RECOVERY
+
+- **B1 — Public gate:** Trello chưa có quyết định provider/access/safety mới.
+  Impact: không tạo domain hoặc gọi deploy thay approval.
+  Coordinator cần duyệt Railway project/service, candidate SHA, synthetic-only data,
+  thời hạn exposure và quyền dùng UI quản trị/phê duyệt chưa có authentication.
+- **B2 — Destructive pending batch:** Patch `bad1524b-b52c-4fc0-a82c-568a908590b0`
+  đã có lệnh **delete MLAi_VNG_A** trước khi Codex staging config.
+  Impact: accept-deploy áp dụng cả deletion, không chỉ service mới.
+  User/project admin cần bỏ lệnh xóa khỏi pending changes hoặc duyệt riêng việc xóa;
+  Codex chưa accept hoặc xóa resource nào. Phải đọc lại get-staged-changes sau disposition.
+- **B3 — Billing/quota:** Connected tools đã xác minh project nhưng không trả actual plan/quota.
+  User/Coordinator cần xác nhận Free/Trial credit có sẵn, không payment/paid upgrade.
+  Build network cho candidate mới cần đúng phạm vi duyệt; quyền build cũ đã dùng.
+- **B4 — Image acceptance:** Source config đã sửa; Docker local unavailable và provider chưa trigger.
+  Execution Owner build candidate sạch, scan image, then startup/replay/Verify/DB recovery.
+  Không phân phối old image hoặc gọi LIVE khi miss.
+- **B5 — Regression failure:** 3 hash-mismatch failures giữ nguyên để Runtime/fixture Owner xử lý
+  theo scope riêng; không đổi contract/hash từ M6-T04.
+
+Safe work completed: target checkout, minimal context fix, canonical pack checks, host
+regressions, secret-pattern scan, prepared Railway staged config/storage/source, report/runbook.
+Staged resource chưa provision; không commit environment patch, tạo domain, đổi payment,
+đăng comment/message, merge PR hoặc cập nhật Trello/DONE.
+
+Rollback: revert checkpoint config commit nếu cần; không reset DB/cassette.
+Giữ local DB và historical evidence nguyên vẹn. Khi candidate được deploy, recovery cần
+DB backup + inspected known-good image; image bị từ chối ở historical checkpoint không
+được dùng làm rollback image.
+
+Agent self-review: chỉ .dockerignore và docs/deploy/report, không business/schema/policy,
+không secret/DB/cache trong diff. Owner self-review/handoff và Vũ final review vẫn pending.
+Commit checkpoint theo task contract; Git SHA/status cuối phải xác minh sau commit/push.
