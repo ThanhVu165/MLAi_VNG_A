@@ -3,6 +3,7 @@
 > Checkpoint mới nhất: xem **Public deployment follow-up — 14/10/2026** ở cuối file.
 > Railway đã connected và cấu hình mới chỉ staged; public deployment vẫn BLOCKED.
 > Toàn bộ image/test evidence phía dưới đến trước follow-up là historical checkpoint.
+> Phase D recheck 15:12: deletion đã hủy; public-access finding được tái hiện trên SHA được duyệt.
 
 ## Kết luận checkpoint
 
@@ -340,3 +341,81 @@ DB backup + inspected known-good image; image bị từ chối ở historical ch
 Agent self-review: chỉ .dockerignore và docs/deploy/report, không business/schema/policy,
 không secret/DB/cache trong diff. Owner self-review/handoff và Vũ final review vẫn pending.
 Commit checkpoint theo task contract; Git SHA/status cuối phải xác minh sau commit/push.
+
+## Phase D recheck — 14/10/2026, 15:12 UTC+07
+
+### Approval và resolved blocker
+
+Trong chat, Coordinator đã duyệt **build/public DEMO có điều kiện** cho exact SHA
+`b7a0658ded496a0b88938f79da32da526ca5dc53`, Free/Trial only, Dockerfile, replay/offline,
+synthetic DEMO và không cho khách thao tác đặc quyền ngoài scope demo.
+Quyết định cũng yêu cầu đối chiếu bản ghi Trello trước triển khai; nếu chưa có thì yêu cầu
+Coordinator cập nhật, và chỉ build riêng nếu public UI chưa đạt giới hạn an toàn.
+
+- Railway pending changes kiểm lại: **destructive=false**. Lệnh delete service
+  `MLAi_VNG_A` đã được hủy trước lượt kiểm này; Codex không xóa service.
+- Prepared service vẫn staged-create; chưa có deployment/domain.
+- Source pin và builder khớp approved SHA/branch, `DOCKERFILE`, path `Dockerfile`.
+- Trello get + list_comments trả đúng một comment A–C cũ, pagination không còn trang;
+  chưa có bản ghi Phase D mới tại thời điểm kiểm. Đã yêu cầu Coordinator cập nhật.
+- Tools Railway hiện không có billing/credit reader; browser-control attempt vào tab
+  project timeout. Không suy ra credit bằng số project hoặc trạng thái REGISTERED.
+  Đã hỏi người dùng actual plan/remaining credit/paid billing, không yêu cầu credential.
+- Chưa apply environment patch hoặc trigger private build do hai xác minh trên còn thiếu.
+  Public-access finding dưới đây chỉ chặn domain; không tự cấm private build sau khi
+  Trello/credit đủ.
+
+### Public access finding — reproduced, exact approved source
+
+**PUBLIC_ACCESS_GATE_BLOCKED.** Trang quản trị cho phép khách tự nhập tên để có actor
+`ADMIN:<name>`. Không có authentication hay kiểm tra vai trò; nút nạp quy định được bật.
+`corpus.intake._ingest` tạo SourceRecord mà không set `is_synthetic`, nên default là
+`false`; đường nạp không giới hạn vào accepted synthetic sources.
+
+Evidence source:
+`pages/3_Quan_tri_quy_dinh.py:124` (_upload),
+`:256` (tên quản trị tự nhập), `corpus/intake.py:96` (SourceRecord),
+`corpus/store.py:28` (is_synthetic default false).
+Chỉ thị nhắc người dùng dùng dữ liệu synthetic không phải enforcement của public access.
+
+Một isolated AppTest của chính trang quản trị được chạy trên SHA b7a0658:
+fresh temporary absolute DB, seed 6 synthetic sources, replay config,
+socket connect/connect_ex/sendto/DNS và `llm._call_live` đều bị deny.
+Không đổi production, không đưa dữ liệu thật, không bấm nạp tài liệu hoặc phê duyệt.
+
+| Observation | Actual |
+| --- | --- |
+| Chưa nhập tên: nút Nạp và đọc tài liệu disabled | true |
+| Nhập tên synthetic-public-visitor: cùng nút disabled | false |
+| Credential/authentication cần để bật nút | Không |
+| Exceptions trong AppTest | 0 |
+| Seed trước/sau | 6 sources / 6 synthetic |
+| Source upload clicked / LIVE provider calls | false / 0 |
+| Assertion probe | exit 0 — tái hiện access finding, không phải safety PASS |
+
+Raw observation:
+`data/validation/m6-t04/20261014-phase-d-access-check.json` (ignored local evidence).
+Lượt này là host AppTest về quyền giao diện; không chứng minh container/UI public,
+browser sessions hoặc runtime acceptance trên Railway.
+DB local vẫn có hash `7c1b78dba687a7780b71a2300dbcc8d416e64cb6b1aa62adf953eb6054de5752`.
+
+### Updated acceptance / next action
+
+- **AC1: BLOCKED**, chưa domain/health/uptime.
+- **AC2: PARTIAL**, source prepared; image build/scan NOT RUN.
+- **AC3: NOT VERIFIED**.
+- **AC4/AC5: PARTIAL**, không có new container evidence.
+- **AC6: NOT VERIFIED**.
+- **AC7: FAIL cho anonymous public-access boundary hiện tại**;
+  replay/DB isolation không thay thế authentication/synthetic-only intake.
+- **AC8: PARTIAL**, report có approval trong chat, resolved deletion và exact-source finding.
+
+Coordinator cần ghi Phase D decision lên Trello; user xác minh Free/Trial credit.
+Sau đó được tiếp tục **private Docker build** đúng b7a0658 và kiểm image/startup/replay/DB,
+nhưng **không tạo public domain** trên giao diện hiện tại.
+Trước public exposure cần access control ở deployment layer chỉ cho người được duyệt,
+hoặc một demo-restriction revision được Coordinator duyệt riêng rồi build/verify lại;
+không chỉ ẩn trang/nút và không tự sửa UI/business logic trong lượt này.
+
+Deployment source vẫn pin approved b7a0658; commit report sau đó không thay image target.
+Không bật billing, không LIVE/email, không merge PR #51 hoặc đánh DONE.
