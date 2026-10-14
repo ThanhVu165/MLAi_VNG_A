@@ -1,0 +1,77 @@
+{
+  "freeze_status": "FREEZE_INCOMPLETE",
+  "created_at": "2026-10-14T20:33:38Z",
+  "coordinator_decision_reference": [
+    "trello-action:6acfe2e4b5e1acc441483add",
+    "change-request:AC4-A-AC4-B-split:2026-10-15"
+  ],
+  "runtime_source_sha": "fe8c2dbca013e9344a678ba52f70588495c897ef",
+  "collector_revision": "sha256:f926179731f6fc06390855061eded1bc499166b87006738c1f1ab9d5d957c6f6",
+  "harness_revision": "sha256:84471b65b6e36c2dd532315747c98be35e037f09112051f9c5c6a87b7ace18cf",
+  "dataset": {
+    "identifier": "NOT_RESOLVED",
+    "version": "NOT_RESOLVED",
+    "hash": "NOT_RESOLVED",
+    "reference": "NOT_RESOLVED",
+    "eligibility": "NOT_VERIFIED"
+  },
+  "gold": {
+    "identifier": "NOT_RESOLVED",
+    "version": "NOT_RESOLVED",
+    "hash": "NOT_RESOLVED",
+    "reference": "NOT_RESOLVED"
+  },
+  "set_b": {
+    "existence": "NOT_RESOLVED",
+    "version": "NOT_RESOLVED",
+    "hash": "NOT_RESOLVED",
+    "seal": "NOT_RESOLVED",
+    "access_history": "NOT_RESOLVED"
+  },
+  "corpus": {
+    "identifier": "NOT_RESOLVED",
+    "version": "NOT_RESOLVED",
+    "hash": "NOT_RESOLVED",
+    "reference": "NOT_RESOLVED"
+  },
+  "policy_hash": "git-blob-sha1:381a80e095af8b0b9d9baa63fdeb9abbd67a3b3c",
+  "prompt_config_hashes": {
+    "settings": "git-blob-sha1:74a509237afdcccce433b089a871e6ac6ff6ebfa",
+    "llm": "git-blob-sha1:227162cebeccec9a6126edeed5b4037807fad658",
+    "extract": "git-blob-sha1:73d51b4fd9b3c181d0219f01d6621740aa26adb8",
+    "retrieval": "git-blob-sha1:d8f96452c008550971d8f0670e4b4cd5cb0cf12b",
+    "generate": "git-blob-sha1:9037843e71d80e7eaa823332a523a74ad7675e5a",
+    "question_gen": "git-blob-sha1:d6229ca79ba91bae2e7b8e6fa7ea4e92cd12a3aa",
+    "resume": "git-blob-sha1:c1fc2f6366dee4d9847578e81fd813654eff28fd"
+  },
+  "adaptation": {
+    "state": "NONE",
+    "version": "NONE"
+  },
+  "provider": "openai",
+  "model": "gpt-6-luna",
+  "model_parameters": {
+    "reasoning_effort": "none",
+    "temperature": 0
+  },
+  "environment": {
+    "python_version": "3.11",
+    "docker_base_image": "python:3.11-slim",
+    "dockerfile_hash": "git-blob-sha1:ad19ffc707e886b9fda9369cf5b9bcaca6c7161f",
+    "dependency_manifest_hash": "git-blob-sha1:828309b78eb21a2e9642efe695638ffa819bb17a",
+    "deployed_image_digest": "NOT_RESOLVED"
+  },
+  "execution_mode": "LIVE",
+  "timeout_seconds": 30,
+  "retries": 1,
+  "per_case_deadline_seconds": 60,
+  "gates": {
+    "quality": "NOT_RESOLVED",
+    "sample_size": "NOT_RESOLVED",
+    "strata": "NOT_RESOLVED",
+    "coverage": "NOT_RESOLVED",
+    "abort_threshold": "NOT_RESOLVED"
+  },
+  "budget": 0,
+  "execution_authorized": false
+}

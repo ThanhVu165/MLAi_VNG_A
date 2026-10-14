@@ -1,3 +1,89 @@
+# AC4-A COLLECTOR & AC4-B FREEZE STATUS — M4-T01 (15/10/2026)
+
+**Current technical result: READY_FOR_COORDINATOR_REVIEW.** Coordinator clarification
+separates AC4-A collector implementation from AC4-B exact official freeze. AC4-A is
+implemented and validated offline. AC4-B remains **FREEZE_INCOMPLETE**; this does not
+authorize or execute Set A/B, LIVE, provider access, tuning, or M4-T02.
+
+## AC4-A — Collector: PASS candidate
+
+The evaluation-only collector is [collector.py](../../docs/evaluation/collector.py).
+It binds each attempt to run ID, accepted runtime SHA, collector revision, manifest and
+config references; records case/attempt identity, timezone timestamp, result status,
+business decision or technical failure code, terminal outcome and opaque evidence reference.
+
+Reconciliation preserves the ordered expected population and explicitly emits MISSING,
+DUPLICATE, UNEXPECTED, MALFORMED and TECHNICAL_ERROR outcomes. A retry sequence may have
+multiple attempts but exactly one terminal attempt. Multiple terminal attempts or repeated
+attempt IDs become DUPLICATE. TECHNICAL_ERROR has no business result and cannot become a
+valid ESCALATE. Runtime/config/manifest binding mismatches fail closed.
+
+Only allowlisted metadata is copied to the reconciliation result. Unknown fields make the
+attempt MALFORMED and are not reflected, which prevents synthetic/private payload fields
+from entering collector evidence. The implementation imports no application module and
+does not call network, provider, DB, pipeline, Set A/B or Gold.
+
+Files:
+
+- [collector.py](../../docs/evaluation/collector.py) — offline reconciliation and freeze validator.
+- [test_collector.py](../../docs/evaluation/test_collector.py) — 15 synthetic checks.
+- [freeze schema](../../docs/evaluation/M4_T01_FREEZE_SCHEMA.json) — Draft 2020-12 structure.
+- [freeze template](../../docs/evaluation/M4_T01_FREEZE_TEMPLATE.json) — current metadata receipt.
+
+## AC4-B — Official Freeze: INCOMPLETE
+
+The template binds accepted runtime source
+`fe8c2dbca013e9344a678ba52f70588495c897ef`, verified policy/settings/LLM/prompt/dependency
+Git blobs, provider `openai`, model `gpt-6-luna`, reasoning `none`, temperature `0`,
+timeout `30s`, retries `1`, per-case deadline `60s`, Python 3.11 and Docker base
+`python:3.11-slim`. Adaptation is recorded as `NONE`. Intended mode is `LIVE`, while
+`execution_authorized=false` and budget is `0`.
+
+The following remain literal structured `NOT_RESOLVED` values: Set A identifier/version/
+hash/reference; Gold identifier/version/hash/reference; Set B existence/version/hash/seal/
+access history; exact corpus snapshot/hash/reference; immutable deployed image digest; and
+numeric quality, sample-size, strata, coverage and abort gates. Set A eligibility remains
+`NOT_VERIFIED`.
+
+The validator returns `FREEZE_INCOMPLETE` for this structurally valid template. Any request
+to validate `OFFICIAL_EXECUTION_READY` fails while a required value is unresolved,
+authorization is false, budget is zero, or mode is not LIVE. No placeholder is interpreted
+as an approved value.
+
+## AC4 continuation validation
+
+| Command/check | Result |
+|---|---|
+| `.\.venv\Scripts\python.exe -B -m unittest docs/evaluation/test_collector.py -v` | PASS — 15/15 synthetic collector/freeze tests |
+| `.\.venv\Scripts\python.exe -B -m unittest discover -s docs/evaluation -p 'test_*.py' -v` | PASS — 33/33 new and existing protocol tests |
+| `black --check --line-length 100 ...` | PASS — both new Python files unchanged |
+| `ruff check ...` | PASS |
+| `git diff --check`; scope/privacy scan; source-hash receipt | PASS — five evaluation-only files, no credential/raw-email pattern, collector/harness hashes match template |
+
+No official quality result is inferred from these tests. Tested revision is the final
+committed PR head reported at handoff; the pre-commit working tree is bound by the collector
+and test SHA-256 values stored in the freeze template.
+
+## AC4 continuation AC1–AC7
+
+| AC | Current disposition | Evidence / remaining condition |
+|---|---|---|
+| AC1 Provenance | NOT_VERIFIED | No new historical Set A/Gold commitment evidence |
+| AC2 Independence/seal | NOT_VERIFIED | Set B metadata and separation attestations unresolved |
+| AC3 Metrics | PASS candidate | Existing preregistered metrics and synthetic arithmetic tests unchanged |
+| AC4-A Collector | PASS candidate | Deterministic collector, freeze validator and 15 synthetic tests |
+| AC4-B Official Freeze | INCOMPLETE | Required dataset/corpus/image/gate metadata remains NOT_RESOLVED |
+| AC5 Reproducibility | PASS_OFFLINE candidate | Exact bindings, schema/template and full offline suite |
+| AC6 Safety | PASS_SCOPED candidate | Evaluation-only files; no private content, execution or production changes |
+| AC7 Evidence | Pending Coordinator review | Report and PR update prepared; no acceptance/DONE claim |
+
+Safety counters for this continuation: application LIVE/API/provider/email `0`; official
+Set A/B runs `0`; private Set A/B/Gold content reads `0`; tuning/adaptation operations `0`.
+Metadata operations were limited to Trello/Git/GitHub references, accepted-source Git blobs
+and evaluation file hashes. M4-T02 remains blocked and GO-A remains not granted.
+
+---
+
 # P2 CORRECTION & SELF-REVIEW — M4-T01 (14/10/2026)
 
 **Technical verdict: TECHNICAL_SELF_REVIEW_PASS. Overall task: PARTIAL_ONLY.**
