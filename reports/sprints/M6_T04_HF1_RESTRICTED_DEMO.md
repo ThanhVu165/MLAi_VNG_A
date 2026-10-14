@@ -1,6 +1,6 @@
 # M6-T04-HF1 — Restricted Public DEMO Access Hotfix
 
-Ngày xác minh: 2026-10-14  
+Ngày xác minh: 2026-10-14
 Kết quả của Owner: **READY_FOR_REVIEW** — chưa merge, chưa deploy public, chưa đánh DONE.
 
 ## Security remediation
@@ -56,7 +56,7 @@ Không sửa cassette, prompt/schema/model, policy hoặc expected labels.
 | AC4 — Public Demo Workflow | PASS | Canonical sample hit replay; Verify4 chạy; free-form UI còn nguyên; arbitrary input báo lane chưa bật và không persist. |
 | AC5 — Regression | PASS có ghi chú | Verify4 4/4, BASE24 24/24 hit, targeted 174/174. Full suite có 16 drift-lock fail do chính source hash thay đổi; 697 test còn lại PASS. |
 | AC6 — External Effects | PASS | Network/provider bị chặn trong test; LIVE/API/email thật = 0; cost = $0; rejected actions không đổi DB. |
-| AC7 — Evidence | PASS chờ independent review | Report, baseline/tested SHA, commands, limitations và Owner review có trong tài liệu này; PR được bổ sung sau khi mở. |
+| AC7 — Evidence | PASS — READY_FOR_REVIEW | Report, baseline/tested SHA, commands, limitations, Owner review và PR #53 đã có; independent review vẫn bắt buộc trước deploy. |
 
 ## Verify và replay
 
@@ -123,6 +123,6 @@ Mọi lệnh chạy với Python 3.11, `OPENAI_API_KEY` rỗng, `LLM_MODE=replay
 ## Commit / PR / handoff
 
 - Implementation commit: `b56f6f8b1e215995ff6dcbe8238e18087460a77a`.
-- Report commit: sẽ ghi sau khi commit tài liệu.
-- PR nhắm `dev`: sẽ bổ sung sau khi mở PR.
+- Report commit ban đầu: `b85184d74e6b602be15e12a4760de66ad2dddadd`.
+- PR nhắm `dev`: [#53](https://github.com/ThanhVu165/MLAi_VNG_A/pull/53) — OPEN, merge state `CLEAN` tại lúc kiểm tra.
 - Handoff: yêu cầu independent review tập trung vào authorization bypass, session isolation, worker/dispatch và corpus mutation. Không merge, không deploy public, không đánh M6-T04 hoặc HF1 DONE.
