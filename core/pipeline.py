@@ -46,7 +46,7 @@ from core.types import (
 from corpus.api import get_corpus_version
 from infra.audit import log_event
 from infra.db import execute, fetch_one, now_iso, to_utc_iso, transaction
-from infra.demo_access import authorize_case_input, is_restricted_demo
+from infra.demo_access import _PIPELINE_CAPABILITY, authorize_case_input, is_restricted_demo
 from infra.llm import case_call_budget
 from infra.settings import LLM_PROCESSING_MAX_ATTEMPTS
 
@@ -377,7 +377,12 @@ def _finalize(
         if status is CaseStatus.PENDING_SEND:
             from core.dispatch import schedule_auto_reply
 
-            schedule_auto_reply(intake.case_id, decision=decision, actor=actor)
+            schedule_auto_reply(
+                intake.case_id,
+                decision=decision,
+                actor=actor,
+                _capability=_PIPELINE_CAPABILITY,
+            )
     return result
 
 

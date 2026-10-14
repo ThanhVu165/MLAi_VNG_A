@@ -15,7 +15,7 @@ from core.sanitize import mask_pii
 from core.types import CaseStatus, Decision, DraftReply, PolicyDecision
 from infra.audit import log_event
 from infra.db import execute, fetch_one, get_connection, now_iso, to_utc_iso, transaction
-from infra.demo_access import authorize_demo_action
+from infra.demo_access import authorize_demo_action, authorize_pipeline_action
 from infra.settings import PENDING_SEND_SECONDS
 
 logger = logging.getLogger(__name__)
@@ -48,8 +48,15 @@ def _pending_case(case_id: str, now: datetime) -> Row:
     return row
 
 
-def schedule_auto_reply(case_id: str, *, decision: PolicyDecision, actor: str) -> None:
+def schedule_auto_reply(
+    case_id: str,
+    *,
+    decision: PolicyDecision,
+    actor: str,
+    _capability: object | None = None,
+) -> None:
     """Lên lịch gửi cho một quyết định AUTO_REPLY đã được Policy Engine duyệt."""
+    authorize_pipeline_action("lên lịch gửi", _capability)
     if decision.decision is not Decision.AUTO_REPLY:
         raise ValueError("Chỉ AUTO_REPLY mới được lên lịch gửi.")
     deadline = to_utc_iso(_utc_now() + timedelta(seconds=PENDING_SEND_SECONDS))

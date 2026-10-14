@@ -11,17 +11,17 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from core.controls import pause_automation
-from core.dispatch import cancel_send, dispatch_due
+from core.dispatch import cancel_send, dispatch_due, schedule_auto_reply
 from core.pipeline import process_case
 from core.resume import resume_case
-from core.types import CaseInput, Decision
+from core.types import CaseInput, CaseStatus, Decision
 from core.worker import queue_resume, submit_case, worker_tick
 from corpus.intake import ingest_text
 from corpus.lifecycle import reject_source
 from corpus.seed import ensure_seeded
 from corpus.store import SourceRecord
 from infra import llm
-from infra.db import fetch_one, get_connection
+from infra.db import execute, fetch_one, get_connection
 from infra.demo_access import (
     DemoAccessDenied,
     app_mode,
@@ -97,6 +97,49 @@ def test_fake_actor_cannot_mutate_admin_or_dispatch(restricted: None, actor: str
     with pytest.raises(DemoAccessDenied):
         worker_tick()
     assert _snapshot() == before
+
+
+@pytest.mark.parametrize("actor", ["ADMIN:fake", "HUMAN:fake", "SYSTEM", "guest"])
+def test_direct_schedule_spoof_is_denied_without_side_effect(restricted: None, actor: str) -> None:
+    ensure_seeded()
+    sample = canonical_demo_inputs()[0]
+    result = process_case(
+        CaseInput(
+            sample.sender,
+            sample.subject,
+            sample.body,
+            datetime.fromisoformat(sample.received_at),
+            sample.channel,
+        )
+    )
+    execute(
+        "UPDATE cases SET status = ?, send_deadline = NULL WHERE case_id = ?",
+        (CaseStatus.PROCESSING, result.case_id),
+    )
+    execute(
+        "DELETE FROM audit_events WHERE case_id = ? AND action = 'SEND_SCHEDULED'",
+        (result.case_id,),
+    )
+    before_case = dict(
+        fetch_one("SELECT status, send_deadline FROM cases WHERE case_id = ?", (result.case_id,))
+    )
+    before_events = fetch_one(
+        "SELECT COUNT(*) AS count FROM audit_events WHERE case_id = ? AND action = 'SEND_SCHEDULED'",
+        (result.case_id,),
+    )["count"]
+
+    with pytest.raises(DemoAccessDenied, match="pipeline nội bộ"):
+        schedule_auto_reply(result.case_id, decision=result.decision, actor=actor)
+
+    after_case = dict(
+        fetch_one("SELECT status, send_deadline FROM cases WHERE case_id = ?", (result.case_id,))
+    )
+    after_events = fetch_one(
+        "SELECT COUNT(*) AS count FROM audit_events WHERE case_id = ? AND action = 'SEND_SCHEDULED'",
+        (result.case_id,),
+    )["count"]
+    assert after_case == before_case == {"status": CaseStatus.PROCESSING, "send_deadline": None}
+    assert after_events == before_events == 0
 
 
 def test_direct_human_resume_is_denied_before_side_effect(restricted: None) -> None:
@@ -250,6 +293,17 @@ def test_canonical_demo_sample_hits_replay_and_uses_server_actor(
         (result.case_id,),
     )
     assert actor is not None and actor["actor"] == "SYSTEM"
+    if expected is Decision.AUTO_REPLY:
+        scheduled = fetch_one(
+            "SELECT status, send_deadline FROM cases WHERE case_id = ?", (result.case_id,)
+        )
+        event = fetch_one(
+            "SELECT actor FROM audit_events WHERE case_id = ? AND action = 'SEND_SCHEDULED'",
+            (result.case_id,),
+        )
+        assert scheduled is not None and scheduled["status"] == CaseStatus.PENDING_SEND
+        assert scheduled["send_deadline"]
+        assert event is not None and event["actor"] == "SYSTEM"
 
 
 def test_verify4_canonical_payloads_run_in_restricted_mode(restricted: None) -> None:

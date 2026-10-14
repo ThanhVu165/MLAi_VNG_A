@@ -16,6 +16,7 @@ MAX_PUBLIC_INPUT_CHARS = 5_000
 _VALID_MODES = frozenset({PRIVATE_MODE, RESTRICTED_MODE})
 _VERIFY4_PATH = Path(__file__).parents[1] / "verify" / "cases_verify4.json"
 _LIVE_UNAVAILABLE = "Xử lý email mới hiện chưa được bật. Bạn vẫn có thể chạy email mẫu hoặc Verify."
+_PIPELINE_CAPABILITY = object()
 
 
 class DemoAccessDenied(RuntimeError):
@@ -90,6 +91,12 @@ def authorize_demo_action(action: str) -> None:
     """Từ chối mọi mutation đặc quyền trong restricted mode, không tin actor."""
     if is_restricted_demo():
         raise DemoAccessDenied(f"Thao tác {action} không khả dụng trong bản DEMO công khai.")
+
+
+def authorize_pipeline_action(action: str, capability: object | None) -> None:
+    """Chỉ pipeline server giữ object identity này; actor string không thể thay thế."""
+    if is_restricted_demo() and capability is not _PIPELINE_CAPABILITY:
+        raise DemoAccessDenied(f"Thao tác {action} chỉ dành cho pipeline nội bộ.")
 
 
 def canonical_demo_inputs() -> tuple[CanonicalDemoInput, ...]:
