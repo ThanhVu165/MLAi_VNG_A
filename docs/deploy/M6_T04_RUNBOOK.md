@@ -1,5 +1,13 @@
 # M6-T04 — Deployment and reproducibility runbook
 
+> **Latest private runtime checkpoint — 14/10/2026:** Railway deployment
+> `c8930474-219b-4d9f-b736-2f0803888cb9` is SUCCESS; Docker build, startup and internal
+> health passed. No public domain exists. Current OCI image digest is
+> `sha256:1611638a236fc6299b321ae0bfca9f0c966a42557441d9c6df9385a2f773a585`.
+> Source-config pin is b7a0658; deployment metadata says 61e31e8 (excluded report-only
+> difference). Exact revision acceptance and container replay/data/image scans remain
+> pending. The rejected image warning below is historical and still applies to that image.
+
 > **BLOCKED CHECKPOINT:** Không dùng hoặc phân phối image
 > `sha256:8e408bd7aa6462bb412a8211b12075c84abf795cc7d35462660c7d892b9e40b8`.
 > Image này chứa artifact `.pytest-*`, gồm `.env` và `*.db`. Owner tiếp theo phải sửa
@@ -172,3 +180,24 @@ health and Streamlit UI from outside the container before declaring PUBLIC_URL_R
 Current results, three retained fixture-hash failures and AC1–AC8 are in
 `reports/sprints/M6_T04_DEPLOYMENT_ACCEPTANCE.md`. Fresh clone and browser acceptance
 remain the reviewer's separately authorized steps.
+
+## Inspect the private Railway container
+
+Current Service Instance ID is `f6d42f27-6b73-4336-a477-a4d413c1c779`. It identifies
+the private SSH target; it is not the Service ID or Deployment ID. A corresponding
+local private key must be available and its public key registered on Railway. Keep
+private keys outside the repository and do not disable SSH host verification.
+
+After SSH authentication/host identity are established, the first read-only probe is:
+
+```powershell
+ssh f6d42f27-6b73-4336-a477-a4d413c1c779@ssh.railway.com 'python --version'
+```
+
+Then verify actual environment identity, cassette bytes, `/app` artifact hygiene and
+SQLite metadata before running critical replay/Verify on a temporary test DB. Do not
+reset or use the live DEMO volume for destructive probes. See the latest report for
+completed checks, the source-SHA discrepancy and remaining access gates.
+
+The SSH path works without creating a public domain:
+[Railway SSH documentation](https://docs.railway.com/cli/ssh).
