@@ -1,0 +1,80 @@
+Captured pre-fix whitespace regression; workspace paths redacted, trailing output whitespace stripped.
+test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) ...
+  test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='sender', value="'   '", layer='schema') ... FAIL
+  test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='sender', value="'   '", layer='helper') ... FAIL
+  test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='subject', value="'   '", layer='schema') ... FAIL
+  test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='subject', value="'   '", layer='helper') ... FAIL
+  test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='sender', value="'\\t'", layer='schema') ... FAIL
+  test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='sender', value="'\\t'", layer='helper') ... FAIL
+  test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='subject', value="'\\n'", layer='schema') ... FAIL
+  test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='subject', value="'\\n'", layer='helper') ... FAIL
+test_whitespace_padded_and_normal_inputs_are_preserved (test_protocol.ProtocolTest.test_whitespace_padded_and_normal_inputs_are_preserved) ... ok
+
+======================================================================
+FAIL: test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='sender', value="'   '", layer='schema')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 252, in test_whitespace_only_sender_and_subject_are_rejected
+    self.assertFalse(self.validator.is_valid(sample))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='sender', value="'   '", layer='helper')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 254, in test_whitespace_only_sender_and_subject_are_rejected
+    with self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='subject', value="'   '", layer='schema')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 252, in test_whitespace_only_sender_and_subject_are_rejected
+    self.assertFalse(self.validator.is_valid(sample))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='subject', value="'   '", layer='helper')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 254, in test_whitespace_only_sender_and_subject_are_rejected
+    with self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='sender', value="'\\t'", layer='schema')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 252, in test_whitespace_only_sender_and_subject_are_rejected
+    self.assertFalse(self.validator.is_valid(sample))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='sender', value="'\\t'", layer='helper')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 254, in test_whitespace_only_sender_and_subject_are_rejected
+    with self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='subject', value="'\\n'", layer='schema')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 252, in test_whitespace_only_sender_and_subject_are_rejected
+    self.assertFalse(self.validator.is_valid(sample))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_whitespace_only_sender_and_subject_are_rejected (test_protocol.ProtocolTest.test_whitespace_only_sender_and_subject_are_rejected) (field='subject', value="'\\n'", layer='helper')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 254, in test_whitespace_only_sender_and_subject_are_rejected
+    with self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.034s
+
+FAILED (failures=8)

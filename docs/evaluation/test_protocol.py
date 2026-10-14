@@ -242,6 +242,37 @@ class ProtocolTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_cases([bad])
 
+    def test_whitespace_only_sender_and_subject_are_rejected(self) -> None:
+        for field, value in (
+            ("sender", "   "),
+            ("subject", "   "),
+            ("sender", "\t"),
+            ("subject", "\n"),
+        ):
+            sample = case("s", "P05")
+            sample["input"][field] = value
+            before = json.dumps(sample, sort_keys=True)
+            with self.subTest(field=field, value=repr(value), layer="schema"):
+                self.assertFalse(self.validator.is_valid(sample))
+            with self.subTest(field=field, value=repr(value), layer="helper"):
+                with self.assertRaises(ValueError):
+                    validate_cases([sample])
+            self.assertEqual(json.dumps(sample, sort_keys=True), before)
+
+    def test_whitespace_padded_and_normal_inputs_are_preserved(self) -> None:
+        for field, values in (
+            ("sender", ("synthetic@example.test", "  synthetic@example.test  ")),
+            ("subject", ("Synthetic check", " \tSynthetic check\n ")),
+        ):
+            for value in values:
+                with self.subTest(field=field, value=repr(value)):
+                    sample = case("s", "P05")
+                    sample["input"][field] = value
+                    before = json.dumps(sample, sort_keys=True)
+                    self.validator.validate(sample)
+                    self.assertEqual(validate_cases([sample]), ["s"])
+                    self.assertEqual(json.dumps(sample, sort_keys=True), before)
+
     def test_content_review_denominators(self) -> None:
         result = criterion_summary(["PASS", "FAIL", "NOT_REVIEWED"])
         for key, pair in (

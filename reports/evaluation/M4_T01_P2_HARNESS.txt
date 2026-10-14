@@ -1,0 +1,9 @@
+{"field": "sender", "value": "'   '", "helper_accepts": false, "harness_accepts": false, "expected": false, "status": "PASS"}
+{"field": "subject", "value": "'   '", "helper_accepts": false, "harness_accepts": false, "expected": false, "status": "PASS"}
+{"field": "sender", "value": "'\\t'", "helper_accepts": false, "harness_accepts": false, "expected": false, "status": "PASS"}
+{"field": "subject", "value": "'\\n'", "helper_accepts": false, "harness_accepts": false, "expected": false, "status": "PASS"}
+{"field": "sender", "value": "'synthetic@example.test'", "helper_accepts": true, "harness_accepts": true, "expected": true, "status": "PASS"}
+{"field": "subject", "value": "'Synthetic check'", "helper_accepts": true, "harness_accepts": true, "expected": true, "status": "PASS"}
+{"field": "sender", "value": "'  synthetic@example.test  '", "helper_accepts": true, "harness_accepts": true, "expected": true, "status": "PASS"}
+{"field": "subject", "value": "' \\tSynthetic check\\n '", "helper_accepts": true, "harness_accepts": true, "expected": true, "status": "PASS"}
+PASS: 8/8 exact harness-loader compatibility checks; no pipeline, DB, provider or official set execution
