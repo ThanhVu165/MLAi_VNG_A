@@ -566,3 +566,25 @@ Next technical work: establish approved SSH access, inspect actual image/env/pac
 then isolated critical replay/Verify and recovery. Public domain remains STOP until
 access control/restricted demo policy is enforced; do not infer PUBLIC_URL_READY from SUCCESS.
 Không bật billing, không merge PR #51, không tự DONE.
+
+## SSH key registration recheck — 14/10/2026, 16:06 UTC+07
+
+User authorized a dedicated local Ed25519 key and confirmed registration on Railway.
+Private key remains outside Git; public/private match and owner-only Windows file ACL
+were verified. No private-key contents were displayed or committed.
+
+SSH server `ssh.railway.com` accepted the key and authenticated using publickey.
+Initial host identity was recorded using OpenSSH `accept-new` in a dedicated local
+known-hosts file; a subsequent `StrictHostKeyChecking=yes` probe matched the recorded
+ED25519 key. This is first-use trust, not an independently published host fingerprint.
+
+The authenticated probe returned `No active deployment` for supplied target
+`f6d42f27-6b73-4336-a477-a4d413c1c779`; no container command executed.
+Provider readback still shows deployment `c8930474-219b-4d9f-b736-2f0803888cb9`
+SUCCESS, one running replica, zero crashed, no pending changes and no public domains.
+The subsequent supplied ID `22f7733a-4341-41b5-b0af-a6a4ae3a08fa` was independently
+identified as the personal workspace, so was not used as an SSH target.
+
+Await the current Service Instance ID from the approved service's command palette.
+Image filesystem, container replay/Verify and remote DB checks remain NOT VERIFIED.
+AC1–AC8 statuses above remain unchanged; public domain remains STOP at the access gate.

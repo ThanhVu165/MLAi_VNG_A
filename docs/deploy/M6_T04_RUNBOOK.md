@@ -183,15 +183,17 @@ remain the reviewer's separately authorized steps.
 
 ## Inspect the private Railway container
 
-Current Service Instance ID is `f6d42f27-6b73-4336-a477-a4d413c1c779`. It identifies
-the private SSH target; it is not the Service ID or Deployment ID. A corresponding
+The previously supplied target `f6d42f27-6b73-4336-a477-a4d413c1c779` returns
+`No active deployment` after successful SSH authentication. Obtain the current
+Service Instance ID from the approved service's command palette before proceeding;
+the workspace, Service ID and Deployment ID are not substitutes. A corresponding
 local private key must be available and its public key registered on Railway. Keep
 private keys outside the repository and do not disable SSH host verification.
 
 After SSH authentication/host identity are established, the first read-only probe is:
 
 ```powershell
-ssh f6d42f27-6b73-4336-a477-a4d413c1c779@ssh.railway.com 'python --version'
+ssh -i "$env:USERPROFILE\.ssh\id_ed25519_railway_m6_t04" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$env:USERPROFILE\.ssh\known_hosts_railway_m6_t04" '<current-service-instance-id>@ssh.railway.com' 'python --version'
 ```
 
 Then verify actual environment identity, cassette bytes, `/app` artifact hygiene and
