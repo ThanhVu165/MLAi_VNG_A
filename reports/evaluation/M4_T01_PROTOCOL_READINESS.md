@@ -1,3 +1,175 @@
+# P2 CORRECTION & SELF-REVIEW — M4-T01 (14/10/2026)
+
+**Technical verdict: TECHNICAL_SELF_REVIEW_PASS. Overall task: PARTIAL_ONLY.**
+Owner human confirmation: **PENDING MINH**. Independent review: **PENDING THƯ**.
+Coordinator acceptance/DONE/merge/GO-A: **NOT GRANTED**. M4-T02: **NOT READY**.
+This section supersedes current technical readiness claims in older checkpoints below;
+it does not supply missing provenance, seal attestations or official configuration.
+
+## P2.1 Authorization, baseline and revisions
+
+Owner's current prompt explicitly authorizes correcting P2, regression, commit/push,
+updating existing Draft PR #52 and technical self-review. Scope remains evaluation docs,
+tests and reports; no production/Gold/private-set/official execution authorization.
+
+- Previous reviewed SHA: `b618e7c14267a43925884c406fb9b4aa39a2fca1`.
+- Fresh remote dev baseline: `eaaeea88a59618b49219a20ae01a3cf3227cec87`, unchanged.
+- Existing branch: `sprint/m4-t01-evaluation-protocol`; [Draft PR #52](https://github.com/ThanhVu165/MLAi_VNG_A/pull/52), base dev, open/unmerged; initial local/remote HEAD matched.
+- Tracked working tree initially clean; two existing untracked slide decks untouched.
+- **Tested implementation / correction SHA: `742ffd41f5726917d788f93c926373455a3cd827`.**
+- Final evidence-only commit contains this section, post-commit test log and inventory.
+  Its exact final SHA is the PR #52 head / `git rev-parse HEAD`, recorded explicitly in
+  the PR body and final handoff. Implementation remains identical to tested SHA above;
+  evidence-only revision is not described as a new runtime-tested implementation.
+- All prior report bytes are preserved after the marker below (working-tree SHA-256
+  `365aae0c4b70d6978d9bd1aab76e01045a6b264e0874d7861f2bd488c1780376`).
+  Prior logs/inventories remain immutable historical snapshots; Git text filters may
+  normalize line endings in committed blobs.
+
+## P2.2 Finding, minimal correction and regression
+
+Confirmed root cause: schema sender/subject at [lines 25–26](../../docs/evaluation/M4_T01_SCHEMA.json)
+had only minLength=1, so spaces/tab/newline passed schema and validate_cases while
+[harness _string](../../verify/harness.py) rejects values whose strip() is empty.
+This was a schema–harness input compatibility defect affecting AC5.
+
+Correction: preserve minLength=1 and add pattern `\\S` to each of sender and subject.
+No trimming, normalization or input/Gold/expected-label modification. No helper change
+was needed: validate_cases already applies the schema. Production/harness unchanged.
+
+| Validation | Evidence | Actual result |
+|---|---|---|
+| Before fix, new whitespace regressions on prior schema | [before log](M4_T01_P2_BEFORE.txt) | 2 test methods run: invalid-input test produced 8 expected failing subtests (4 inputs × schema/helper); valid/padded-input test PASS |
+| Full synthetic suite after correction on exact committed SHA | [after log](M4_T01_P2_AFTER.txt) | **18 PASS**, 0 FAIL, 0.062s; prior 16 tests remain green |
+| Exact harness-loader definitions, isolated from app | [compatibility log](M4_T01_P2_HARNESS.txt) | **8/8 PASS**: four invalid inputs rejected by both paths; four normal/padded inputs accepted unchanged |
+| JSON Schema Draft 2020-12 | Current suite setUpClass/schema tests | PASS; schema validates and semantic checks remain enforced |
+| Black/Ruff/diff/scope/links/privacy | [P2 inventory](M4_T01_P2_EVIDENCE.json) | PASS; final inventory records byte/blob bindings and link count |
+
+Rejected inputs: sender="   ", subject="   ", sender="\t", subject="\n".
+Accepted inputs: ordinary sender/subject and non-whitespace content with leading/trailing
+spaces/tab/newline. Tests assert the entire serialized case is unchanged after validation.
+No expected test was changed to turn failure into success. Before log redacts workspace
+paths and strips trailing stdout whitespace without changing assertion/traceback meaning.
+
+Exact commands from repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m unittest discover -s docs/evaluation -p test_protocol.py -k whitespace -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s docs/evaluation -p test_protocol.py -v
+.\.venv\Scripts\python.exe -m black --workers 1 --check --line-length 100 docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py
+.\.venv\Scripts\python.exe -m ruff check docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py
+git diff --check eaaeea88a59618b49219a20ae01a3cf3227cec87...HEAD
+```
+
+Environment: Windows/PowerShell 7.6.5, Python 3.11.16, jsonschema 4.23.0, pytest 8.3.3;
+no dependency installed/changed. Harness compatibility used `python -B -` to load the
+unchanged VerifyCase/_string/_case_from_payload AST definitions with real CaseInput/enum
+types. It did not import/run the pipeline, DB or provider. This is input-loader evidence,
+not product replay or held-out accuracy. Earlier two guarded pipeline harness test results
+remain EVIDENCE REVIEWED — NOT RERUN; production and their scope are unchanged.
+
+## P2.3 Final technical self-review
+
+Reviewed full task source/diff and evidence, not only the two schema lines:
+
+- Protocol/spec/policy: AUTO_REPLY/ESCALATE, three stop types and P01–P05 remain aligned;
+  P04 content stop differs from ERROR/TECHNICAL_ERROR. No threshold/model/config change.
+- Schema/helper: normalized result validation, contradictory outcomes, missing/extra fields,
+  MALFORMED/ERROR/MISSING/INVALID_INPUT, identity reconciliation and whitespace boundary
+  remain consistent. No unauthorized collector or official execution path introduced.
+- Manifest: exact-byte dataset/protocol digests, ordered unique IDs/count, Gold version
+  and expected runtime SHA binding retained. It rejects claimed execution authorization;
+  caller must supply a trusted freeze receipt, not copy the manifest's own SHA field.
+- Metrics: MER/OER, confusion matrix, coverage/failures/missingness, separate stop/rule
+  correctness, applicability/NOT_REVIEWED, Wilson 95% and N=0 unchanged and checked by
+  the 18-test suite. Synthetic outputs remain arithmetic evidence, not model accuracy.
+- Evidence: before/after logs, current tested source, isolated loader comparison, artifact
+  integrity and scope reviewed. Original history/logs retained; no production, policy,
+  interface, Gold/case content, cassettes, STATUS or dependency edits. No Set A/B access.
+- P2 is closed for the confirmed boundary. No other confirmed in-scope defect affecting
+  AC was identified in this review. Technical self-review does not attest historical
+  dataset secrecy, production scale, provider quality or private-data authorization.
+
+**TECHNICAL_SELF_REVIEW_PASS** applies to technical preparation on the tested implementation
+and final evidence packet. Human sign-off, independent acceptance, Coordinator acceptance
+and official evaluation authorization remain distinct pending conditions.
+
+## P2.4 Current AC1–AC7 and remaining blockers
+
+| AC | Current disposition | Evidence / remaining condition |
+|---|---|---|
+| AC1 Provenance | NOT VERIFIED | No new historical author/Gold/hash/cutoff/exposure receipt supplied |
+| AC2 Independence/seal | NOT VERIFIED | No new overlap or Set B custodian/ACL/access-history attestation |
+| AC3 Metrics | PASS candidate | Unchanged protocol, arithmetic/edge-case checks in 18-test suite; Thư review pending |
+| AC4 Protocol | BLOCKED official lock | Preparation specification available; config/corpus/adaptation/collector/gates/GO not authorized/frozen |
+| AC5 Reproducibility | PASS offline | P2 corrected; schema/helper and exact loader agree for invalid/normal/padded inputs; manifest checks retained |
+| AC6 Safety | PASS session scope | Permitted synthetic metadata only, scope/privacy checks; no claim about historical Set B access |
+| AC7 Evidence | Preparation evidence complete | Existing report/PR, exact tested SHA, regression and review packet; Minh/Thư sign-offs pending |
+
+Coordinator decisions C5 below remain unchanged: Set A original commitments/cutoff/
+exposure and metadata-only access; Set B seal/ACL/history; exact official configuration,
+private collector/environment, numeric gates/mode/budget; dependency-locked T02 queue.
+Lack of evidence is NOT VERIFIED, not contamination or ELIGIBLE. No current digest can
+repair preregistration. **M4-T02 remains NOT READY and requires separate GO-A.**
+
+## P2.5 Human-use drafts (not posted)
+
+```text
+[M4-T01] OWNER SELF-REVIEW
+PR: #52
+Reviewed SHA: exact final PR head given in closing PR metadata/handoff; record full SHA when signing.
+Tested SHA: 742ffd41f5726917d788f93c926373455a3cd827
+Files reviewed: protocol, schema, helper, tests, report and all validation artifacts in PR.
+Correction P2: sender/subject require a non-whitespace character; input preserved; helper/production unchanged.
+Regression: before 8 expected failing subtests; after 18 unit PASS + 8/8 isolated loader checks.
+AC1 NOT VERIFIED; AC2 NOT VERIFIED; AC3 PASS candidate; AC4 BLOCKED;
+AC5 PASS offline; AC6 PASS session; AC7 preparation evidence complete.
+Scope/privacy: no production/Gold/STATUS/dependency changes; old evidence retained; no private set reads.
+Remaining blockers: provenance/seal/config/collector/authorization and Coordinator queue decision.
+LIVE application/LLM/provider/email: 0.
+Technical self-review verdict: TECHNICAL_SELF_REVIEW_PASS.
+Owner confirmation: PENDING MINH
+```
+
+Minh must read the exact final diff/results and confirm understanding before using this
+as human sign-off; Codex has not signed or posted for Minh.
+
+```text
+[M4-T01] OWNER HANDOFF — PARTIAL_ONLY
+Changes: minimal P2 schema correction + regressions/evidence; technical preparation ready for review.
+Validation: 18 synthetic PASS, 8/8 exact loader checks; Black/Ruff/schema/scope/links/privacy PASS.
+Evidence: PR #52, tested SHA 742ffd41f5726917d788f93c926373455a3cd827,
+exact final head from PR metadata/handoff and this report's P2 section.
+AC: 1/2 NOT VERIFIED; 3 PASS candidate; 4 BLOCKED; 5 PASS offline; 6 PASS scoped; 7 preparation complete.
+Self-review: Codex technical PASS; Minh human confirmation PENDING; Thư review PENDING.
+Risks: provenance/seal/config not established; no held-out-quality or GO-A claim.
+LIVE application/LLM/provider/email: 0. Request: Thư independent review; Coordinator remaining decisions.
+```
+
+```text
+[M4-T01] THƯ INDEPENDENT REVIEW REQUEST
+Review exact final head of PR #52 (full SHA supplied in closing PR metadata/handoff).
+Focus files: M4_T01_PROTOCOL.md, M4_T01_SCHEMA.json, protocol_validation.py,
+test_protocol.py, report P2 section and M4_T01_P2_* regression/inventory artifacts.
+P2: compare schema non-whitespace constraints with unchanged harness loader; verify
+before failures, after rejection/acceptance and preservation of padded valid inputs.
+Check AC3/5/6: denominators/Wilson/N=0, business vs technical outcomes, IDs/hashes/runtime
+receipt, privacy/evidence limits. AC1/2 remain NOT VERIFIED and AC4 blocked official lock.
+Do not open Set B/private Gold or infer historical seal/eligibility from synthetic PASS.
+Record actual reviewed SHA and verdict ĐẠT / HOLD / CHANGE REQUEST with AC evidence and required actions.
+No Thư verdict, Coordinator acceptance or GO-A is supplied by Codex.
+```
+
+**LIVE/API application/LLM/provider/email calls: 0; official A/B runs: 0.** Read-only
+Trello/GitHub/Git verification and authorized push/PR metadata updates are separate from
+application/provider calls. No automatic card movement, DONE, merge or GO-M4-T02.
+
+Next: Minh confirms human self-review → Thư independent review → Coordinator decision.
+
+---
+
+<!-- M4_T01_REPORT_BEFORE_P2_CORRECTION -->
+
 # M4-T01 — Current continuation / review readiness (14/10/2026)
 
 **RESULT: PARTIAL_ONLY.** Technical preparation is reviewable; no eligibility, seal,
