@@ -1,3 +1,269 @@
+# M4-T01 — Current continuation / review readiness (14/10/2026)
+
+**RESULT: PARTIAL_ONLY.** Technical preparation is reviewable; no eligibility, seal,
+official config, human review, acceptance, merge or GO-A is inferred from this update.
+Owner Minh; independent reviewer Thư; decisions remain with Project Coordinator.
+This continuation supersedes current-status statements in the older checkpoints below.
+
+## C1. Quick preflight and evidence boundaries
+
+- Previous/local/remote task HEAD at start: `b6edae55433b9acbe222c30fec01c2509a088287`.
+- Fresh `git fetch origin dev` + `git ls-remote` confirm current dev remains
+  `eaaeea88a59618b49219a20ae01a3cf3227cec87`; baseline is unchanged, no merge/rebase.
+- Existing [Draft PR #52](https://github.com/ThanhVu165/MLAi_VNG_A/pull/52) is open,
+  unmerged, base dev, head matches local branch; no comments/new review at access time.
+- Branch `sprint/m4-t01-evaluation-protocol`; tracked tree initially clean. Two
+  pre-existing untracked slides remain untouched and excluded from staging.
+- Required instructions/spec/workflow and live Task Contract re-read; authorized scope
+  remains docs/evaluation and reports/evaluation. No ownership/file conflict observed.
+- T01 remains IN PROGRESS, T05 Done with prior owner-transfer decision. T02 remains
+  IN PROGRESS, lastActivity `2026-10-13T23:32:15.119Z`, no comments. Latest coordination
+  still sequences Minh T01 first, then T02 only after acceptance/GO-A. Treat T02 as
+  dependency-locked; Coordinator must correct/clarify that column. No T02 work executed.
+- T01 has no comments/attachments or additional authorized private-metadata route.
+  Board listing complete (`hasNextPage=false`). No other newly assigned Minh Owner
+  implementation identified; membership alone is not ownership.
+- No private data location searched; no Set A/B case/Gold/archive opened. No .env,
+  live DB, credentials, mailbox or provider configuration inspected or executed.
+
+## C2. Technical findings, corrections and metric reconciliation
+
+Reviewed every existing protocol/schema/helper/test and prior validation artifact.
+All helper callers are confined to docs/evaluation tests; no production caller changed.
+
+| ID | Confirmed before correction | Minimal correction / evidence |
+|---|---|---|
+| TECH-01 | Helper ignored the declared outcome except MISSING; AUTO/P05 tagged TECHNICAL_ERROR returned VALID. ERROR tagged VALID returned TECHNICAL_ERROR despite schema rejection. Missing elapsed_ms, extra fields and negative/nonfinite timing could enter valid metrics. | Validate the full normalized result schema first; invalid identifiable records count MALFORMED and stay in planned population. Nonfinite timing is a semantic failure. Consistent records return their schema-validated outcome. |
+| TECH-02 | validate_cases ignored missing Gold version and extra case properties. Non-dict results failed with an AttributeError before identity reconciliation. | Enforce case schema before Gold/timestamp semantics; reject unreconcilable output identity explicitly. Missing/unknown/duplicate IDs remain reconciliation failures, never discarded. |
+| TECH-03 | Manifest runtime_sha was not compared to a trusted expected revision; null/0 execution_authorized passed the falsey check, and manifest shape/extra fields were not validated. | Enforce preparation manifest schema and require explicit keyword runtime_sha from the independent freeze receipt. Hash/ordered ID/Gold/count checks retained; literal false required. This validates a receipt binding, not Git existence or authorization. |
+| DOC-01 | Unescaped absolute-value pipes inside Markdown metric table split cells; INVALID_INPUT was mistyped once. | Render-equivalent count(V)/count(S) notation and correct enum spelling; formulas and denominators unchanged. |
+
+Regression evidence: [before tests](M4_T01_CONTINUATION_BEFORE.txt),
+[direct manifest reproduction](M4_T01_CONTINUATION_MANIFEST_BEFORE.txt).
+Before suite: 16 tests, 8 failing subtests and 4 errors. The errors show the proposed
+explicit-runtime argument was not supported; the separate direct reproduction proves
+the old helper accepted unchecked runtime and null/0 authorization. No claim that those
+TypeErrors alone proved incorrect metrics. After correction: 16 tests PASS during working
+tree validation; exact committed-source results are recorded in C8 below.
+
+Test factory now supplies the full required result envelope, rather than a four-field
+projection that bypassed schema. Synthetic labels, expected metric values and old logs
+remain unchanged. No production, frozen Gold/rubric, expected policy outcome or historical
+report was edited. jsonschema 4.23.0 was already installed; no dependency added.
+
+MER FN/(TP+FN), OER FP/(TN+FP), precision/recall, confusion matrix, stop vs rule,
+full-planned failures/missing/invalid, applicability/NOT_REVIEWED and Wilson/N=0 were
+reconciled against existing tests. No metric change or conflicting newly approved
+contract found. Known wrong route/type/rule combinations remain semantic mismatches;
+structural invalidity/contradictory declarations are technical MALFORMED, not guessed routes.
+NOT_APPLICABLE is excluded only by the frozen applicability mask; NOT_REVIEWED stays in
+the applicable denominator. Sampling/curated-family/retry limitations remain explicit.
+
+## C3. Exact remaining provenance and seal evidence
+
+Permitted sources checked again: T01 contract/comments/attachments; T02; T05 owner
+transfer; latest coordination; public roadmap/M2 reports and tracked replay metadata.
+No new author, Gold, preregistration, exposure or seal attestation supplied. M2 captures
+and BASE24 provenance belong to DEV/runtime replay and do not establish Set A/B provenance.
+
+| Required item | Evidence currently available | Missing artifact and accountable source |
+|---|---|---|
+| Set A author/source and independent roles | Task ownership only | Custodian-signed dataset/source provenance and author/Gold-author/reviewer role separation |
+| Original creation and Gold finalization | No historical receipt | Original timezone-aware timestamps plus independent immutable registry/version-history receipt |
+| Historical dataset/Gold commitment | No authorized commitment record | Original dataset + Gold version/hash commitments and receipt predating actual M2 tuning; metadata-only disclosure approval |
+| Earliest relevant M2 tuning cutoff | Git corroboration `124b06d...` at 06/10 02:27 +07; later DEV preregistration/results | Runtime Owner + Coordinator attest actual earliest tuning event across Git, local experiments and external sessions, with evidence refs; commit date alone insufficient |
+| Exposure/contamination history | DEV/full15 explicitly diagnostic in roadmap | Custodian access log/attestation covering authors, reviewers, tuning prompts/captures/cassettes, demo and study usage; exceptions adjudicated |
+| DEV/REGRESSION family overlap | Separation requirement only | Authorized independent reviewer attestation of exact/semantic/family overlap check and disposition; no case text or Gold published |
+| Set B seal/Gold/version commitment | Roadmap's M7 single-run requirement | Original seal receipt/version commitment and signed independent custodian attestation |
+| Set B ACL/access/exposure and reviewer role | No historical attestation | Custodian/Coordinator approve sanitized ACL and access-history summary through current checkpoint, reviewer role/exposure declaration |
+
+**Set A: NOT VERIFIED. Set B: SEAL NOT VERIFIED.** Lack of evidence is not contamination.
+No newly generated dataset digest/timestamp is used to repair preregistration. Stop
+private eligibility/seal inspection and all official runs until the approved route exists.
+Keep Set B sealed for M7; only sanitized metadata should be provided for T01 review.
+
+## C4. Official configuration readiness
+
+The middle column distinguishes verified source defaults/installed versions/historical
+DEV configuration from effective runtime values. No process was started and no local
+.env/DB read, so effective runtime environment and ACTIVE corpus are NOT VERIFIED.
+All official selections and freeze receipts remain **PENDING AUTHORIZATION**.
+
+| Parameter | Verified Current Value | Required Decision/Evidence |
+|---|---|---|
+| Runtime Git SHA | dev `eaaeea88a59618b49219a20ae01a3cf3227cec87`; task preparation parent `b6edae55433b9acbe222c30fec01c2509a088287`; production unchanged | Select full official runtime SHA, freeze receipt and matching safety/integration evidence |
+| Python/dependencies | Installed Python 3.11.16; pytest 8.3.3; jsonschema 4.23.0; openai 3.24.0; pydantic 2.14.1. requirements.txt SHA-256 `b0410a1ff46b1380ab4e7a7e0f8ae12717d903f829c9f8c83f1e725a46202bcc` | Approve exact environment/image and dependency inventory. jsonschema is installed but not directly pinned in project requirements; freeze it in approved validation environment |
+| Corpus version/hash | NOT VERIFIED actual ACTIVE snapshot. corpus.store.compute_corpus_version derives cv_ from ACTIVE doc_id/content_hash | Custodian-approved exact snapshot, full digest, effective-date/ACL/state metadata; cv_ prefix alone does not bind all metadata |
+| Policy version/hash | policies/policy.yaml version 1; SHA-256 `805349a02bbd804f5b690e822f4098f3f394d9caaeddb94a9d7f4b950f422430` | Approve these exact bytes and relevant settings, not just version integer |
+| Prompt/schema version | EXTRACT/SELECT/GENERATE/QUESTION/RESUME PROMPT_V1 plus their schema constants; tracked source fingerprints captured in continuation inventory | Freeze template + schema bytes and rendered-request hash/config at collection; V1 naming alone insufficient |
+| Adaptation configuration/version | Source defaults SIMILARITY_THRESHOLD=.35, CITATION_RATIO_MIN=.6, RETRIEVAL_TOP_K=6; no approved frozen adaptation receipt | Runtime Owner declares applicable adaptation implementation/state/version (or explicit absence), thresholds and no-update policy; no feedback tuning on held-out |
+| Provider/model | Runtime supports openai only; model comes from OPENAI_MODEL and defaults empty. BASE24 historical DEV model gpt-6-luna | Coordinator chooses official model/provider and pins identity; DEV recording choice is not official authorization |
+| Temperature/reasoning | call_json defaults 0, rejects nonzero; provider request supplies temperature when reasoning=none, otherwise omits sampling parameter; reasoning source default none | Approve exact effective settings and request capture on selected model, no model probe in T01 |
+| Retry/timeout | Source default timeout 30s, retries capped at 1; case lifetime deadline 60s; max attempts 4 (processing 3 + resume 1) | Freeze effective values and budget; preserve every attempt/failure and no post-result best-of retry |
+| Execution mode/cache | Current continuation OFFLINE_UNIT only. Source fallback/.env.example says live/cache=1; compose says replay/cache=0; neither is observed effective runtime | Explicit approved mode, cache off and isolated environment; never execute implicit live fallback |
+| Replay pack, if used | BASE24 manifest scope BASE_PACK_V1_PLUS_DELTA_REPAIR_V1, hash `2a3c80855923010e3ead807424bc1d2e904c01422ab08eade7655fe30aa280c8`; manifest config describes historical record, not current replay | Select compatible replay pack/config with zero-miss evidence on official revision and independent recording provenance if claiming independence; no cassette execution/read in this continuation |
+| Dataset/Gold manifest | Only synthetic preparation manifests verified; Set A/B original commitments absent | Private immutable manifest + historical eligibility receipt, independent Gold version/sign-off and approved disclosure |
+| Private collector/result envelope | Verify output has decision/type/rule/time/corpus/case_ref and expected labels/input-derived text | Approved private collector through ordinary process_case, full envelope below, access/redaction tests; collector implementation is outside T01 |
+| Sample-size/quality gates | NOT AUTHORIZED; formulas fixed in candidate protocol, numeric gates not invented | Approve planned N/strata/family design, MER/OER and coverage/technical limits, stop/retry/abort policy before first result |
+| LIVE call budget | T01 authorization 0; actual LLM/provider/email 0 | Separate case/run/provider/model/attempt/USD ceiling and GO-A if LIVE selected; no inherited T05 budget |
+| Authorized execution environment | This validation: Windows/PowerShell, venv, synthetic metadata only; prior harness evidence used guarded temporary DB | Approve exact isolated DB/corpus/cassette/image/network/access/retention/log environment; no production DB/mailbox |
+
+Fingerprints above and in the inventory are current source/working-tree integrity evidence,
+not historical Set A commitments. No corpus snapshot or adaptation value is invented.
+
+Collector gap, precisely: public Verify JSON lacks run/manifest-receipt binding, case/Gold
+version, per-attempt ordinal/request and terminal timing/status, raw PipelineResult hash,
+full evidence/draft/citation references, private adjudication/applicability and history,
+expected-ID failure/missing ledger and privacy/access audit. Existing fields do not bind
+the ordinary input to all scoring evidence. Proposal after approval: Runtime/QA Owner
+implements a private collector using the normal process_case path and isolated DB,
+append-only attempts, complete envelope and missing ledger, then targeted synthetic
+privacy/failure/hash tests. Publish only approved sanitized aggregates. T01 does not
+implement or execute that collector or require sealed content for its design review.
+
+## C5. Consolidated Coordinator decision packet
+
+### DECISION 1 — Set A provenance
+
+- **Problem:** C3 lists original authorship/Gold/receipt/cutoff/exposure/overlap gaps.
+- **Impact:** AC1/AC2 cannot be verified; no independent Set A or GO-A claim.
+- **Options:** (A) obtain authorized metadata attestations and evaluate eligibility;
+  (B) retain NOT VERIFIED and defer independent evaluation; (C) if affirmative exposure
+  evidence is supplied, classify NOT ELIGIBLE and plan a separately authorized replacement.
+- **Recommended option:** A if original evidence exists; otherwise B. Never backdate or
+  promote DEV/full15/M5 Gold into independent evidence. C needs affirmative evidence.
+- **Decision authority:** Coordinator appoints custodian/independent reviewer (Thư review)
+  and approves metadata-only access/disclosure; Runtime Owner substantiates tuning cutoff.
+- **Evidence:** C3 table, roadmap M4, original receipts to be supplied; no content opening.
+- **Safe work:** protocol/schema/metric review; private provenance inspection and runs stop.
+
+### DECISION 2 — Set B seal
+
+- **Problem:** no authorized seal, ACL/history or independent-role attestation supplied.
+- **Impact:** AC2 cannot certify seal or final held-out independence.
+- **Options:** (A) custodian provides sanitized signed seal/version/ACL/access history;
+  (B) keep seal NOT VERIFIED and postpone final independent claim; (C) confirmed exposure
+  requires Coordinator incident/disposition and a separately approved replacement plan.
+- **Recommended option:** A without opening content; B until attestation is verified.
+- **Decision authority:** Coordinator names custodian/independent attestor and permitted
+  recipients. Only authorized human roles can attest historical access/seal state.
+- **Evidence:** C3, roadmap one frozen M7 run; no exposure inferred from missing metadata.
+- **Safe work:** deny unauthorized content access, retain seal, review metadata requirements.
+
+### DECISION 3 — Official configuration and collector
+
+- **Problem:** verified references in C4 are not a frozen official run configuration;
+  current public harness lacks the private envelope needed for independent scoring.
+- **Impact:** AC4 final lock blocked; technical PASS cannot unlock M4-T02.
+- **Options:** (A) approve exact config/collector scope + private storage and subsequently
+  issue GO-A after all entry gates; (B) authorize replay reproducibility only with its
+  limited inference; (C) hold official evaluation pending required evidence/environment.
+- **Recommended option:** C now; prepare A for review using C4, or B only if Coordinator
+  needs a specifically labeled reproducibility run. No implicit LIVE or independent claim.
+- **Decision authority:** Coordinator chooses config/mode/gates/budget and separate GO;
+  Runtime/QA Owner owns collector implementation under a new explicit approved scope.
+- **Evidence:** C4, protocol manifest/envelope/metric sections, existing integration reports.
+- **Safe work:** review the configuration table/collector design, no collector implementation
+  or execution in T01. M4-T02 needs T01 accepted, eligible A, locked protocol/Gold/runtime/
+  corpus/policy/adaptation/config, matching M3/Stable Integration evidence and explicit GO-A.
+
+### DECISION 4 — Owner capacity / queued M4-T02
+
+- **Problem:** T01 and dependency-locked T02 both still occupy IN PROGRESS with Owner Minh.
+- **Impact:** board state conflicts with one-active-task rule and can imply premature GO.
+- **Options:** (A) Coordinator returns T02 to a waiting state (BACKLOG/READY as appropriate);
+  (B) records a precise capacity exception and allowed preparation scope; (C) confirms
+  T02 genuinely active, requiring T01 implementation to pause until sequencing resolved.
+- **Recommended option:** A, preserving latest T01-first sequence; T02 stays unexecuted.
+- **Decision authority:** Coordinator; Codex does not move cards, change Owner or grant GO.
+- **Evidence:** live [T01](https://trello.com/c/7EhgcMDv), [T02](https://trello.com/c/ocB3GjyJ),
+  [14/10 coordination](https://trello.com/c/4TKE89rg), no new comments/exception.
+- **Safe work:** this specifically requested T01 technical continuation and reviewer packet;
+  no simultaneous T02 implementation. If actual concurrent work is confirmed, stop affected work.
+
+## C6. Current AC disposition and human review status
+
+| AC | Current verdict | Evidence / remaining condition |
+|---|---|---|
+| AC1 Provenance | NOT VERIFIED | C3/Decision 1; historical evidence/access missing |
+| AC2 Independence | NOT VERIFIED | C3/Decisions 1–2; no independent seal/overlap attestation |
+| AC3 Metrics | PASS candidate | Unchanged definitions + corrected schema/scoring boundary; synthetic regressions, no quality inference |
+| AC4 Protocol | BLOCKED | C4/Decision 3; official config/collector/access/gates not authorized or frozen |
+| AC5 Reproducibility | PASS offline candidate | Schema + semantic ID/hash/Gold/runtime binding; no official runner or production change |
+| AC6 Safety | PASS continuation boundary | Synthetic metadata only, no private payload/Set B, provider/email=0; scope/privacy validation C8 |
+| AC7 Evidence | PASS preparation packet | Existing PR/report/history plus continuation logs/decisions and two human-use drafts; human review pending |
+
+Minh human self-review: **PENDING**. Thư independent review: **PENDING**.
+Agent technical self-review does not impersonate either role. Coordinator acceptance,
+DONE, merge and GO-A: **NOT GRANTED**. **M4-T02 ENTRY: NOT READY**, recommendation only.
+
+## C7. Separate human-use drafts (not posted)
+
+### Owner handoff — Minh
+
+```text
+[M4-T01] OWNER HANDOFF — PARTIAL_ONLY
+Changes: corrected schema/helper boundary and runtime-receipt binding; no metric,
+Gold, production or official execution changes. C3/C4/C5 contain exact evidence gaps,
+current-source config references and four consolidated Coordinator decisions.
+Validation: 16 synthetic tests PASS on the exact tested SHA in C8; two earlier guarded
+harness PASS reused because harness/runtime unchanged. Black/Ruff/schema/links/scope checks C8.
+Evidence: PR #52; tested SHA and final branch tip in C8/PR; this report and continuation logs.
+AC1 NOT VERIFIED; AC2 NOT VERIFIED; AC3 PASS candidate; AC4 BLOCKED;
+AC5 PASS offline; AC6 PASS session; AC7 PASS preparation packet.
+Risks: unverified independence/seal, unlocked official configuration, T02 queue mismatch.
+LIVE/provider/email: 0. No official dataset run. Human self-review is PENDING until I sign.
+Self-review checklist for Minh: read complete diff/tests and known before failures;
+understand denominators and malformed handling; verify SHA/PR/scope/privacy;
+confirm provenance/config gaps and no held-out/GO claim; then sign actual review result.
+Request: Thư independent review and Coordinator Decisions 1–4. No DONE/merge/GO implied.
+```
+
+### Independent review request — Thư
+
+```text
+[M4-T01] INDEPENDENT REVIEW REQUEST
+Reviewed SHA: use exact final head from C8/PR #52; record the full SHA actually reviewed.
+Tested implementation SHA is separately stated in C8; do not substitute old 8ebb9f1.
+Files: docs/evaluation/M4_T01_PROTOCOL.md, M4_T01_SCHEMA.json,
+protocol_validation.py, test_protocol.py; current C1–C8 report and continuation logs.
+Review AC3/AC5: shape vs semantic validation, contradictory outcome => MALFORMED,
+missing/extra fields, same-stop wrong-rule and wrong-stop as business mismatches,
+planned denominator coverage, NOT_REVIEWED, N=0/Wilson, runtime receipt binding.
+Review AC1/AC2/AC4: attestations/access/cutoff/overlap/seal and exact configuration gaps;
+NOT VERIFIED/BLOCKED must not become PASS because tests are green.
+Review privacy: full private envelope/collector remains pending; no Set B access,
+private Gold or expected labels in public output; current source defaults are not official config.
+Conclusion template: Reviewed SHA [...]; Verdict ĐẠT / CHANGE REQUEST / HOLD;
+AC/evidence [...]; findings and required actions [...]; methodology/privacy limits [...].
+ĐẠT for technical draft does not itself accept dataset eligibility, close task or grant GO-A.
+No Thư review verdict is supplied by Codex.
+```
+
+## C8. Continuation validation and exact revisions
+
+- Previous source `b6edae55433b9acbe222c30fec01c2509a088287`; prior tested implementation
+  `8ebb9f1091e132ce3238563eb220c89d8dc0e8d2` remains valid historical evidence only.
+- Current implementation changes require fresh synthetic tests; exact committed tested
+  SHA and closing evidence are appended here after the source commit, without rewriting
+  older checkpoints or logs. Final evidence commit is resolved from PR #52 / branch tip.
+- Environment: Python 3.11.16, pytest 8.3.3, jsonschema 4.23.0; no package installed.
+- Commands: `python -m unittest discover -s docs/evaluation -p test_protocol.py -v`;
+  `python -m black --workers 1 --check --line-length 100 docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py`;
+  `python -m ruff check docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py`;
+  `git diff --check`; inline stdlib local-link/Markdown-table/UTF-8/secret/scope/hash checks.
+- Unit before-fix failures and direct manifest reproduction preserved above; after-fix
+  test output goes to M4_T01_CONTINUATION_AFTER.txt. No expected business label changed.
+- Existing harness tests: **NOT RERUN**; reuse prior 2 PASS on unchanged runtime/harness,
+  since helper callers are only synthetic tests. Full suite/product replay/official A/B/
+  LIVE/provider/email: **NOT RUN**. LIVE application/LLM/email count **0**.
+- Prior full report content and prior validation artifacts are preserved as historical
+  snapshots below/in Git. Working-tree and canonical Git-blob hashes are distinguished.
+
+---
+
+<!-- M4_T01_PRIOR_REPORT_BEFORE_CONTINUATION -->
+
 # M4-T01 — Protocol & Set Readiness (14/10/2026)
 
 **RESULT: PARTIAL_ONLY. Preflight: PARTIAL ONLY.** Owner: Minh — Evaluation/Logic.

@@ -6,7 +6,10 @@ from collections import Counter
 from datetime import datetime
 from hashlib import sha256
 import json
-from math import sqrt
+from math import isfinite, sqrt
+from pathlib import Path
+
+from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 
 
 ROUTES = {"AUTO_REPLY", "ESCALATE"}
@@ -19,6 +22,17 @@ GOLD_RULES = {
     "P05": ("AUTO_REPLY", None),
 }
 Z95 = 1.959963984540054
+SCHEMA = json.loads(Path(__file__).with_name("M4_T01_SCHEMA.json").read_text(encoding="utf-8"))
+
+
+def _validate_record(value: object, kind: str) -> None:
+    validator = Draft202012Validator(
+        {"$ref": f"#/$defs/{kind}", "$defs": SCHEMA["$defs"]}, format_checker=FormatChecker()
+    )
+    try:
+        validator.validate(value)
+    except ValidationError:
+        raise ValueError(f"Record {kind} không đúng schema") from None
 
 
 def proportion(n: int, total: int) -> dict:
@@ -45,34 +59,22 @@ def outcome(row: dict | None) -> str:
     """Phân loại output trước khi tính metric; lỗi không trở thành business route."""
     if row is None:
         return "MISSING"
-    if not isinstance(row, dict):
+    try:
+        _validate_record(row, "result")
+    except ValueError:
         return "MALFORMED"
-    if row.get("outcome") == "MISSING":
-        empty = all(row.get(k) is None for k in ("actual_decision", "actual_type", "rule_id"))
-        return "MISSING" if empty and row.get("error_code") else "MALFORMED"
-    required = {"case_id", "actual_decision", "actual_type", "rule_id"}
-    if not required <= row.keys() or not isinstance(row["rule_id"], str):
+    elapsed = row["elapsed_ms"]
+    if elapsed is not None and not isfinite(elapsed):
         return "MALFORMED"
-    decision, stop = row["actual_decision"], row["actual_type"]
-    if not isinstance(decision, str) or (stop is not None and not isinstance(stop, str)):
-        return "MALFORMED"
-    if decision == "ERROR":
-        return (
-            "TECHNICAL_ERROR"
-            if stop is None and row["rule_id"] == "TECHNICAL_ERROR"
-            else "MALFORMED"
-        )
-    if decision == "INVALID_INPUT":
-        return "INVALID_INPUT" if stop is None else "MALFORMED"
-    if decision == "AUTO_REPLY" and stop is None and row["rule_id"].strip():
-        return "VALID"
-    if decision == "ESCALATE" and stop in STOPS and row["rule_id"].strip():
-        return "VALID"
-    return "MALFORMED"
+    return row["outcome"]
 
 
 def validate_cases(cases: list[dict]) -> list[str]:
     """Kiểm Gold route/stop/rule và identity; không sửa nhãn."""
+    if not isinstance(cases, list):
+        raise ValueError("Cases phải là array")
+    for case in cases:
+        _validate_record(case, "case")
     ids = [case["id"] for case in cases]
     if any(not isinstance(i, str) or not i.strip() for i in ids) or len(ids) != len(set(ids)):
         raise ValueError("Case IDs trống hoặc trùng")
@@ -100,8 +102,13 @@ def criterion_summary(judgments: list[str]) -> dict:
     }
 
 
-def validate_manifest(manifest: dict, case_bytes: bytes, protocol_bytes: bytes) -> None:
+def validate_manifest(
+    manifest: dict, case_bytes: bytes, protocol_bytes: bytes, *, runtime_sha: str
+) -> None:
     """So exact bytes/count/ordered IDs; không xác nhận lịch sử preregistration."""
+    _validate_record(manifest, "manifest")
+    if manifest["runtime_sha"] != runtime_sha:
+        raise ValueError("Runtime SHA mismatch với receipt kỳ vọng")
     cases = json.loads(case_bytes)
     ids = validate_cases(cases)
     if manifest["case_ids"] != ids or manifest["planned_count"] != len(ids):
@@ -121,6 +128,8 @@ def summarize(cases: list[dict], rows: list[dict]) -> dict:
     ids = validate_cases(cases)
     outputs: dict[str, dict] = {}
     for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("Output không có identity; cần reconciliation")
         case_id = row.get("case_id")
         if not isinstance(case_id, str) or case_id not in ids or case_id in outputs:
             raise ValueError("Output ID thiếu, lạ hoặc trùng; cần reconciliation")

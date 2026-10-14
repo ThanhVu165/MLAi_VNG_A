@@ -47,7 +47,16 @@ def case(case_id: str, rule: str) -> dict:
 
 def row(case_id: str, rule: str) -> dict:
     route, stop = GOLD_RULES.get(rule, ("ERROR", None))
-    return {"case_id": case_id, "actual_decision": route, "actual_type": stop, "rule_id": rule}
+    return {
+        "case_id": case_id,
+        "actual_decision": route,
+        "actual_type": stop,
+        "rule_id": rule,
+        "elapsed_ms": 1,
+        "outcome": "TECHNICAL_ERROR" if route == "ERROR" else "VALID",
+        "error_code": "SYNTHETIC_TIMEOUT" if route == "ERROR" else None,
+        "artifact_ref": "synthetic-result",
+    }
 
 
 class ProtocolTest(unittest.TestCase):
@@ -117,7 +126,7 @@ class ProtocolTest(unittest.TestCase):
         # 6 absent; 7 malformed; 8 is INVALID_INPUT for a valid business case.
         rows += [
             {**row("7", "P05"), "actual_decision": "UNKNOWN"},
-            {**row("8", "P05"), "actual_decision": "INVALID_INPUT"},
+            {**row("8", "P05"), "actual_decision": "INVALID_INPUT", "outcome": "INVALID_INPUT"},
         ]
         result = summarize(cases, rows)
         self.assertEqual(result["confusion"], {"TP": 2, "FN": 1, "FP": 1, "TN": 1})
@@ -246,6 +255,77 @@ class ProtocolTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             criterion_summary(["NOT_APPLICABLE"])
 
+    def test_result_schema_is_enforced_before_scoring(self) -> None:
+        valid = {
+            **row("s", "P05"),
+            "elapsed_ms": 1,
+            "outcome": "VALID",
+            "error_code": None,
+            "artifact_ref": "synthetic-result",
+        }
+        contradictory = {**valid, "outcome": "TECHNICAL_ERROR"}
+        cases = [case("s", "P05")]
+        for invalid in (
+            contradictory,
+            {**valid, "unexpected": True},
+            {k: v for k, v in valid.items() if k != "elapsed_ms"},
+            {**valid, "elapsed_ms": -1},
+            {**valid, "elapsed_ms": float("nan")},
+            {**valid, "rule_id": " "},
+        ):
+            with self.subTest(record=invalid):
+                self.assertEqual(outcome(invalid), "MALFORMED")
+                result = summarize(cases, [invalid])
+                self.assertEqual(result["metrics"]["coverage"]["n"], 0)
+                self.assertEqual(result["metrics"]["technical_failure"]["n"], 1)
+        error_claiming_valid = {
+            **valid,
+            "actual_decision": "ERROR",
+            "rule_id": "TECHNICAL_ERROR",
+            "error_code": "SYNTHETIC_TIMEOUT",
+        }
+        self.assertEqual(outcome(error_claiming_valid), "MALFORMED")
+
+    def test_case_schema_is_not_bypassed_by_semantic_helper(self) -> None:
+        for invalid in (
+            {**case("s", "P05"), "unexpected": True},
+            {k: v for k, v in case("s", "P05").items() if k != "gold_version"},
+        ):
+            with self.subTest(record=invalid), self.assertRaises(ValueError):
+                validate_cases([invalid])
+
+    def test_manifest_runtime_binding_and_falsey_authorization(self) -> None:
+        data = json.dumps([case("s", "P05")]).encode()
+        protocol = b"synthetic protocol"
+        manifest = {
+            "protocol_version": "M4-T01-v1",
+            "protocol_sha256": sha256(protocol).hexdigest(),
+            "dataset_id": "SYNTHETIC_ONLY",
+            "dataset_sha256": sha256(data).hexdigest(),
+            "gold_version": "SYNTHETIC-v1",
+            "case_ids": ["s"],
+            "planned_count": 1,
+            "runtime_sha": "eaaeea88a59618b49219a20ae01a3cf3227cec87",
+            "mode": "OFFLINE_UNIT",
+            "eligibility": "SYNTHETIC_ONLY",
+            "execution_authorized": False,
+            "official_config": None,
+            "pending_authorization": ["No GO"],
+        }
+        for key, value in (
+            ("runtime_sha", "0" * 40),
+            ("execution_authorized", None),
+            ("execution_authorized", 0),
+            ("unexpected", True),
+        ):
+            with self.subTest(field=key, value=value), self.assertRaises(ValueError):
+                validate_manifest(
+                    {**manifest, key: value},
+                    data,
+                    protocol,
+                    runtime_sha="eaaeea88a59618b49219a20ae01a3cf3227cec87",
+                )
+
     def test_manifest_exact_bytes_and_rejected_drift(self) -> None:
         cases = [case("s", "P05")]
         data = json.dumps(cases).encode()
@@ -266,7 +346,7 @@ class ProtocolTest(unittest.TestCase):
             "pending_authorization": ["Official configuration and GO are not granted"],
         }
         self.validator.validate(manifest)
-        validate_manifest(manifest, data, protocol)
+        validate_manifest(manifest, data, protocol, runtime_sha=manifest["runtime_sha"])
         for key, value in (
             ("case_ids", ["other"]),
             ("planned_count", 2),
@@ -277,9 +357,9 @@ class ProtocolTest(unittest.TestCase):
         ):
             changed = {**manifest, key: value}
             with self.subTest(key=key), self.assertRaises(ValueError):
-                validate_manifest(changed, data, protocol)
+                validate_manifest(changed, data, protocol, runtime_sha=manifest["runtime_sha"])
         with self.assertRaises(ValueError):
-            validate_manifest(manifest, data + b"\n", protocol)
+            validate_manifest(manifest, data + b"\n", protocol, runtime_sha=manifest["runtime_sha"])
         self.assertFalse(self.validator.is_valid({**manifest, "execution_authorized": True}))
 
     def test_source_harness_contract_without_importing_app(self) -> None:

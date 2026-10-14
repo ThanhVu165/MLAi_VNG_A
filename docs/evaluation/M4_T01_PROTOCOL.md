@@ -74,7 +74,7 @@ Gold rule/type pairs follow the table below. Ambiguous cases, multi-intent prece
 applicability masks (citation/groundedness), domain/family strata and allowed evidence
 references must be adjudicated and frozen by authorized reviewers before execution.
 An ambiguous Gold blocks the run; never remove a case because its output is inconvenient.
-Gold INPUT_INVALID cases, if approved for another protocol, form a separate population;
+Gold INVALID_INPUT cases, if approved for another protocol, form a separate population;
 they do not enter this two-route business population.
 
 ## 4. Rubric and runtime reconciliation
@@ -139,7 +139,7 @@ do not treat correlated variants or retries as independent samples.
 In V: TP = Gold ESCALATE/pred ESCALATE; FN = Gold ESCALATE/pred AUTO_REPLY;
 FP = Gold AUTO_REPLY/pred ESCALATE; TN = Gold AUTO_REPLY/pred AUTO_REPLY.
 Publish this 2x2 confusion matrix with labeled axes and a separate Gold-by-outcome table
-including ERROR, MALFORMED, INVALID_INPUT, MISSING. Sum check: TP+FN+FP+TN = |V|.
+including ERROR, MALFORMED, INVALID_INPUT, MISSING. Sum check: TP+FN+FP+TN = count(V).
 
 | Metric | Numerator / denominator | Inclusion/exclusion and missing handling |
 |---|---|---|
@@ -147,15 +147,15 @@ including ERROR, MALFORMED, INVALID_INPUT, MISSING. Sum check: TP+FN+FP+TN = |V|
 | OER (conditional) | FP / (TN+FP) | Gold AUTO_REPLY in V; same exclusions |
 | Escalation precision | TP / (TP+FP) | Valid predicted ESCALATE, regardless of stop correctness |
 | Escalation recall | TP / (TP+FN) | Valid Gold ESCALATE; 1-MER on the same denominator |
-| Route correctness | (TP+TN) / |V| | Conditional; never describe as full-population held-out accuracy without qualification |
-| Decision coverage | |V| / |S| | All planned cases, including technical/missing/invalid |
-| Technical failure | (ERROR+MALFORMED) / |S| | Disjoint categories; report ERROR and malformed subtotals |
-| Missingness | MISSING / |S| | Expected IDs without output, including aborted/unattempted cases |
-| Invalid-input response | INVALID_INPUT / |S| | Separate nonbusiness category for this business population |
-| End-to-end route success | (TP+TN) / |S| | All planned cases, with nonbusiness outputs contributing no success |
+| Route correctness | (TP+TN) / count(V) | Conditional; never describe as full-population held-out accuracy without qualification |
+| Decision coverage | count(V) / count(S) | All planned cases, including technical/missing/invalid |
+| Technical failure | (ERROR+MALFORMED) / count(S) | Disjoint categories; report ERROR and malformed subtotals |
+| Missingness | MISSING / count(S) | Expected IDs without output, including aborted/unattempted cases |
+| Invalid-input response | INVALID_INPUT / count(S) | Separate nonbusiness category for this business population |
+| End-to-end route success | (TP+TN) / count(S) | All planned cases, with nonbusiness outputs contributing no success |
 | Stop correctness | exact stop / Gold ESCALATE in V | Gold stop vs predicted three stops plus AUTO_REPLY column; route miss is not excluded |
 | Conditional stop correctness | exact stop / TP | Gold and pred ESCALATE only; publish alongside previous metric |
-| Rule correctness | exact rule / |V| | Wrong known rules counted as FAIL; report independently of route |
+| Rule correctness | exact rule / count(V) | Wrong known rules counted as FAIL; report independently of route |
 | Citation/groundedness | PASS / applicable planned cases | Freeze applicability; technical/missing/no required draft cannot PASS |
 | Content review coverage | (PASS+FAIL) / applicable planned cases | NOT_REVIEWED shown explicitly; also PASS/(PASS+FAIL) as reviewed-only diagnostic |
 
@@ -193,7 +193,17 @@ sets do not establish population representativeness. No pooling runs or multiple
 [JSON schema](M4_T01_SCHEMA.json) defines case, result and manifest records.
 [Offline validator](protocol_validation.py) checks cross-field/ID/hash invariants;
 [tests](test_protocol.py) include positive and deliberately rejected records.
-JSON Schema handles shape; semantic checks handle identity, mapping and aggregate counts.
+Every helper entry point validates the corresponding schema before semantic checks:
+cases/manifest violations raise ValueError; identifiable invalid result records count as
+MALFORMED, including contradictory outcome tags, missing/extra fields and invalid timings.
+Schema-valid records retain their declared outcome; finite elapsed_ms is checked separately
+because Python's JSON tools can represent NaN/Infinity outside strict JSON. None means an
+absent output. Records without a reconcilable case_id abort reconciliation; unknown or
+duplicate IDs are never silently dropped. A complete normalized result is required even
+in synthetic tests; a four-field harness projection is not the result envelope.
+Known wrong rule/type/route combinations remain semantic errors with valid business routing.
+JSON Schema handles shape; semantic checks handle calendar/timezone, Gold mapping,
+finite timing, identity and aggregate counts. Neither layer establishes provenance.
 
 Before authorized run, freeze a manifest containing:
 
@@ -225,7 +235,12 @@ minimal result schema alone is not a sufficient official evidence envelope.
 
 Every planned case gets a normalized row including MISSING; the collector may initially
 omit an absent row, which scoring reconciles against manifest IDs. Keep original evidence.
-`validate_manifest` binds exact case bytes, count/IDs and protocol bytes. It is an offline
+`validate_manifest(manifest, case_bytes, protocol_bytes, runtime_sha=expected_sha)` binds
+exact case bytes, count/IDs, Gold version, protocol bytes and the expected runtime SHA.
+The expected SHA must come from the independently reviewed freeze receipt, not be copied
+from the manifest being checked; this helper does not inspect Git or approve that receipt.
+Schema validation requires the literal boolean false for execution_authorized; null/0,
+extra properties and missing fields are rejected. It is an offline
 preparation check, not an eligibility/seal/authorization verifier or official runner.
 The synthetic manifest in tests explicitly has `execution_authorized=false`, null official
 configuration and pending decisions. This is valid preparation metadata, never a GO receipt.

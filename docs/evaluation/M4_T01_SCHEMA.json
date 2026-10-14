@@ -38,7 +38,7 @@
       "additionalProperties": false,
       "required": ["case_id", "actual_decision", "actual_type", "rule_id", "elapsed_ms", "outcome", "error_code", "artifact_ref"],
       "properties": {
-        "case_id": {"type": "string", "minLength": 1},
+        "case_id": {"type": "string", "minLength": 1, "pattern": "\\S"},
         "actual_decision": {"enum": ["AUTO_REPLY", "ESCALATE", "ERROR", "INVALID_INPUT", null]},
         "actual_type": {"$ref": "#/$defs/stop"},
         "rule_id": {"type": ["string", "null"]},
@@ -51,7 +51,7 @@
         {
           "if": {"properties": {"outcome": {"const": "VALID"}}},
           "then": {
-            "properties": {"actual_decision": {"enum": ["AUTO_REPLY", "ESCALATE"]}, "rule_id": {"type": "string", "minLength": 1}, "error_code": {"const": null}},
+            "properties": {"actual_decision": {"enum": ["AUTO_REPLY", "ESCALATE"]}, "rule_id": {"type": "string", "minLength": 1, "pattern": "\\S"}, "error_code": {"const": null}},
             "allOf": [
               {"if": {"properties": {"actual_decision": {"const": "AUTO_REPLY"}}}, "then": {"properties": {"actual_type": {"const": null}}}},
               {"if": {"properties": {"actual_decision": {"const": "ESCALATE"}}}, "then": {"properties": {"actual_type": {"type": "string"}}}}
