@@ -16,6 +16,7 @@ from core.sanitize import mask_pii, strip_prompt_injection
 from core.types import CaseStatus, DraftReply, EvidenceResult, EvidenceStatus
 from infra.audit import log_event
 from infra.db import fetch_one, get_connection, now_iso
+from infra.demo_access import authorize_demo_action
 from infra.llm import call_json, case_call_budget
 from infra.settings import LLM_RESUME_MAX_ATTEMPTS
 
@@ -205,6 +206,7 @@ def validate_human_draft(case_id: str, draft: DraftReply) -> DraftReply:
 
 def resume_case(case_id: str, choice: str, reason: str, actor: str) -> DraftReply:
     """Diễn đạt lại quyết định của người và chuyển case sang chờ duyệt gửi."""
+    authorize_demo_action("soạn tiếp sau quyết định chuyên viên")
     if not actor.startswith("HUMAN:"):
         raise ValueError("R11 chỉ nhận actor HUMAN:<user>.")
     choice = _required_string(choice, "choice")

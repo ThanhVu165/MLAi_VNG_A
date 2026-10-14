@@ -23,6 +23,7 @@ from corpus.store import (
 )
 from infra.audit import log_event
 from infra.db import now_iso
+from infra.demo_access import authorize_demo_action
 
 LOGGER = logging.getLogger(__name__)
 TEXT_SOURCE_KIND = "text"
@@ -130,6 +131,7 @@ def ingest_file(
     database_path: DatabasePath = None,
 ) -> IntakeResult:
     """Nạp một tệp PDF/DOCX do admin chọn thủ công."""
+    authorize_demo_action("nạp tệp corpus")
     return _ingest(
         content,
         title=filename,
@@ -150,6 +152,7 @@ def ingest_text(
     database_path: DatabasePath = None,
 ) -> IntakeResult:
     """Giữ nguyên bản dán; chỉ chuẩn hóa NFC khi trích xuất nội dung."""
+    authorize_demo_action("nạp văn bản corpus")
     if not text.strip():
         raise ValueError("Nội dung tài liệu không được để trống.")
     content = text.encode("utf-8")
@@ -173,6 +176,7 @@ def ingest_url(
     database_path: DatabasePath = None,
 ) -> IntakeResult:
     """Tải một URL khi admin gọi hàm; không tạo lịch chạy nền."""
+    authorize_demo_action("nạp URL corpus")
     if not url.strip():
         raise ValueError("URL không được để trống.")
     content = (fetch or _download_once)(url)
@@ -195,6 +199,7 @@ def recheck_url_sources(
     database_path: DatabasePath = None,
 ) -> list[SourceRecheckResult]:
     """Kiểm tra thủ công từng URL đã đăng ký; không tạo lịch chạy nền."""
+    authorize_demo_action("kiểm tra lại URL corpus")
     downloader = fetch or _download_once
     return [
         _recheck_source(source, actor=actor, fetch=downloader, database_path=database_path)

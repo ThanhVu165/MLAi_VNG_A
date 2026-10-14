@@ -14,11 +14,19 @@ import streamlit as st
 from core.controls import is_automation_paused
 from core.dispatch import cancel_send, create_correction_email, escalate_from_pending
 from core.explain import explain_plainly
-from core.pipeline import load_result
+from core.pipeline import load_result, process_case
 from core.types import CaseInput, CaseStatus, Decision, DraftReply
 from core.worker import submit_case
 from corpus.api import get_chunk
 from infra.db import fetch_all, fetch_one, seconds_until
+from infra.demo_access import (
+    authorize_case_input,
+    canonical_demo_input,
+    canonical_demo_inputs,
+    case_is_owned,
+    is_restricted_demo,
+    validate_public_text,
+)
 from infra.settings import PENDING_STATUS_REFRESH_SECONDS
 from ui.presentation import (
     decision_badge_html,
@@ -40,45 +48,14 @@ UI_ACTOR = "HUMAN:local"
 # 3 email mẫu đại diện cho 3 luồng xử lý canonical
 SAMPLES = [
     {
-        "id": "sample_routine",
-        "tag": "Email thường quy",
-        "desc": "Hỏi hạn rút học phần kỳ 1",
-        "sender": "sample.student1@example.test",
-        "subject": "Hỏi hạn rút học phần",
-        "body": (
-            "Kính gửi Phòng Đào tạo,\n\n"
-            "Em là sinh viên K24. Em muốn hỏi hạn chót để nộp đơn xin rút bớt học phần trong học kỳ 1 "
-            "năm học 2026-2027 là vào thời điểm nào ạ? Mong quý thầy cô hướng dẫn giúp em.\n\n"
-            "Em xin chân thành cảm ơn."
-        ),
-    },
-    {
-        "id": "sample_out_of_policy",
-        "tag": "Ngoài chính sách",
-        "desc": "Xin miễn học phí toàn khóa",
-        "sender": "sample.student2@example.test",
-        "subject": "Đơn xin miễn 100% học phí toàn bộ khóa học",
-        "body": (
-            "Kính gửi Ban Giám hiệu và Phòng Đào tạo,\n\n"
-            "Em là sinh viên khóa 2026. Do gia đình em vừa gặp biến cố đột xuất, em muốn làm đơn "
-            "xin miễn toàn bộ học phí 4 năm đại học cho em có được không ạ? "
-            "Mong nhà trường xem xét đặc cách hỗ trợ hoàn cảnh của em.\n\n"
-            "Em xin cảm ơn."
-        ),
-    },
-    {
-        "id": "sample_missing_facts",
-        "tag": "Thiếu dữ kiện",
-        "desc": "Hỏi về môn học chưa rõ ràng",
-        "sender": "sample.student3@example.test",
-        "subject": "Xin phúc khảo bài thi kết thúc học phần",
-        "body": (
-            "Kính gửi thầy cô Phòng Đào tạo,\n\n"
-            "Em muốn xin phúc khảo lại điểm thi học kỳ vừa rồi vì em thấy điểm chấm chưa đúng "
-            "với bài làm của em. Mong thầy cô hỗ trợ xem lại giúp em với ạ.\n\n"
-            "Em cảm ơn thầy cô."
-        ),
-    },
+        "id": item.sample_id,
+        "tag": item.tag,
+        "desc": item.description,
+        "sender": item.sender,
+        "subject": item.subject,
+        "body": item.body,
+    }
+    for item in canonical_demo_inputs()
 ]
 
 
@@ -123,8 +100,16 @@ def load_inbox() -> tuple[InboxEmail, ...]:
 
 
 def paste_input(sender: str, subject: str, body: str) -> CaseInput:
-    if not all(value.strip() for value in (sender, subject, body)):
-        raise ValueError("Hãy nhập đủ email người gửi, tiêu đề và nội dung trước khi xử lý.")
+    validate_public_text(sender, subject, body)
+    canonical = canonical_demo_input(sender, subject, body)
+    if canonical is not None:
+        return CaseInput(
+            canonical.sender,
+            canonical.subject,
+            canonical.body,
+            datetime.fromisoformat(canonical.received_at),
+            "paste",
+        )
     return CaseInput(sender, subject, body, datetime.now(timezone.utc), "paste")
 
 
@@ -135,9 +120,31 @@ def inbox_input(email: InboxEmail) -> CaseInput:
 
 
 def _submit(inp: CaseInput) -> None:
-    case_id = submit_case(inp, actor=UI_ACTOR)
+    if is_restricted_demo():
+        authorize_case_input(
+            sender=inp.sender,
+            subject=inp.subject,
+            body=inp.body,
+            received_at=inp.received_at,
+            channel=inp.channel,
+            external_id=inp.external_id,
+        )
+        result = process_case(inp, actor="SYSTEM")
+        if result.decision.decision is Decision.ERROR and not result.corpus_version:
+            raise RuntimeError(result.decision.reason)
+        case_id = result.case_id
+    else:
+        case_id = submit_case(inp, actor=UI_ACTOR)
+    owned = _owned_case_ids()
+    if case_id not in owned:
+        owned.append(case_id)
     st.session_state["active_case_id"] = case_id
     st.query_params["case_id"] = case_id
+
+
+def _owned_case_ids() -> list[str]:
+    values = st.session_state.setdefault("restricted_demo_case_ids", [])
+    return values if isinstance(values, list) else []
 
 
 def _render_correction(case_id: str) -> None:
@@ -198,13 +205,16 @@ def _render_stepper(current_step: int) -> str:
             f'<div class="ex-step-num">{badge}</div>'
             f'<div class="ex-step-title">{title}</div>'
             f'<div class="ex-step-desc">{desc}</div>'
-            f'</div>'
+            f"</div>"
         )
     return f'<div class="ex-stepper">{"".join(items_html)}</div>'
 
 
 @st.fragment(run_every=PENDING_STATUS_REFRESH_SECONDS)
 def render_saved_case(case_id: str) -> None:
+    if not case_is_owned(case_id, _owned_case_ids()):
+        st.warning("Bạn không có quyền xem email này trong phiên hiện tại.")
+        return
     row = fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,))
     if row is None:
         st.warning("Không tìm thấy email này trong lịch sử.")
@@ -217,9 +227,10 @@ def render_saved_case(case_id: str) -> None:
     if status in (CaseStatus.ERROR, CaseStatus.INVALID_INPUT):
         st.error(status_label(status))
         if status is CaseStatus.ERROR:
-            st.info("Lần xử lý trước bị gián đoạn. Chưa có phản hồi nào được gửi; bạn có thể thử lại.")
-            if st.button("🔄 Thử xử lý lại", key=f"retry_{case_id}"):
+            st.info("Lần xử lý trước bị gián đoạn. Chưa có phản hồi nào được gửi.")
+            if not is_restricted_demo() and st.button("🔄 Thử xử lý lại", key=f"retry_{case_id}"):
                 from core.worker import retry_case
+
                 try:
                     new_id = retry_case(case_id, actor=UI_ACTOR)
                 except ValueError as error:
@@ -237,7 +248,9 @@ def render_saved_case(case_id: str) -> None:
 
     # 3. Trạng thái đã có kết quả (AUTO_REPLY hoặc ESCALATE)
     if not result:
-        st.info("Email cũ chưa có bản kết quả đầy đủ. Nội dung và các thao tác vẫn còn trong lịch sử.")
+        st.info(
+            "Email cũ chưa có bản kết quả đầy đủ. Nội dung và các thao tác vẫn còn trong lịch sử."
+        )
         return
 
     decision = result.decision.decision
@@ -262,60 +275,64 @@ def render_saved_case(case_id: str) -> None:
             f'<div style="display: flex; justify-content: space-between; align-items: flex-start;">'
             f'<div style="display: flex; gap: 12px; align-items: center;">'
             f'<div style="width: 38px; height: 38px; border-radius: 50%; background: #ECFDF5; border: 2px solid #10B981; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #10B981; font-weight: 700;">✓</div>'
-            f'<div>'
+            f"<div>"
             f'<div style="display: flex; align-items: center; gap: 8px;">'
             f'{decision_badge_html("AUTO_REPLY")} {status_badge_html(status.value)}'
-            f'</div>'
+            f"</div>"
             f'<div style="font-size: 15px; font-weight: 700; color: #065F46; margin-top: 2px;">'
-            f'Đã xử lý — Phản hồi tự động'
-            f'</div>'
+            f"Đã xử lý — Phản hồi tự động"
+            f"</div>"
             f'<div style="font-size: 13.5px; color: #047857; margin-top: 2px; font-weight: 500;">'
-            f'Có đủ căn cứ để tự động phản hồi.'
-            f'</div>'
-            f'</div>'
-            f'</div>'
+            f"Có đủ căn cứ để tự động phản hồi."
+            f"</div>"
+            f"</div>"
+            f"</div>"
             f'<div style="text-align: right; font-size: 12px; color: #64748B;">'
-            f'<div>📅 Xử lý lúc {finished_time}</div>'
-            f'<div>⏱️ Thời gian: {elapsed:.1f}s</div>'
-            f'</div>'
-            f'</div>'
+            f"<div>📅 Xử lý lúc {finished_time}</div>"
+            f"<div>⏱️ Thời gian: {elapsed:.1f}s</div>"
+            f"</div>"
+            f"</div>"
             f'<div style="margin-top: 10px; font-size: 12.5px; color: #334155; background: #F8FAFC; border: 1px solid #E2E8F0; padding: 7px 12px; border-radius: 6px;">'
-            f'{exec_note}'
-            f'</div>'
-            f'</div>'
+            f"{exec_note}"
+            f"</div>"
+            f"</div>"
         )
         st.markdown(banner_html, unsafe_allow_html=True)
     else:
         # Nhánh ESCALATE
         esc_row = fetch_one("SELECT * FROM escalations WHERE case_id = ?", (case_id,))
-        esc_type = esc_row["escalation_type"] if esc_row else (result.decision.rule_id or "FACT_UNRESOLVED")
+        esc_type = (
+            esc_row["escalation_type"]
+            if esc_row
+            else (result.decision.rule_id or "FACT_UNRESOLVED")
+        )
 
         banner_html = (
             f'<div class="ex-card" style="border-top: 3px solid #D97706; margin-bottom: 14px;">'
             f'<div style="display: flex; justify-content: space-between; align-items: flex-start;">'
             f'<div style="display: flex; gap: 12px; align-items: center;">'
             f'<div style="width: 38px; height: 38px; border-radius: 50%; background: #FFFBEB; border: 2px solid #D97706; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #D97706; font-weight: 700;">⚠️</div>'
-            f'<div>'
+            f"<div>"
             f'<div style="display: flex; align-items: center; gap: 8px;">'
             f'{decision_badge_html("ESCALATE")} {stop_reason_badge_html(esc_type)} {status_badge_html(status.value)}'
-            f'</div>'
+            f"</div>"
             f'<div style="font-size: 15px; font-weight: 700; color: #92400E; margin-top: 2px;">'
-            f'Cần chuyên viên xem xét trước khi tiếp tục.'
-            f'</div>'
+            f"Cần chuyên viên xem xét trước khi tiếp tục."
+            f"</div>"
             f'<div style="font-size: 13.5px; color: #B45309; margin-top: 2px;">'
-            f'Yêu cầu đã được chuyển vào Hàng chờ duyệt để cán bộ phòng ban xử lý.'
-            f'</div>'
-            f'</div>'
-            f'</div>'
+            f"Yêu cầu đã được chuyển vào Hàng chờ duyệt để cán bộ phòng ban xử lý."
+            f"</div>"
+            f"</div>"
+            f"</div>"
             f'<div style="text-align: right; font-size: 12px; color: #64748B;">'
-            f'<div>📅 Tiếp nhận: {finished_time}</div>'
-            f'<div>⏱️ Thời gian: {elapsed:.1f}s</div>'
-            f'</div>'
-            f'</div>'
+            f"<div>📅 Tiếp nhận: {finished_time}</div>"
+            f"<div>⏱️ Thời gian: {elapsed:.1f}s</div>"
+            f"</div>"
+            f"</div>"
             f'<div style="margin-top: 10px; font-size: 13px; color: #78350F; background: #FFFDF5; border: 1px solid #FDE68A; padding: 8px 12px; border-radius: 6px;">'
-            f'<strong>Lý do dừng:</strong> {escape_html(readable_text(result.decision.reason))}'
-            f'</div>'
-            f'</div>'
+            f"<strong>Lý do dừng:</strong> {escape_html(readable_text(result.decision.reason))}"
+            f"</div>"
+            f"</div>"
         )
         st.markdown(banner_html, unsafe_allow_html=True)
 
@@ -324,13 +341,16 @@ def render_saved_case(case_id: str) -> None:
 
     with col_resp:
         if decision == Decision.AUTO_REPLY:
-            st.markdown('<div class="ex-card-title">📝 Nội dung phản hồi (đã chuẩn bị)</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="ex-card-title">📝 Nội dung phản hồi (đã chuẩn bị)</div>',
+                unsafe_allow_html=True,
+            )
             draft = result.draft or (result.card.partial_draft if result.card else None)
             if draft:
                 st.markdown(
                     f'<div style="font-size: 13.5px; font-weight: 600; color: #0F172A; margin-bottom: 6px;">'
-                    f'<strong>Tiêu đề:</strong> {escape_html(draft.subject)}'
-                    f'</div>',
+                    f"<strong>Tiêu đề:</strong> {escape_html(draft.subject)}"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
                 formatted_body = reply_text(draft.body, draft.citations)
@@ -348,39 +368,56 @@ def render_saved_case(case_id: str) -> None:
                     st.toast("Đã sao chép phản hồi!")
 
                 # Can thiệp hủy gửi / chuyển chuyên viên nếu đang PENDING_SEND
-                if status is CaseStatus.PENDING_SEND:
-                    st.markdown("<hr style='margin: 12px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
+                if status is CaseStatus.PENDING_SEND and not is_restricted_demo():
+                    st.markdown(
+                        "<hr style='margin: 12px 0; border-color: #E2E8F0;'>",
+                        unsafe_allow_html=True,
+                    )
                     if is_automation_paused():
                         st.info("Đang tạm dừng gửi tự động. Phản hồi vẫn được giữ để bạn kiểm tra.")
                     else:
-                        st.caption(f"Sẽ gửi mô phỏng sau {seconds_until(row['send_deadline'])} giây.")
+                        st.caption(
+                            f"Sẽ gửi mô phỏng sau {seconds_until(row['send_deadline'])} giây."
+                        )
                     reason = st.text_input("Lý do can thiệp", key=f"send_reason_{case_id}")
-                    if st.button("Hủy gửi", key=f"cancel_send_{case_id}", disabled=not reason.strip(), use_container_width=True):
+                    if st.button(
+                        "Hủy gửi",
+                        key=f"cancel_send_{case_id}",
+                        disabled=not reason.strip(),
+                        use_container_width=True,
+                    ):
                         try:
                             cancel_send(case_id, UI_ACTOR, reason.strip())
                         except ValueError as error:
                             st.error(readable_text(str(error)))
                         else:
                             st.rerun()
-                    if st.button("Chuyển cho chuyên viên", key=f"escalate_send_{case_id}", disabled=not reason.strip(), use_container_width=True):
+                    if st.button(
+                        "Chuyển cho chuyên viên",
+                        key=f"escalate_send_{case_id}",
+                        disabled=not reason.strip(),
+                        use_container_width=True,
+                    ):
                         try:
                             escalate_from_pending(case_id, actor=UI_ACTOR, reason=reason.strip())
                         except ValueError as error:
                             st.error(readable_text(str(error)))
                         else:
                             st.rerun()
-                elif status is CaseStatus.SENT:
+                elif status is CaseStatus.SENT and not is_restricted_demo():
                     _render_correction(case_id)
             else:
                 st.info("Chưa có bản thảo phản hồi được tạo.")
         else:
             # Escalation workspace
-            st.markdown('<div class="ex-card-title">👤 Chuyên viên cần xử lý</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="ex-card-title">👤 Chuyên viên cần xử lý</div>', unsafe_allow_html=True
+            )
             if result.card:
                 st.markdown(
                     f'<div style="font-size: 13.5px; font-weight: 600; color: #1E293B; margin-bottom: 6px;">'
-                    f'<strong>Vấn đề cần quyết định:</strong> {escape_html(result.card.question)}'
-                    f'</div>',
+                    f"<strong>Vấn đề cần quyết định:</strong> {escape_html(result.card.question)}"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
                 if result.card.facts:
@@ -390,24 +427,35 @@ def render_saved_case(case_id: str) -> None:
 
                 if result.card.partial_draft:
                     with st.expander("📝 Bản nháp gợi ý ban đầu", expanded=False):
-                        st.text(reply_text(result.card.partial_draft.body, result.card.partial_draft.citations))
+                        st.text(
+                            reply_text(
+                                result.card.partial_draft.body, result.card.partial_draft.citations
+                            )
+                        )
 
                 st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
-                st.link_button(
-                    "👤 Mở trong mục Cần chuyên viên xử lý",
-                    f"/Hang_cho_duyet?case_id={quote(case_id)}",
-                    type="primary",
-                    use_container_width=True,
-                )
+                if not is_restricted_demo():
+                    st.link_button(
+                        "👤 Mở trong mục Cần chuyên viên xử lý",
+                        f"/Hang_cho_duyet?case_id={quote(case_id)}",
+                        type="primary",
+                        use_container_width=True,
+                    )
 
     with col_evid:
-        st.markdown('<div class="ex-card-title">📑 Căn cứ quy định đã sử dụng</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="ex-card-title">📑 Căn cứ quy định đã sử dụng</div>', unsafe_allow_html=True
+        )
         draft = result.draft or (result.card.partial_draft if result.card else None)
         citation_ids = draft.citations if draft else result.decision.evidence_ids
 
         has_citations = False
         if citation_ids:
-            snapshots = {chunk.chunk_id: chunk for chunk in result.evidence.chunks} if result.evidence else {}
+            snapshots = (
+                {chunk.chunk_id: chunk for chunk in result.evidence.chunks}
+                if result.evidence
+                else {}
+            )
             for index, citation_id in enumerate(citation_ids, start=1):
                 chunk = snapshots.get(citation_id) or get_chunk(citation_id)
                 if chunk:
@@ -416,7 +464,7 @@ def render_saved_case(case_id: str) -> None:
                         f'<div class="ex-evidence-box">'
                         f'<div class="ex-evidence-breadcrumb">📌 [{index}] {escape_html(chunk.breadcrumb)} · <span style="font-family: monospace; font-size: 11px;">{escape_html(chunk.chunk_id)}</span></div>'
                         f'<div class="ex-evidence-text">"{escape_html(chunk.text)}"</div>'
-                        f'</div>',
+                        f"</div>",
                         unsafe_allow_html=True,
                     )
         elif result.card and result.card.basis:
@@ -426,7 +474,7 @@ def render_saved_case(case_id: str) -> None:
                     f'<div class="ex-evidence-box">'
                     f'<div class="ex-evidence-breadcrumb">📌 {escape_html(breadcrumb)}</div>'
                     f'<div class="ex-evidence-text">"{escape_html(text)}"</div>'
-                    f'</div>',
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
 
@@ -434,28 +482,48 @@ def render_saved_case(case_id: str) -> None:
             st.markdown(
                 '<div class="ex-card" style="background: #F8FAFC;">'
                 '<span style="font-size: 13px; color: #64748B;">Không có đoạn trích dẫn quy định nào được liên kết cho ca này (hoặc nội dung nằm ngoài phạm vi quy chế hiện hành).</span>'
-                '</div>',
+                "</div>",
                 unsafe_allow_html=True,
             )
 
-        st.link_button("📚 Tra cứu Quy định & căn cứ", "/Quan_tri_quy_dinh", use_container_width=True)
+        st.link_button(
+            "📚 Tra cứu Quy định & căn cứ", "/Quan_tri_quy_dinh", use_container_width=True
+        )
 
     # ==================== C. EXPLAINABILITY & TIẾP THEO ====================
-    st.markdown("<hr style='margin: 18px 0 14px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
+    st.markdown(
+        "<hr style='margin: 18px 0 14px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True
+    )
     explanation_key = f"explanation_{case_id}_{status}_{result.decision.reason}"
     col_exp, _ = st.columns([4, 6])
     with col_exp:
-        if st.button("💡 Vì sao hệ thống xử lý như vậy?", key=f"explain_{case_id}", use_container_width=True):
+        if st.button(
+            "💡 Vì sao hệ thống xử lý như vậy?", key=f"explain_{case_id}", use_container_width=True
+        ):
             st.session_state[explanation_key] = readable_text(explain_plainly(case_id))
     if explanation := st.session_state.get(explanation_key):
         st.info(explanation)
 
-    st.markdown('<div class="ex-card-title" style="margin-top: 14px;">👉 Tiếp theo bạn có thể:</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="ex-card-title" style="margin-top: 14px;">👉 Tiếp theo bạn có thể:</div>',
+        unsafe_allow_html=True,
+    )
     col_nxt1, col_nxt2, col_nxt3 = st.columns(3)
     with col_nxt1:
-        st.link_button("👤 Cần chuyên viên xử lý", f"/Hang_cho_duyet?case_id={quote(case_id)}", use_container_width=True)
+        if not is_restricted_demo():
+            st.link_button(
+                "👤 Cần chuyên viên xử lý",
+                f"/Hang_cho_duyet?case_id={quote(case_id)}",
+                use_container_width=True,
+            )
+        else:
+            st.caption("Hàng duyệt đặc quyền không mở cho khách.")
     with col_nxt2:
-        st.link_button("📋 Nhật ký kiểm toán", f"/Nhat_ky_kiem_toan?case_id={quote(case_id)}", use_container_width=True)
+        st.link_button(
+            "📋 Nhật ký kiểm toán",
+            f"/Nhat_ky_kiem_toan?case_id={quote(case_id)}",
+            use_container_width=True,
+        )
     with col_nxt3:
         st.link_button("🛡️ Verify (Kiểm thử tự động)", "/Verify", use_container_width=True)
 
@@ -477,7 +545,7 @@ def main() -> None:
     st.markdown(
         '<div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">'
         '⚡ Thử nhanh với email mẫu: <span style="font-size: 12px; font-weight: 400; color: #64748B;">(Bấm để tự động điền nội dung)</span>'
-        '</div>',
+        "</div>",
         unsafe_allow_html=True,
     )
     col_s1, col_s2, col_s3 = st.columns(3)
@@ -495,6 +563,10 @@ def main() -> None:
 
     # Xác định bước Stepper hiện tại
     active_case_id = st.query_params.get("case_id") or st.session_state.get("active_case_id")
+    if active_case_id and not case_is_owned(active_case_id, _owned_case_ids()):
+        active_case_id = None
+        st.session_state.pop("active_case_id", None)
+        st.query_params.pop("case_id", None)
     step = 1
     if active_case_id:
         active_row = fetch_one("SELECT * FROM cases WHERE case_id = ?", (active_case_id,))
@@ -515,8 +587,12 @@ def main() -> None:
 
     # ==================== CỘT TRÁI: NHẬP EMAIL CẦN XỬ LÝ ====================
     with col_left:
-        st.markdown('<div class="ex-card-title">📥 Nhập email cần xử lý</div>', unsafe_allow_html=True)
-        st.caption("Nhập tự do nội dung email bất kỳ để kiểm tra quy chế. Chưa kết nối hộp thư thực tế.")
+        st.markdown(
+            '<div class="ex-card-title">📥 Nhập email cần xử lý</div>', unsafe_allow_html=True
+        )
+        st.caption(
+            "Bạn có thể nhập email tự do; lane xử lý mới chỉ hoạt động khi máy chủ được cấp quyền LIVE."
+        )
 
         with st.form("email_form"):
             sender = st.text_input(
@@ -538,9 +614,13 @@ def main() -> None:
             st.caption(f"{len(body)}/5000 ký tự")
 
             with st.expander("📎 Đính kèm tệp (nếu có)", expanded=False):
-                st.caption("Chức năng nhận tệp đính kèm (PDF/Ảnh) — Hiện đang chạy ở chế độ mô phỏng.")
+                st.caption(
+                    "Chức năng nhận tệp đính kèm (PDF/Ảnh) — Hiện đang chạy ở chế độ mô phỏng."
+                )
 
-            submitted = st.form_submit_button("Xử lý email", type="primary", use_container_width=True)
+            submitted = st.form_submit_button(
+                "Xử lý email", type="primary", use_container_width=True
+            )
 
         if submitted:
             try:
@@ -549,26 +629,49 @@ def main() -> None:
             except (ValueError, RuntimeError) as error:
                 st.error(readable_text(str(error)))
 
+        if is_restricted_demo():
+            st.info(
+                "Hiện chỉ email mẫu canonical và Verify chạy bằng replay; input mới chưa được lưu hoặc xử lý."
+            )
+
         # Expander: Thử bằng email minh họa (Giữ nguyên để tương thích AppTest)
-        with st.expander("📂 Hoặc chọn từ hộp thư mô phỏng (Inbox Synthetic)", expanded=False):
-            emails = load_inbox()
-            if emails:
-                selected = st.selectbox("Chọn email", emails, format_func=lambda email: email.subject)
-                st.caption(f"Từ {selected.sender} · {local_time(selected.received_at)}")
-                st.text(selected.body)
-                if st.button("Xử lý email minh họa", key="process_inbox", use_container_width=True):
-                    try:
-                        _submit(inbox_input(selected))
-                        st.rerun()
-                    except (ValueError, RuntimeError) as error:
-                        st.error(readable_text(str(error)))
-            else:
-                st.info("Không có email minh họa. Bạn có thể nhập email trực tiếp ở trên.")
+        if not is_restricted_demo():
+            with st.expander("📂 Hoặc chọn từ hộp thư mô phỏng (Inbox Synthetic)", expanded=False):
+                emails = load_inbox()
+                if emails:
+                    selected = st.selectbox(
+                        "Chọn email", emails, format_func=lambda email: email.subject
+                    )
+                    st.caption(f"Từ {selected.sender} · {local_time(selected.received_at)}")
+                    st.text(selected.body)
+                    if st.button(
+                        "Xử lý email minh họa", key="process_inbox", use_container_width=True
+                    ):
+                        try:
+                            _submit(inbox_input(selected))
+                            st.rerun()
+                        except (ValueError, RuntimeError) as error:
+                            st.error(readable_text(str(error)))
+                else:
+                    st.info("Không có email minh họa. Bạn có thể nhập email trực tiếp ở trên.")
 
         # Expander: Mở lại email gần đây
-        recent = fetch_all(
-            "SELECT case_id, subject, status, received_at FROM cases ORDER BY rowid DESC LIMIT 30"
-        )
+        if is_restricted_demo():
+            recent = [
+                row
+                for case_id in _owned_case_ids()
+                if (
+                    row := fetch_one(
+                        "SELECT case_id, subject, status, received_at FROM cases WHERE case_id = ?",
+                        (case_id,),
+                    )
+                )
+                is not None
+            ]
+        else:
+            recent = fetch_all(
+                "SELECT case_id, subject, status, received_at FROM cases ORDER BY rowid DESC LIMIT 30"
+            )
         with st.expander("🕒 Mở lại email đã lưu gần đây", expanded=False):
             if recent:
                 selected_id = st.selectbox(
@@ -581,7 +684,9 @@ def main() -> None:
                     ),
                     key="recent_saved_selector",
                 )
-                if st.button("Mở kết quả đã lưu", key="btn_open_recent_saved", use_container_width=True):
+                if st.button(
+                    "Mở kết quả đã lưu", key="btn_open_recent_saved", use_container_width=True
+                ):
                     st.session_state["active_case_id"] = selected_id
                     st.query_params["case_id"] = selected_id
                     st.rerun()
