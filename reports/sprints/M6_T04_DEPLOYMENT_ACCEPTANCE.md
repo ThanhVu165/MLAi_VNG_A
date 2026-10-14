@@ -457,3 +457,16 @@ AC1 BLOCKED; AC2 PARTIAL; AC3 NOT VERIFIED; AC4/AC5 PARTIAL;
 AC6 NOT VERIFIED; AC7 PUBLIC_ACCESS_GATE_BLOCKED; AC8 PARTIAL.
 Không build PASS từ trigger bị hủy, không startup PASS từ staged config.
 LIVE LLM/email=0, không billing upgrade, không merge/DONE.
+
+### Retry after explicit user confirmation — 15:25 UTC+07
+
+User chọn “Gọi lại để tôi xác nhận”. Codex kiểm lại pending patch destructive=false,
+đúng task branch và source pin b7a0658, rồi gọi accept-deploy lần thứ hai.
+Tool lại trả `Cancelled — the user did not approve this action. No changes were made.`
+với structured error `INVALID_ARGUMENT`. Readback: patch STAGED, destructive=false,
+intended service deployments=[]; build/startup/health vẫn NOT RUN.
+
+Không quy kết lỗi cho Dockerfile hoặc credit. Không lặp thêm hay dùng một live source/
+deployment API khác để né cancellation. User cần tự apply đúng pending changes trên
+Railway dashboard rồi cung cấp deployment ID hoặc báo đã apply; Codex tiếp tục đọc
+build/startup logs. Giữ service private, chưa tạo public domain.
