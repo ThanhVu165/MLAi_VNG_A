@@ -1,0 +1,121 @@
+{
+  "task": "M4-T01",
+  "checkpoint": "CONTINUATION_20261014",
+  "result": "PASS_TECHNICAL_PREPARATION_ONLY",
+  "overall_disposition": "PARTIAL_ONLY",
+  "previous_sha": "b6edae55433b9acbe222c30fec01c2509a088287",
+  "current_dev_baseline_sha": "eaaeea88a59618b49219a20ae01a3cf3227cec87",
+  "tested_sha": "8ce6d81e4c6e9a306ef19ef49d617dd1d45ddf18",
+  "pr": "https://github.com/ThanhVu165/MLAi_VNG_A/pull/52",
+  "environment": {
+    "python": "3.11.16",
+    "packages": {
+      "pytest": "8.3.3",
+      "jsonschema": "4.23.0",
+      "openai": "3.24.0",
+      "pydantic": "2.14.1"
+    }
+  },
+  "commands": {
+    "before_regressions": ".\\.venv\\Scripts\\python.exe -m unittest discover -s docs/evaluation -p test_protocol.py -v (new regressions against previous helper)",
+    "after": ".\\.venv\\Scripts\\python.exe -m unittest discover -s docs/evaluation -p test_protocol.py -v",
+    "black": ".\\.venv\\Scripts\\python.exe -m black --workers 1 --check --line-length 100 docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py",
+    "ruff": ".\\.venv\\Scripts\\python.exe -m ruff check docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py",
+    "diff": "git diff --check",
+    "source_scope": "git diff b6edae55433b9acbe222c30fec01c2509a088287 -- core policies infra verify requirements.txt"
+  },
+  "before": {
+    "tests_run": 16,
+    "failing_subtests": 8,
+    "errors": 4,
+    "failed_test_ids": [
+      "test_case_schema_is_not_bypassed_by_semantic_helper",
+      "test_result_schema_is_enforced_before_scoring",
+      "test_manifest_runtime_binding_and_falsey_authorization"
+    ],
+    "error_explanation": "Four TypeErrors reflect missing new runtime binding parameter; separate direct old-call reproduction proves unchecked SHA and falsey authorization acceptance"
+  },
+  "after": {
+    "passed": 16,
+    "failed": 0,
+    "seconds": 0.055,
+    "black": "PASS",
+    "ruff": "PASS",
+    "schema_and_semantics": "PASS"
+  },
+  "harness": {
+    "status": "NOT RERUN",
+    "reused_pass_count": 2,
+    "source_evidence_sha": "8ebb9f1091e132ce3238563eb220c89d8dc0e8d2",
+    "reason": "No runtime/harness change; helper callers confined to synthetic tests"
+  },
+  "checks": {
+    "local_links_checked": 33,
+    "broken_links": [],
+    "whitespace": "PASS",
+    "markdown_tables": "PASS",
+    "known_secret_patterns": [],
+    "manual_privacy_review": "PASS: only public metadata and synthetic records",
+    "production_diff": "NONE",
+    "prior_report_preserved_sha256": "da3b261bdb79f40473ad9bebc9801f52aca31eb1115c2e656323ee72655a9903",
+    "prior_validation_logs": "UNCHANGED"
+  },
+  "live_application_llm_email_calls": 0,
+  "official_set_runs": 0,
+  "private_set_content_reads": 0,
+  "artifact_hash_scope": "Exact working-tree SHA256 plus canonical Git blob SHA1; Git text filters may normalize line endings",
+  "artifacts": {
+    "docs/evaluation/M4_T01_PROTOCOL.md": {
+      "working_tree_sha256": "1eb9c8fb508957b8d7491dc3e1af7a396822fce7a4b4b5fca4b8003046793f5c",
+      "git_blob_sha1": "4f514ce5ca08f779994a4165c6c387e9c1b5d026"
+    },
+    "docs/evaluation/M4_T01_SCHEMA.json": {
+      "working_tree_sha256": "e7ae145ef096ca7ad017c7d7ffc3c8712b7fd9ba5abffad7f10b8eb8d8ac0afe",
+      "git_blob_sha1": "96b3589450a05f38482aa7dbf747e2c1a59b7011"
+    },
+    "docs/evaluation/protocol_validation.py": {
+      "working_tree_sha256": "d6ab36300974f1e68f24182abe0d1f13ffc278a8cb62dc2df0a445567c85705e",
+      "git_blob_sha1": "bb66e04343918cb7095ae8668052cf02e4d3c1fc"
+    },
+    "docs/evaluation/test_protocol.py": {
+      "working_tree_sha256": "5d3eed7980972ac50c7b0a70df6387804b9a6d159c8a2e2ad85e206dd97aeb9c",
+      "git_blob_sha1": "a7b5c5e3b188bb40baa79dedfcf60745ad848454"
+    },
+    "reports/evaluation/M4_T01_PROTOCOL_READINESS.md": {
+      "working_tree_sha256": "365aae0c4b70d6978d9bd1aab76e01045a6b264e0874d7861f2bd488c1780376",
+      "git_blob_sha1": "f4eb950eb181af176f9676c20be7fa3e59c99269"
+    },
+    "reports/evaluation/M4_T01_CONTINUATION_BEFORE.txt": {
+      "working_tree_sha256": "177491a8f52e35efd4ae8a31f98d05143b5df5945f18b2a00a60f170c39b21a9",
+      "git_blob_sha1": "8776d97de2a18ef501531249c98c6887daa0d2b1"
+    },
+    "reports/evaluation/M4_T01_CONTINUATION_MANIFEST_BEFORE.txt": {
+      "working_tree_sha256": "256b0e9dc35cb56f93371c4cf05d2fa4be95648643bb942454018e82208c3cd9",
+      "git_blob_sha1": "270ed8f7b64f45feb33fa2815e7e87c24dc9659c"
+    },
+    "reports/evaluation/M4_T01_CONTINUATION_AFTER.txt": {
+      "working_tree_sha256": "0a6c9069071c29da433720e86317d5c0e0c326ca5af6a1231f67e7ae8bc40e5a",
+      "git_blob_sha1": "6dfb26741831b310fdba4aaf26b475def7ec16f1"
+    }
+  },
+  "current_source_fingerprints": {
+    "policies/policy.yaml": "805349a02bbd804f5b690e822f4098f3f394d9caaeddb94a9d7f4b950f422430",
+    "infra/settings.py": "00873244fbd7b6f8dd870606c90475933497165add40bb03627aef9e8ee5a194",
+    "infra/llm.py": "09db7dca677ccc05cc4270d49604e38afd92a7a7a0953c99b23a0d5fbf65c324",
+    "core/extract.py": "ab52cc0203c08fa8439ef4fcf0313bc3177e0f5a3cdd01f5b69373fe5c01e0d2",
+    "core/retrieval.py": "02ea482a4d2ac9bff84b169b3c96f2918896b26f01b5040984b1d3cdec8b34bc",
+    "core/generate.py": "cce4fbbaf370a7da0a2710f30abe651a9ac006c1d602e9ea616ed0f31a2fde0d",
+    "core/question_gen.py": "adeaa9ceab7485329987284a63a778eabe1ad0a89cd255e42fffc62d71f52dbb",
+    "core/resume.py": "ef0464c68458ae2de504bb51984b28c97109e1a62dbb2ea322211ef6471103a9",
+    "requirements.txt": "b0410a1ff46b1380ab4e7a7e0f8ae12717d903f829c9f8c83f1e725a46202bcc",
+    "reports/readiness/M6_T05_BASE24_RECORDED_PACK.json": "2a3c80855923010e3ead807424bc1d2e904c01422ab08eade7655fe30aa280c8"
+  },
+  "limitations": [
+    "No provenance/seal attestation supplied",
+    "No official configuration/environment frozen",
+    "Current source defaults or DEV recording config are not official authorization",
+    "Minh human review and Thu independent review PENDING",
+    "No independent model quality or GO-A claim",
+    "Pattern scan has limited signatures"
+  ]
+}

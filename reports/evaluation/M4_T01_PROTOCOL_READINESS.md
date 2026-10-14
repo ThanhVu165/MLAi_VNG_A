@@ -244,16 +244,26 @@ No Thư review verdict is supplied by Codex.
 
 - Previous source `b6edae55433b9acbe222c30fec01c2509a088287`; prior tested implementation
   `8ebb9f1091e132ce3238563eb220c89d8dc0e8d2` remains valid historical evidence only.
-- Current implementation changes require fresh synthetic tests; exact committed tested
-  SHA and closing evidence are appended here after the source commit, without rewriting
-  older checkpoints or logs. Final evidence commit is resolved from PR #52 / branch tip.
+- **TESTED SHA: `8ce6d81e4c6e9a306ef19ef49d617dd1d45ddf18`** (new implementation).
+  Post-commit unit validation: **16 PASS / 0 FAIL**, 0.055s; JSON Schema meta-checks,
+  result/category matrix and semantic manifest/runtime binding are included.
+  Final evidence-only commit is resolved from PR #52 / branch tip; exact final SHA
+  is supplied in the PR body and human handoff. No new runtime source test is implied.
 - Environment: Python 3.11.16, pytest 8.3.3, jsonschema 4.23.0; no package installed.
 - Commands: `python -m unittest discover -s docs/evaluation -p test_protocol.py -v`;
   `python -m black --workers 1 --check --line-length 100 docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py`;
   `python -m ruff check docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py`;
   `git diff --check`; inline stdlib local-link/Markdown-table/UTF-8/secret/scope/hash checks.
 - Unit before-fix failures and direct manifest reproduction preserved above; after-fix
-  test output goes to M4_T01_CONTINUATION_AFTER.txt. No expected business label changed.
+  output: [after tests](M4_T01_CONTINUATION_AFTER.txt). No expected business label changed.
+- **Black PASS** (2 files unchanged), **Ruff PASS**, **git diff --check PASS**.
+  Link/table/UTF-8/whitespace/known-secret and scope checks PASS; full prior report
+  suffix and prior logs retained. Before-log workspace paths redacted and trailing
+  stdout whitespace stripped; assertion meanings and traceback lines retained.
+- [Continuation inventory](M4_T01_CONTINUATION_EVIDENCE.json) records current source
+  fingerprints, environment, before/after commands/results and artifact hashes.
+  Original M4_T01_VALIDATION_EVIDENCE.json is kept as the prior snapshot, not refreshed
+  to claim the new implementation was tested in the earlier session.
 - Existing harness tests: **NOT RERUN**; reuse prior 2 PASS on unchanged runtime/harness,
   since helper callers are only synthetic tests. Full suite/product replay/official A/B/
   LIVE/provider/email: **NOT RUN**. LIVE application/LLM/email count **0**.
