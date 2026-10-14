@@ -21,7 +21,7 @@ Checklist chỉ mô tả entry conditions. Nó không tự ban hành GO-STUDY.
 | LIVE/replay mode | NOT VERIFIED | Compose có replay; Coordinator chưa pin mode/model cho study; LIVE không được phép |
 | Stable case/corpus/form manifest | READY | Revision IDs và hashes ghi trong environment check |
 | Evidence package readiness | READY | Baseline/methods/validation/risk/privacy boundary đã đủ |
-| Final commit/PR evidence | NOT VERIFIED | Chưa có commit SHA, PR hoặc validation trên committed SHA; AC6 chính thức chưa đạt |
+| Final commit/PR evidence | READY | Commit `52e7d8e9a26ec8af8a568ad833b76413e81d709a` đã validation và nằm trong PR #55; AC6 PASS |
 | Coordinator GO-STUDY decision | BLOCKED | Chưa có decision; checklist không có quyền tự GO |
 
 ## Unlock rule

@@ -11,7 +11,9 @@ M5-T02 DONE hoặc M5 gate PASS.
 - Authority/Owner/acceptance: Project Coordinator.
 - Branch: `sprint/m5-t02-study-readiness`.
 - Initial SHA: `2ce699c6a0d5b3d4ac6252a394468fb2aab329cd`.
-- Final working-tree SHA: `2ce699c6a0d5b3d4ac6252a394468fb2aab329cd` (`PENDING FINAL COMMIT`).
+- Evidence commit SHA: `52e7d8e9a26ec8af8a568ad833b76413e81d709a`.
+- Pull Request: [#55](https://github.com/ThanhVu165/MLAi_VNG_A/pull/55), head
+  `sprint/m5-t02-study-readiness`, base `dev`.
 - `origin/dev` tại preflight: `2ce699c6a0d5b3d4ac6252a394468fb2aab329cd`.
 - Initial tree: clean; task branch expected ahead of its remote.
 
@@ -38,8 +40,8 @@ Kết quả thực tế:
   `NOT RUN / BLOCKED` vì confirmed participant = 0.
 - Environment: prior offline/replay separation/safety evidence tồn tại; exact selected
   STUDY SHA/DB/mode/isolation `NOT VERIFIED`.
-- Evidence package readiness: `PASS`; AC6 chính thức vẫn `NOT VERIFIED` cho đến khi
-  có final commit SHA, PR chứa report và validation trên committed SHA.
+- Evidence package readiness: `PASS`; commit `52e7d8e9a26ec8af8a568ad833b76413e81d709a`
+  đã được validation trên committed Git blobs và chứa report trong PR #55.
 - LIVE/API/email thật: `0`.
 
 ## AC matrix
@@ -51,7 +53,7 @@ Kết quả thực tế:
 | AC3 — Gold / Case Exposure | NOT RUN / BLOCKED | Mechanism ready, nhưng actual screening `NOT RUN — 0 participants confirmed` |
 | AC4 — Protocol | PASS | B0/B2, 8 cases, X/Y, S1–S4, 5 ACTIVE + 1 SUPERSEDED và forms khớp repo |
 | AC5 — GO-STUDY Unlock Checklist | PASS | Checklist có READY/BLOCKED/NOT VERIFIED và không tự cấp GO |
-| AC6 — Evidence | NOT VERIFIED / PENDING FINAL COMMIT AND PR | Evidence package readiness PASS; chưa có commit SHA, PR và validation trên committed SHA |
+| AC6 — Evidence | PASS | Evidence package, committed-SHA validation và PR #55 đã có; không suy ra DONE hoặc GO-STUDY |
 
 ## Validation
 
@@ -65,6 +67,7 @@ Kết quả thực tế:
 | Corpus ACTIVE/SUPERSEDED, synthetic flags và hashes | PASS |
 | Scope: đúng 6 artifact | PASS |
 | `git diff --check` + whitespace check cho file untracked | PASS |
+| Validation trên committed SHA `52e7d8e9...` | PASS — exact 6 files, clean tree, UTF-8/NFC và AC/privacy assertions |
 | Runtime tests | NOT RUN — docs/readiness scope |
 | Docker/Study runtime | NOT RUN — docs/readiness scope |
 | Participant sessions / consent / screening | NOT RUN — participant count 0 |
@@ -100,9 +103,9 @@ Retention tối đa 90 ngày sau study closure; deletion log không chứa PII. 
 
 ## Git / handoff
 
-- Commit: `NOT CREATED`.
-- Push: `NOT RUN`.
-- PR: `NOT CREATED`.
+- Evidence commit: `52e7d8e9a26ec8af8a568ad833b76413e81d709a`.
+- Push: `PASS` — branch `sprint/m5-t02-study-readiness`.
+- PR: [#55](https://github.com/ThanhVu165/MLAi_VNG_A/pull/55), OPEN, nhắm `dev`.
 - Final GO-STUDY: `BLOCKED — PARTICIPANT/CONSENT AND OTHER VERIFIED ENTRY CONDITIONS PENDING`.
 - Recommended next step: Coordinator xác minh cấu hình Google Drive thực tế đúng
   `Restricted`, ba thư mục và quyền mặc định trước khi recruitment bắt đầu.

@@ -34,8 +34,9 @@ Participant thực tế: **0 confirmed / PENDING recruitment**. Study sessions: 
   screening thực tế. Coordinator đã phê duyệt storage/privacy plan; AC2 là
   `PASS candidate`, nhưng consent thực tế vẫn `NOT RUN`.
 - AC3 chính thức: `NOT RUN / BLOCKED`; chỉ cơ chế screening đã được chuẩn bị.
-- AC6 chính thức: `NOT VERIFIED / PENDING FINAL COMMIT AND PR`; evidence package
-  đã sẵn sàng nhưng chưa có commit SHA, PR và validation trên committed SHA.
+- AC6 chính thức: `PASS`; artifact commit
+  `52e7d8e9a26ec8af8a568ad833b76413e81d709a` đã được validation và nằm trong
+  [PR #55](https://github.com/ThanhVu165/MLAi_VNG_A/pull/55) nhắm `dev`.
 - GO-STUDY: `BLOCKED — PARTICIPANT/CONSENT AND OTHER VERIFIED ENTRY CONDITIONS PENDING`.
 
 Project Coordinator là custodian. Private evidence dùng Google Drive PRIVATE với
