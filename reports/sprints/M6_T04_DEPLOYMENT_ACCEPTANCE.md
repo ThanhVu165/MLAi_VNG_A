@@ -6,6 +6,8 @@
 > Phase D recheck 15:12: deletion đã hủy; public-access finding được tái hiện trên SHA được duyệt.
 > Phase D execution 15:18: Trello approval đã có; Apply/Deploy bị lớp xác nhận công cụ hủy, chưa build.
 > Latest: private Docker build/health, container source/pack scan và critical replay/Verify PASS có giới hạn; public access và exact deployed SHA chưa đạt.
+> Team handoff: [docs/deploy/M6_T04_TEAM_HANDOFF.md](../../docs/deploy/M6_T04_TEAM_HANDOFF.md).
+> D1 accepts 61e31e8 LIMITED for private checkpoint; D3 hotfix contract required, D4 public HOLD.
 
 ## Kết luận checkpoint
 
@@ -680,3 +682,48 @@ access-control or restricted-demo revision before public exposure. Then verify t
 accepted deployment/domain from an external browser, real independent sessions, and
 remaining restart/reset/fresh-clone gates. Current public URL: **none**.
 No paid billing, LIVE/email, merge of PR #51 or DONE action was performed.
+
+## Team handoff / Restricted DEMO preflight — 14/10/2026
+
+User yêu cầu bàn giao phiên bản hiện tại cho thành viên nhóm qua PR và ghi đầy đủ thông
+tin để làm tiếp. PR #51 được tái sử dụng, không tạo PR trùng và không merge.
+Handoff mới chỉ gồm tài liệu và artifact kiểm tra ngoài Docker context; không có hotfix
+source, policy/schema/audit/cassette/evaluation change hoặc Railway mutation.
+
+Đã đọc lại comment mới nhất trên Trello:
+`[M6-T04] COORDINATOR DECISION — PRIVATE CHECKPOINT & RESTRICTED DEMO`,
+action `6acf4ca53a2061bfdcd91356`, 14/10/2026 16:34:29 UTC+07.
+D1 ACCEPT LIMITED 61e31e8 là private checkpoint, không exact-SHA/public acceptance.
+D2 cho chuẩn bị Restricted DEMO; D3 cần contract/Task ID/Owner/Reviewer/ownership/
+baseline/AC1–AC7 được duyệt READY; D4 PUBLIC GATE HOLD. Không tự implementation.
+
+Preflight remote dev vẫn eaaeea88; branch/PR evidence HEAD trước bàn giao d37a38d,
+clean. Deployment hiện vẫn c8930474 / 61e31e8 / SUCCESS, chưa domain/staged changes.
+No separate hotfix contract was found among 27 open board cards at that preflight.
+
+Published handoff artifacts:
+
+- `docs/deploy/M6_T04_TEAM_HANDOFF.md`: ownership/decisions, source/deployment identities,
+  Railway config, access prerequisites, completed/missing checks, AC1–AC8, blockers,
+  receiving-checkout/SSH instructions, recovery and next action sequence.
+- `docs/deploy/M6_T04_RESTRICTED_DEMO_CONTRACT_DRAFT.md`: multi-page/backend action map,
+  PUBLIC_SAFE/PRIVILEGED/UNDECIDED, A/B comparison, recommendation/CONTRACT-CHANGE,
+  exact proposed file scope, assignment/baseline pending, AC1–AC7/tests/deliverables/
+  timebox/Stop Conditions. It is not an official hotfix card or implementation approval.
+- `docs/deploy/validation/`: byte-preserved public-safe container readback/source check/
+  runtime/recovery JSON and the successfully executed task-local private replay driver.
+  Private keys, DBs, raw provider/API/PII logs and earlier driver failures remain local.
+
+Snapshot exports are existing 61e31e8 observations, not new tests on handoff HEAD.
+The copied driver SHA-256 remains
+`009616dca910362f0e72dc0acb62e2ec72b9f82039cc3b9b40df549fd0cddbfd`.
+Its syntax/copy integrity and public evidence were checked without calling product
+runtime/LIVE or modifying demo/developer databases. Runbook now identifies its current
+UI-selection prerequisite and uses an existing settings marker for future disposable
+persistence checks, rather than adding a new schema table; commands are instructions,
+not a newly completed Docker/restart test.
+
+Next Owner: obtain official Restricted DEMO contract READY and approved guest/judge
+workflow list; implement only assigned scope; independent review; new exact deploy SHA;
+private new-image checks, browser/concurrency/persistence; public decision and final
+M6-T04 review. Do not use PR ready-for-review status as hotfix READY/public/merge/DONE.

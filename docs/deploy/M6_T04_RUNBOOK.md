@@ -1,5 +1,10 @@
 # M6-T04 — Deployment and reproducibility runbook
 
+> **Team handoff:** [M6_T04_TEAM_HANDOFF.md](M6_T04_TEAM_HANDOFF.md) contains the latest
+> D1–D4 disposition, portable private-checkpoint evidence, SSH prerequisites and next
+> steps. [Restricted DEMO contract draft](M6_T04_RESTRICTED_DEMO_CONTRACT_DRAFT.md) is
+> not implementation approval. Public gate remains HOLD.
+
 > **Latest private runtime checkpoint — 14/10/2026:** Railway deployment
 > `c8930474-219b-4d9f-b736-2f0803888cb9` is SUCCESS; Docker build, startup and internal
 > health passed. No public domain exists. Current OCI image digest is
@@ -96,15 +101,22 @@ at `/evidence` and write outputs there. Do not modify or re-record cassettes. Ve
 finish with 4/4 semantic matches, critical flows 4/4, zero replay misses, and zero LIVE
 calls before AC5 can pass.
 
+The historical audit CLI's human helper assumes its case is already selected in the
+queue. With the current UI, select that case explicitly; the exact successfully executed
+driver is published at [validation/private_runtime_probe.py](validation/private_runtime_probe.py).
+Its instructions in the team handoff target the existing private Railway checkpoint,
+not a future Restricted DEMO authorization context. Do not interpret the CLI's UI-helper
+KeyError as proof that human R11 business semantics failed or alter production for it.
+
 ## Synthetic database, persistence, and recovery
 
 Only use project `exodia-m6t02-validation-m6t04`. Seed through the application entrypoint,
 write a synthetic probe, restart, and confirm it persists:
 
 ```powershell
-docker compose --project-name exodia-m6t02-validation-m6t04 exec -T demo python -c 'from infra.db import execute; execute("CREATE TABLE IF NOT EXISTS m6_t04_probe (value TEXT NOT NULL)"); execute("INSERT INTO m6_t04_probe VALUES (''synthetic'')")'
+docker compose --project-name exodia-m6t02-validation-m6t04 exec -T demo python -c "from infra.db import execute, now_iso; execute('INSERT OR REPLACE INTO settings(key,value,updated_at,actor) VALUES(?,?,?,?)', ('m6_t04_synthetic_probe', 'synthetic', now_iso(), 'SYSTEM'))"
 docker compose --project-name exodia-m6t02-validation-m6t04 restart demo
-docker compose --project-name exodia-m6t02-validation-m6t04 exec -T demo python -c 'from infra.db import fetch_one; assert fetch_one("SELECT value FROM m6_t04_probe")[0] == "synthetic"'
+docker compose --project-name exodia-m6t02-validation-m6t04 exec -T demo python -c "from infra.db import fetch_one; assert fetch_one('SELECT value FROM settings WHERE key = ?', ('m6_t04_synthetic_probe',))[0] == 'synthetic'"
 ```
 
 For a controlled recovery check, stop and start the same service and re-run health and

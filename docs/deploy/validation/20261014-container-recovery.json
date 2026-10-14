@@ -1,0 +1,1 @@
+{"volume_directory": "/runtime/m6-t04-validation-yrl0mtkn", "separate_process_reopen": "PASS", "sqlite_backup_restore_to_new_path": "PASS", "fresh_database_seed_idempotence": "PASS", "service_restart": "NOT_RUN", "live_demo_reset": "NOT_RUN", "temporary_volume_directory_removed": true, "demo_db_unchanged": true}
