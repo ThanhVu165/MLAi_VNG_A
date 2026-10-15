@@ -2,7 +2,8 @@
 
 Owner Mac + Codex; authorization: **COORDINATOR AMENDMENT — GO C2-B LOCAL/SERVER-ONLY**.
 Baseline `dev@ac5184ee5f1568827df321b7c737f218885f293f`, verified fetch; #70 merged
-đúng SHA này, chứa CR01. Branch `codex/judge-input-c2b`. READY_FOR_REVIEW, chưa DONE.
+đúng SHA này, chứa CR01. Branch `codex/judge-input-c2b`. C2B-R01 hotfix
+READY_FOR_REVIEW, chưa DONE; chưa merge/deploy.
 
 ## Scope / trust boundary
 
@@ -10,7 +11,8 @@ Baseline `dev@ac5184ee5f1568827df321b7c737f218885f293f`, verified fetch; #70 mer
 - `scripts/judge_operator.py`: local terminal client; secret nhập bằng getpass, không argv,
   widget, URL, stdout hoặc log. Secret chỉ đi qua IPC trong private OS directory.
 - Điểm nối Email/Audit: khi `JUDGE_GATEWAY_SOCKET` được cấu hình, grant nằm trong registry
-  server, bind theo ScriptRunContext.session_id do Streamlit server cấp. Không tin query,
+  server, bind đồng thời theo ScriptRunContext.session_id và SHA-256 của WebSocket key của
+  kết nối hiện tại. Session ID chỉ định tuyến, không phải bằng chứng xác thực. Không tin query,
   widget hoặc credential/session được chèn vào session_state. Mã đối chiếu hiển thị là
   identifier không cấp quyền; operator phải đối chiếu đúng phiên với judge trước cấp.
 - Khi gateway chưa cấu hình, giữ seam C1 server-only và canonical/private behavior cũ.
@@ -21,10 +23,10 @@ Baseline `dev@ac5184ee5f1568827df321b7c737f218885f293f`, verified fetch; #70 mer
 - Local OS account và tiến trình cùng UID là trusted computing base, không chống host
   compromise. Không dùng interface này như public authentication hoặc remote gateway.
 
-Provisioning giữ lock local và gọi C2-A one-use provisioning ID. Một session chỉ được
-provision một lần, kể cả đổi request ID sau revoke/expiry. Rerun/native reconnect giữ binding
-đang có, không cấp thêm; reload nếu tạo session mới không kế thừa quyền. Restart mất registry,
-không deserialize token hoặc tự
+Provisioning giữ lock local và gọi C2-A one-use provisioning ID. Một connection binding chỉ
+được provision một lần, kể cả đổi request ID sau revoke/expiry. Rerun trên cùng WebSocket giữ
+binding đang có, không cấp thêm; native reconnect/new WebSocket tạo binding chưa cấp quyền dù
+Streamlit khôi phục cùng AppSession/session ID. Restart mất registry, không deserialize token hoặc tự
 cấp lại grant. Quota/nonce/reservations/revocation vẫn ở ledger bền vững, không reset.
 Grant TTL/limits, HOLD/CR01, PREVIEW_READY, dispatch guards giữ nguyên C2-A.
 
@@ -405,3 +407,58 @@ def test_known_disconnected_session_id_must_not_recover_judge_grant(judge, monke
     asyncio.run(exercise())
 
 ```
+
+## C2B-R01 hotfix final — READY_FOR_REVIEW (supersedes HOLD above)
+
+Validation on 15/10/2026 21:49 +0700, starting branch HEAD
+`37005d82ad4546bb0d89fec1eaf434f005398ed9`. Scope changed only
+`ui/judge_gateway.py`, `tests/test_judge_input_c2b.py` and this report.
+
+Minimal fail-closed fix binds each server registry entry to both the Streamlit session ID
+and a SHA-256 fingerprint of the current WebSocket handshake key. The raw key is not stored,
+logged or treated as human authentication. Missing/invalid/mismatched connection evidence
+returns no credentials. A native reconnect may still restore Streamlit's old AppSession and
+browser state, but its new WebSocket cannot use the old grant; `prepare_session()` replaces
+the binding with a fresh unprivileged reference that requires explicit operator approval.
+No Streamlit framework, schema, public interface, C2-A ledger, dispatch path or provider was
+changed.
+
+Dedicated proof command:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q -p no:cacheprovider tests/test_judge_input_c2b.py::test_connection_fingerprint_uses_websocket_key_and_fails_closed tests/test_judge_input_c2b.py::test_native_known_id_reconnect_requires_new_operator_approval --tb=short
+```
+
+Result: **2 passed in 0.50s**. Native `BrowserWebSocketHandler` /
+`WebsocketSessionManager` proof confirms: active known-ID attempt receives a distinct session
+and is denied; inactive known-ID reconnect restores the same AppSession but receives neither
+the old Judge grant nor old-case read access. Ledger/quota is unchanged before new approval.
+After a new operator approval the new grant works, old-case ownership remains denied, revoke
+works, PREVIEW_READY remains the only pipeline result, and there are no jobs/SEND audit events.
+
+Targeted C1/C2-A/C2-B security regression (includes actual AF_UNIX smoke, unsafe directory,
+operator secret, permissions, grant/quota/revoke, HOLD, audit ownership and no-dispatch):
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q -rs -p no:cacheprovider tests/test_judge_input_c2b.py tests/test_judge_input_c2a.py tests/test_judge_input_c1.py --tb=short
+```
+
+Result: **126 passed in 15.98s**, exit 0. Black check for the two changed source/test files,
+Ruff `--no-cache` and `git diff --check` all PASS. Full suite, LIVE/API, merge and deploy were
+not run.
+
+Self-review: fail-closed behavior is applied before every gateway credential read and before
+session preparation; raw connection material cannot reach UI, query, session_state, report,
+logs or operator IPC. Existing grant validation, durable quota/reservations, revoke,
+PREVIEW_READY, Audit and no-dispatch code paths are unchanged. The prior C2B-R01 reproduction
+is now represented by a permanent native regression test instead of an external-only probe.
+
+Remaining risk: this proves the Streamlit 1.39 native reconnect lifecycle in-process and the
+production header extractor in isolation, not a deployed reverse-proxy/browser handshake E2E.
+The mechanism prevents possession of an old session ID alone from recovering capability; it
+does not claim protection if an attacker also captures the old live WebSocket handshake key,
+compromises the same-UID host process, or controls the reverse proxy. Those remain deployment/
+host trust-boundary risks and do not justify claiming general authentication.
+
+Disposition: **READY_FOR_REVIEW / MERGE recommendation for the scoped offline C2-B hotfix**,
+subject to reviewer/CI confirmation. Restricted DEMO remains offline; LIVE/API count is zero.

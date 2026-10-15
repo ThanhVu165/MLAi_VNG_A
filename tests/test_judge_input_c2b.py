@@ -1,5 +1,7 @@
 """C2-B gateway/local staging, synthetic SQLite, không network/provider thật."""
 
+import asyncio
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -8,7 +10,14 @@ from types import SimpleNamespace
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.memory_session_storage import MemorySessionStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.script_data import ScriptData
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.testing.v1 import AppTest
+from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 
 from infra import db, judge_access as access
 from ui import judge_gateway as gateway
@@ -24,8 +33,9 @@ def session(judge, monkeypatch):
     monkeypatch.setenv("JUDGE_GATEWAY_SOCKET", "/unopened/offline.sock")
     monkeypatch.setattr(gateway, "_BINDINGS", {})
     monkeypatch.setattr(gateway, "_start_listener", lambda: None)
-    context = SimpleNamespace(session_id="server-session-a")
+    context = SimpleNamespace(session_id="server-session-a", connection="connection-a")
     monkeypatch.setattr(gateway, "get_script_run_ctx", lambda **kwargs: context)
+    monkeypatch.setattr(gateway, "_connection_fingerprint", lambda: context.connection)
     return context, gateway.prepare_session()
 
 
@@ -56,6 +66,7 @@ def test_guest_forgery_and_cross_session_denied(session, monkeypatch):
     assert result.status.value == "PREVIEW_READY"
     assert gateway.can_read(result.case_id)
     context.session_id = "server-session-b"
+    context.connection = "connection-b"
     gateway.prepare_session()
     assert not gateway.grant_valid() and not gateway.can_read(result.case_id)
     # C2-B không tin credential/state/query do caller giả mạo.
@@ -81,6 +92,7 @@ def test_rerun_replay_restart_never_reissues_or_resets(session, monkeypatch):
     assert _ledger() == before
     # Browser reload tạo session mới; không kế thừa quyền bằng mã đối chiếu cũ.
     context.session_id = "reloaded-server-session"
+    context.connection = "reloaded-connection"
     new_reference = gateway.prepare_session()
     assert new_reference != reference and not gateway.grant_valid()
     with pytest.raises(access.JudgeDenied):
@@ -171,6 +183,7 @@ def test_ui_rerun_binding_and_audit_ownership(judge, monkeypatch, caplog):
         return SimpleNamespace(session_id=str(id(context.session_state._state)))
 
     monkeypatch.setattr(gateway, "get_script_run_ctx", test_context)
+    monkeypatch.setattr(gateway, "_connection_fingerprint", lambda: "apptest-connection")
     monkeypatch.setenv("JUDGE_GATEWAY_SOCKET", "/unopened/ui.sock")
     monkeypatch.setattr(gateway, "_BINDINGS", {})
     monkeypatch.setattr(gateway, "_start_listener", lambda: None)
@@ -206,6 +219,88 @@ def test_ui_rerun_binding_and_audit_ownership(judge, monkeypatch, caplog):
     )
     assert grant.token not in rendered and SECRET not in rendered
     assert grant.token not in str(dict(app.query_params)) and SECRET not in caplog.text
+
+
+def test_connection_fingerprint_uses_websocket_key_and_fails_closed(monkeypatch):
+    key = "dGhlIHNhbXBsZSBub25jZQ=="
+    monkeypatch.setattr(gateway.st, "context", SimpleNamespace(headers={"Sec-Websocket-Key": key}))
+    assert gateway._connection_fingerprint() == hashlib.sha256(key.encode()).hexdigest()
+    monkeypatch.setattr(gateway.st, "context", SimpleNamespace(headers={}))
+    with pytest.raises(access.JudgeDenied):
+        gateway._connection_fingerprint()
+
+
+def test_native_known_id_reconnect_requires_new_operator_approval(judge, monkeypatch):
+    monkeypatch.setenv("JUDGE_GATEWAY_SOCKET", "/not-opened/reconnect.sock")
+    monkeypatch.setattr(gateway, "_BINDINGS", {})
+    monkeypatch.setattr(gateway, "_start_listener", lambda: None)
+    monkeypatch.setattr(AppSession, "register_file_watchers", lambda self: None)
+    context = SimpleNamespace(session_id="", connection="")
+    monkeypatch.setattr(gateway, "get_script_run_ctx", lambda **kwargs: context)
+    monkeypatch.setattr(gateway, "_connection_fingerprint", lambda: context.connection)
+    _provider(monkeypatch)
+
+    async def exercise():
+        script = ScriptData(str(Path.cwd() / "streamlit_app.py"))
+        manager = WebsocketSessionManager(
+            MemorySessionStorage(), MemoryUploadedFileManager("/unused"), ScriptCache(), None
+        )
+
+        class LocalRuntime:
+            def connect_session(self, client, user_info, existing_session_id=None):
+                return manager.connect_session(client, script, user_info, existing_session_id)
+
+        runtime = LocalRuntime()
+
+        def open_client(connection, previous=None):
+            headers = {"Sec-Websocket-Key": connection}
+            if previous is not None:
+                headers["Sec-Websocket-Protocol"] = "streamlit,unused," + previous
+            client = SimpleNamespace(request=SimpleNamespace(headers=headers), _runtime=runtime)
+            BrowserWebSocketHandler.open(client)
+            return client
+
+        victim = open_client("victim-websocket-key")
+        context.session_id, context.connection = victim._session_id, "victim-connection"
+        reference = gateway.prepare_session()
+        _operator("provision", reference, request_id="native-reconnect-victim-0001")
+        result = gateway.submit(_input())
+        assert result.status.value == "PREVIEW_READY"
+        victim_session = manager.get_active_session_info(victim._session_id).session
+        victim_session.session_state["restricted_demo_case_ids"] = [result.case_id]
+        assert gateway.grant_valid() and gateway.can_read(result.case_id)
+        ledger_before = _ledger()
+
+        # Control: ID của phiên vẫn active không thể nối vào cùng AppSession/binding.
+        active_attacker = open_client("active-attacker-key", victim._session_id)
+        assert active_attacker._session_id != victim._session_id
+        context.session_id, context.connection = active_attacker._session_id, "active-attacker"
+        assert not gateway.grant_valid() and not gateway.can_read(result.case_id)
+        manager.close_session(active_attacker._session_id)
+
+        manager.disconnect_session(victim._session_id)
+        attacker = open_client("reconnect-attacker-key", victim._session_id)
+        assert attacker._session_id == victim._session_id
+        restored = manager.get_active_session_info(attacker._session_id).session
+        assert restored is victim_session
+        assert restored.session_state["restricted_demo_case_ids"] == [result.case_id]
+        context.session_id, context.connection = attacker._session_id, "reconnect-attacker"
+
+        # Biết ID cũ không còn đủ để nhận grant/read; prepare tạo binding cần duyệt mới.
+        assert not gateway.grant_valid() and not gateway.can_read(result.case_id)
+        new_reference = gateway.prepare_session()
+        assert new_reference != reference
+        assert not gateway.grant_valid() and not gateway.can_read(result.case_id)
+        assert _ledger() == ledger_before
+        _operator("provision", new_reference, request_id="native-reconnect-new-approval-0001")
+        assert gateway.grant_valid() and not gateway.can_read(result.case_id)
+        _operator("revoke", new_reference)
+        assert not gateway.grant_valid()
+        assert not db.fetch_all("SELECT * FROM case_jobs")
+        assert not db.fetch_all("SELECT * FROM audit_events WHERE action LIKE 'SEND_%'")
+        manager.close_session(attacker._session_id)
+
+    asyncio.run(exercise())
 
 
 def test_socket_path_rejects_unsafe_directory(session, monkeypatch, tmp_path):
@@ -246,6 +341,7 @@ with tempfile.TemporaryDirectory(prefix="c2b-", dir="/private/tmp") as directory
     path = Path(directory) / "o.sock"
     os.environ["JUDGE_GATEWAY_SOCKET"] = str(path)
     g.get_script_run_ctx = lambda **kwargs: SimpleNamespace(session_id="smoke-session")
+    g._connection_fingerprint = lambda: "smoke-connection"
     reference = g.prepare_session()
     assert path.stat().st_mode & 0o777 == 0o600
     def rpc(operation, secret=SECRET, **kwargs):

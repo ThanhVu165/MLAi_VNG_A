@@ -6,6 +6,8 @@ trong thư mục riêng 0700 và secret server; không có HTTP/authentication p
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -31,6 +33,17 @@ _BINDINGS: dict[str, dict] = {}
 _LISTENER: socket.socket | None = None
 
 
+def _connection_fingerprint() -> str:
+    """Dấu vân tay server-only cho đúng WebSocket hiện tại, không phải credential."""
+    try:
+        websocket_key = st.context.headers.get("Sec-Websocket-Key")
+    except (AttributeError, RuntimeError):
+        websocket_key = None
+    if not isinstance(websocket_key, str) or not 16 <= len(websocket_key) <= 128:
+        raise access.JudgeDenied("Không xác minh được kết nối trình duyệt hiện tại.")
+    return hashlib.sha256(websocket_key.encode("utf-8")).hexdigest()
+
+
 def configured() -> bool:
     return bool(os.getenv(_KEY, ""))
 
@@ -47,8 +60,15 @@ def _current() -> dict | None:
     context = get_script_run_ctx(suppress_warning=True)
     if context is None:
         return None
-    # session_id do Streamlit server tạo, không lấy từ session_state/query/browser input.
-    return _BINDINGS.get(context.session_id)
+    try:
+        connection = _connection_fingerprint()
+    except access.JudgeDenied:
+        return None
+    record = _BINDINGS.get(context.session_id)
+    fingerprint = record.get("connection") if record else None
+    if not isinstance(fingerprint, str) or not hmac.compare_digest(fingerprint, connection):
+        return None
+    return record
 
 
 def prepare_session() -> str | None:
@@ -60,13 +80,23 @@ def prepare_session() -> str | None:
     context = get_script_run_ctx(suppress_warning=True)
     if context is None:
         raise access.JudgeDenied("Không có phiên server hợp lệ.")
+    connection = _connection_fingerprint()
     with _LOCK:
+        record = _BINDINGS.get(context.session_id)
+        fingerprint = record.get("connection") if record else None
+        if record is not None and (
+            not isinstance(fingerprint, str) or not hmac.compare_digest(fingerprint, connection)
+        ):
+            # Native reconnect có thể phục hồi AppSession từ ID do browser cung cấp.
+            # Kết nối mới chỉ nhận binding chưa cấp quyền và cần operator duyệt lại.
+            del _BINDINGS[context.session_id]
         if context.session_id not in _BINDINGS:
             if len(_BINDINGS) >= _MAX_SESSIONS:
                 raise access.JudgeDenied("Gateway đã đầy; cần operator kiểm tra.")
             _BINDINGS[context.session_id] = {
                 "reference": secrets.token_hex(8),
                 "session": secrets.token_urlsafe(32),
+                "connection": connection,
                 "grant": None,
                 "provisioned": False,
             }
