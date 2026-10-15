@@ -6,7 +6,14 @@ import sqlite3
 
 from core.pipeline import _new_ulid, process_case
 from core.types import CaseInput, PipelineResult
-from infra.judge_access import JudgeDenied, JudgeGrant, payload_hash, request_scope, validate_text
+from infra.judge_access import (
+    JudgeDenied,
+    JudgeGrant,
+    mark_processing,
+    payload_hash,
+    request_scope,
+    validate_text,
+)
 
 
 def process_judge_case(
@@ -20,6 +27,7 @@ def process_judge_case(
     fingerprint = payload_hash(inp.sender, inp.subject, inp.body, inp.received_at)
     try:
         with request_scope(grant, session, nonce, case_id, fingerprint):
+            mark_processing()
             return process_case(inp, actor="SYSTEM", case_id=case_id)
     except (sqlite3.Error, OSError):
         raise JudgeDenied(
