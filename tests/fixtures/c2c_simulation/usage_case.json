@@ -1,0 +1,7 @@
+{
+  "is_synthetic": true,
+  "model": "offline-controlled-provider",
+  "request": {"input_tokens": 8000, "max_output_tokens": 2000},
+  "usage": {"input_tokens": 8000, "output_tokens": 2000},
+  "data": {"simulation": "offline accounting only"}
+}
