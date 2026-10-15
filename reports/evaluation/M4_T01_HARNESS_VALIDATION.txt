@@ -1,0 +1,8 @@
+Captured command output — current M4-T01 preparation, baseline eaaeea88a59618b49219a20ae01a3cf3227cec87 plus task files.
+Command: .\.venv\Scripts\python.exe -m pytest tests/test_harness.py::test_paste_inbox_and_verify_share_the_same_pipeline verify/test_harness.py::test_same_escalation_type_with_wrong_rule_does_not_pass -q
+Environment: Python 3.11.16, pytest 8.3.3; repository tests/conftest.py network/provider guard and temporary isolated DB.
+Initial sandbox attempt: FAIL before collection; TEST_DATABASE_ISOLATION: cannot create safe test database; PermissionError [WinError 5] resolving sandbox temp. No test executed on this failed attempt.
+Retry with approved execution escalation:
+..                                                                       [100%]
+2 passed in 3.92s
+Evidence level: existing harness behavior with test doubles; no product replay, LIVE model or official evaluation.

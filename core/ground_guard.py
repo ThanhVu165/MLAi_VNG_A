@@ -15,6 +15,25 @@ ARTICLE_PATTERN = re.compile(r"Điều \d+", re.IGNORECASE)
 FORM_PATTERN = re.compile(r"Mẫu [A-Z0-9-]+", re.IGNORECASE)
 SENTENCE_PATTERN = re.compile(r"(?<=[.!?])\s+")
 CITATION_MARKER_PATTERN = re.compile(r"\[[^\]]+\]")
+CLOCK_PATTERN = re.compile(
+    r"(?<![\w:])(?P<hour>1[0-2]|[1-9])(?::(?P<minute>[0-5]\d))?\s*"
+    r"(?P<period>[ap])\.?m\.?(?!\w)",
+    re.IGNORECASE,
+)
+ACADEMIC_YEAR_PATTERNS = (
+    re.compile(
+        r"\bnăm\s+học\s+(?P<start>\d{4})\s*[-–—/]\s*(?P<end>\d{4})\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?P<start>\d{4})\s*[-–—/]\s*(?P<end>\d{4})\s+academic\s+year\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bacademic\s+year\s+(?P<start>\d{4})\s*[-–—/]\s*(?P<end>\d{4})\b",
+        re.IGNORECASE,
+    ),
+)
 FORBIDDEN_AUTHORITY_PHRASES = (
     "chúng tôi đồng ý",
     "đã được duyệt",
@@ -38,11 +57,67 @@ def _citation_failure(draft: DraftReply, evidence: EvidenceResult) -> bool:
     )
 
 
+def _without_grounded_clocks(body: str, evidence_text: str) -> str:
+    """Chỉ bỏ clock 12 giờ khi có giờ 24 tương đương nguyên vẹn trong evidence."""
+
+    def replace_clock(match: re.Match[str]) -> str:
+        hour = int(match["hour"])
+        minute = match["minute"] or "00"
+        if match["period"].lower() == "a":
+            hour = 0 if hour == 12 else hour
+        elif hour != 12:
+            hour += 12
+        hour_pattern = f"0?{hour}" if hour < 10 else str(hour)
+        time_pattern = rf"{hour_pattern}\s*(?::|giờ|h)\s*{minute}(?![\d:])"
+        if minute == "00":
+            time_pattern += rf"|{hour_pattern}\s+giờ(?!\s*\d)"
+        grounded = re.search(rf"(?<![\w:])(?:{time_pattern})(?!\w)", evidence_text)
+        return " " if grounded else match.group()
+
+    return CLOCK_PATTERN.sub(replace_clock, body)
+
+
+def _academic_year_pairs(text: str) -> set[tuple[str, str]]:
+    return {
+        (match["start"], match["end"])
+        for pattern in ACADEMIC_YEAR_PATTERNS
+        for match in pattern.finditer(text)
+    }
+
+
+def _without_grounded_academic_years(body: str, draft: DraftReply, evidence: EvidenceResult) -> str:
+    """Chỉ bỏ cặp năm học có đúng ngữ cảnh trong breadcrumb đã được trích dẫn."""
+
+    cited_ids = set(draft.citations)
+    grounded_pairs = {
+        pair
+        for chunk in evidence.chunks
+        if chunk.chunk_id in cited_ids
+        for pair in _academic_year_pairs(chunk.breadcrumb)
+    }
+    for pattern in ACADEMIC_YEAR_PATTERNS:
+        body = pattern.sub(
+            lambda match: (
+                " " if (match["start"], match["end"]) in grounded_pairs else match.group()
+            ),
+            body,
+        )
+    return body
+
+
 def _unsupported_value_failure(
-    draft: DraftReply, evidence: EvidenceResult, extra_text: str = ""
+    draft: DraftReply,
+    evidence: EvidenceResult,
+    extra_text: str = "",
+    *,
+    course_code: str = "",
+    input_text: str = "",
 ) -> bool:
     evidence_text = "\n".join([extra_text] + [chunk.text for chunk in evidence.chunks]).casefold()
     body = CITATION_MARKER_PATTERN.sub("", draft.body)
+    requested_academic_years = _academic_year_pairs(input_text)
+    if requested_academic_years and _academic_year_pairs(body) - requested_academic_years:
+        return True
     values = {
         match.group().casefold().rstrip(".,/")
         for pattern in (ARTICLE_PATTERN, FORM_PATTERN)
@@ -55,10 +130,28 @@ def _unsupported_value_failure(
     source_numbers = {
         normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(evidence_text)
     }
-    draft_numbers = {normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(body)}
+    numeric_body = _without_grounded_clocks(body, evidence_text)
+    numeric_body = _without_grounded_academic_years(numeric_body, draft, evidence)
+    numeric_body = _without_input_course_code(numeric_body, course_code, input_text)
+    draft_numbers = {
+        normalize_number(match.group()) for match in NUMBER_PATTERN.finditer(numeric_body)
+    }
     return not draft_numbers <= source_numbers or any(
         value not in evidence_text for value in values
     )
+
+
+def _without_input_course_code(body: str, course_code: str, input_text: str) -> str:
+    """Chỉ bỏ mã R2 nhận diện khi input gắn chính mã đó với môn/học phần."""
+    if not re.fullmatch(r"[A-Z]{2,4}[0-9]{3}", course_code):
+        return body
+    token = rf"(?<!\w){re.escape(course_code)}(?!\w)"
+    context = rf"\b(?:môn(?: học)?|học phần)\s+[^.!?\n;:]*?{token}"
+    if not re.search(context, input_text, re.IGNORECASE):
+        return body
+    # Không miễn kiểm tra khi token được dùng như một giá trị có đơn vị nghiệp vụ.
+    units = r"%|₫|đồng\b|vnd\b|ngày\b|giờ\b|tuần\b|tháng\b|năm\b|phần\s+trăm\b"
+    return re.sub(rf"{token}(?!\s*(?:{units}))", " ", body, flags=re.IGNORECASE)
 
 
 def _authority_failure(draft: DraftReply) -> bool:
@@ -100,11 +193,18 @@ def guard_groundedness(
     draft: DraftReply,
     evidence: EvidenceResult,
     record_event: bool = True,
+    course_code: str = "",
+    input_text: str = "",
 ) -> GroundednessResult:
     """Kiểm tra bốn điều kiện groundedness, giữ nguyên draft khi hạ cấp."""
     checks = (
         ("citation", _citation_failure(draft, evidence)),
-        ("number", _unsupported_value_failure(draft, evidence)),
+        (
+            "number",
+            _unsupported_value_failure(
+                draft, evidence, course_code=course_code, input_text=input_text
+            ),
+        ),
         ("authority", _authority_failure(draft)),
         ("citation_ratio", _citation_ratio_failure(draft)),
     )

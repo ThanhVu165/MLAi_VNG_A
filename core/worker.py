@@ -18,6 +18,8 @@ from core.types import CaseInput, CaseStatus, Decision
 from corpus.api import get_corpus_version
 from infra.audit import log_event
 from infra.db import execute, fetch_all, fetch_one, get_connection, now_iso, to_utc_iso
+from infra.demo_access import authorize_case_input, authorize_demo_action, is_restricted_demo
+from infra.judge_access import active_case, is_judge_case, JudgeDenied
 
 logger = logging.getLogger(__name__)
 POLL_SECONDS = 1
@@ -29,6 +31,18 @@ _stop = Event()
 
 def submit_case(inp: CaseInput, *, actor: str = "SYSTEM", parent_case_id: str | None = None) -> str:
     """Lưu nguyên email và công việc trong cùng giao dịch; cùng mã hộp thư chỉ nhận một lần."""
+    if active_case() is not None or (parent_case_id and is_judge_case(parent_case_id)):
+        raise JudgeDenied("Judge chỉ được xử lý đồng bộ qua facade được cấp quyền.")
+    if is_restricted_demo():
+        actor = "SYSTEM"
+    authorize_case_input(
+        sender=inp.sender,
+        subject=inp.subject,
+        body=inp.body,
+        received_at=inp.received_at,
+        channel=inp.channel,
+        external_id=inp.external_id,
+    )
     if (
         _is_missing_required(inp)
         or guard_input(sanitize_body(inp.body)).decision is Decision.INVALID_INPUT
@@ -128,10 +142,14 @@ def _recover_interrupted() -> None:
 def _mark_interrupted(case_id: str) -> None:
     reason = "Lần xử lý bị gián đoạn khi hệ thống dừng. Hãy chạy lại; chưa gửi email."
     with closing(get_connection()) as connection, connection:
-        case = connection.execute("SELECT status FROM cases WHERE case_id = ?", (case_id,)).fetchone()
+        case = connection.execute(
+            "SELECT status FROM cases WHERE case_id = ?", (case_id,)
+        ).fetchone()
         if case is not None and case["status"] == CaseStatus.HUMAN_DECIDED:
             log_event(
-                case_id=case_id, actor="SYSTEM", action="CASE_ERROR",
+                case_id=case_id,
+                actor="SYSTEM",
+                action="CASE_ERROR",
                 reason="Bước soạn thư bị gián đoạn. Quyết định của chuyên viên vẫn được giữ; hãy yêu cầu soạn lại.",
                 connection=connection,
             )
@@ -148,13 +166,19 @@ def _mark_interrupted(case_id: str) -> None:
             (str(uuid4()), Decision.ERROR, reason, now_iso(), case_id),
         )
         log_event(
-            case_id=case_id, actor="SYSTEM", action="CASE_ERROR", reason=reason,
+            case_id=case_id,
+            actor="SYSTEM",
+            action="CASE_ERROR",
+            reason=reason,
             connection=connection,
         )
 
 
 def retry_case(case_id: str, *, actor: str = "HUMAN:local") -> str:
     """Tạo lần chạy mới liên kết email lỗi/đã hủy, không chỉnh sửa lần chạy cũ."""
+    if is_judge_case(case_id):
+        raise JudgeDenied("Không chạy lại judge qua thao tác chuyên viên.")
+    authorize_demo_action("xử lý lại case")
     case = fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,))
     if case is None:
         raise ValueError("Không tìm thấy email cần chạy lại.")
@@ -171,6 +195,7 @@ def retry_case(case_id: str, *, actor: str = "HUMAN:local") -> str:
 
 def queue_resume(case_id: str, *, connection: Connection | None = None) -> None:
     """Xếp việc soạn thư theo quyết định đã lưu, có thể cùng giao dịch của giao diện."""
+    authorize_demo_action("tiếp tục sau quyết định chuyên viên")
     if connection is None:
         with closing(get_connection()) as owned, owned:
             owned.execute("BEGIN IMMEDIATE")
@@ -195,7 +220,9 @@ def queue_resume(case_id: str, *, connection: Connection | None = None) -> None:
     ).rowcount
     if changed:
         log_event(
-            case_id=case_id, actor=human["actor"], action="CASE_QUEUED",
+            case_id=case_id,
+            actor=human["actor"],
+            action="CASE_QUEUED",
             reason="Đã lưu yêu cầu soạn thư theo quyết định của chuyên viên; chưa gửi email.",
             connection=connection,
         )
@@ -220,7 +247,9 @@ def _resume_job(case: Row, lease: str) -> None:
                 (state, case_id, lease),
             )
             log_event(
-                case_id=case_id, actor="SYSTEM", action="CASE_ERROR",
+                case_id=case_id,
+                actor="SYSTEM",
+                action="CASE_ERROR",
                 reason=(
                     mask_pii(str(error))
                     if str(error).startswith(("Dịch vụ AI", "Chưa cấu hình"))
@@ -242,6 +271,7 @@ def _dispatch_pending() -> None:
 
 def worker_tick() -> None:
     """Khôi phục lease hết hạn, gửi thư đến hạn, nhận tối đa một công việc bằng khóa DB."""
+    authorize_demo_action("chạy tác tử nền")
     _recover_interrupted()
     _dispatch_pending()
     job = fetch_one("SELECT * FROM case_jobs WHERE state = 'queued' ORDER BY rowid LIMIT 1")
@@ -274,8 +304,10 @@ def worker_tick() -> None:
             "SELECT status FROM cases WHERE case_id = ?", (case["case_id"],)
         ).fetchone()
         # Người duyệt có thể lưu quyết định ngay trước khi lượt xử lý ban đầu nhả job.
-        state = "queued" if current and current["status"] == CaseStatus.HUMAN_DECIDED else (
-            "failed" if result.status is CaseStatus.ERROR else "done"
+        state = (
+            "queued"
+            if current and current["status"] == CaseStatus.HUMAN_DECIDED
+            else ("failed" if result.status is CaseStatus.ERROR else "done")
         )
         connection.execute(
             "UPDATE case_jobs SET state = ?, lease_until = NULL WHERE case_id = ? AND state = 'running' AND lease_until = ?",
@@ -296,6 +328,8 @@ def _loop(dispatch_only: bool = False) -> None:
 
 def start_worker() -> None:
     """Khởi động một lần mỗi tiến trình; đổi trang/tải lại không tạo thêm worker."""
+    if is_restricted_demo():
+        return
     with _start_lock:
         if _threads and all(thread.is_alive() for thread in _threads):
             return
@@ -303,3 +337,7 @@ def start_worker() -> None:
             thread = Thread(target=_loop, args=(dispatch_only,), name=name, daemon=True)
             thread.start()
             _threads.append(thread)
+        logger.warning(
+            "Background workers started and alive: %s",
+            ", ".join(thread.name for thread in _threads if thread.is_alive()),
+        )

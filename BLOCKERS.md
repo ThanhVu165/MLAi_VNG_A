@@ -1,5 +1,10 @@
 # BLOCKERS.md
 
+> **Lưu ý lịch sử:** Tệp này giữ nguyên các blocker và cập nhật tại thời điểm chúng
+> được ghi nhận; một mục cũ không tự mô tả trạng thái `dev` hiện hành. Đối chiếu
+> `PROJECT_SPEC.md`, `STATUS.md`, Task Contract trên Trello và
+> [`reports/README.md`](reports/README.md) trước khi dùng một mục làm kết luận hiện tại.
+
 - [B-08][Agent B] Đã ghi `conflict_flag`/`conflict_with` cho chunk ACTIVE và test phát hiện cặp nguồn mâu thuẫn. [cập nhật 2026-09-21] `corpus.api` đã đọc index/nguồn ACTIVE thật; còn cần Agent A tiêu thụ `conflict_flag` trong Evidence Validator để xác minh runtime trả `OUT_OF_POLICY`. Không sửa `core/` vượt phạm vi B-08.
 
 - [B-04][Agent B][đã xử lý 2026-09-21] Đã ghim `pdfplumber==0.11.4`; B-04 trích xuất PDF/DOCX và kiểm thử chuẩn hóa đã hoàn tất.

@@ -1,16 +1,24 @@
-# PROJECT_SPEC.md — Escalation Referee · Sprint 1A
+# PROJECT_SPEC.md — Escalation Referee
 
 ## 1. Hiệu lực đặc tả và trạng thái nghiệm thu
 
-Bản này đồng bộ cấu trúc tái thiết kế đã được người dùng cho phép ngày 22/09/2026. Nó thay thế các chỉ dẫn cũ mâu thuẫn về quyền trả lời ở cấp đoạn, chặn email theo số từ, gộp lỗi kỹ thuật vào chuyển tiếp và bố cục sáu trang. Lịch sử thiết kế cũ được giữ trong Git, không duy trì hai bộ quy tắc song song.
+Bản này đồng bộ cấu trúc tái thiết kế đã được người dùng cho phép ngày 22/09/2026.
+Nguồn gốc Sprint 1A là lịch sử; các technical contract bên dưới tiếp tục áp dụng
+trong Sprint 2 nếu Task Contract không thay đổi chúng theo quy trình được duyệt.
 
-Thứ tự áp dụng: yêu cầu trực tiếp mới nhất của người dùng → brief Đề A và yêu cầu tối thiểu Sprint 1 → đặc tả này → AGENT.md → TASKBOARD.md. Quyết định cho phép tái cấu trúc bao gồm thay đổi contract, schema và UI cần thiết; không cho phép sửa kỳ vọng kiểm thử để che lỗi.
+Task Contract/authorization mới nhất của Project Coordinator quyết định scope;
+brief Đề A và technical contract trong tài liệu này vẫn là ranh giới sản phẩm.
+[TEAM_WORKFLOW.md](docs/TEAM_WORKFLOW.md) và `AGENT.md` điều phối cách thực hiện.
+Task Contract chỉ đổi technical contract khi ghi rõ `CONTRACT-CHANGE` và qua review.
+`TASKBOARD.md` là lịch sử Sprint 1, không quản lý task Sprint 2. Không sửa kỳ vọng
+kiểm thử để che lỗi.
 
-**Chỉ đạo hiện hành: hoàn thành tái cấu trúc trước, nghiệm thu sau. Không chạy thêm kiểm thử, lint, format, type-check, SDK converter, LLM live hoặc UI/E2E khi người dùng chưa đổi chỉ đạo.** Có thể đọc mã, sửa mã và viết kiểm tra chưa chạy.
+Offline tests, lint, format, type-check và E2E local được phép khi Task Contract yêu
+cầu. LIVE/API luôn cần authorization cụ thể; việc gọi dịch vụ lặp lại khi đang lỗi
+không thay thế chẩn đoán nguyên nhân. Trạng thái milestone xem `STATUS.md`; technical
+spec không tự chứng nhận một gate đã PASS.
 
-Trạng thái: **đã/đang triển khai cấu trúc, CHƯA NGHIỆM THU bản cuối**. Nội dung mô tả dưới đây là yêu cầu và thiết kế hiện hành, không phải chứng nhận hoạt động. Kết quả xanh của bản trước chỉ là bằng chứng lịch sử, không được dùng để đánh DONE cho bản sau. Việc gọi dịch vụ liên tục khi đang lỗi không thay thế sửa nguyên nhân trong mã.
-
-## 2. Phạm vi Sprint 1A
+## 2. Phạm vi sản phẩm đã chốt từ Sprint 1A
 
 Một quy trình duy nhất: tiếp nhận và xử lý email hành chính sinh viên của văn phòng Công tác Sinh viên.
 
@@ -39,6 +47,46 @@ Thành phần thật: nhập/lưu email, gọi LLM khi ở chế độ live, x�
 
 ## 4. Kiến trúc và nguồn chân lý của contract
 
+### C1 — Judge preview offline (Coordinator-approved amendment 15/10/2026)
+
+`CaseStatus.PREVIEW_READY` là trạng thái kết thúc chỉ xem của Judge AUTO_REPLY đã qua
+Policy/Ground Guard. Quyết định vẫn là AUTO_REPLY; case, snapshot và CASE_RESOLVED
+được lưu cùng giao dịch, send_deadline=NULL, không SEND_SCHEDULED/SEND_DISPATCHED.
+Canonical/Verify4 và private mode giữ lifecycle hiện hành. Không thêm audit action/schema.
+
+Judge lane mặc định tắt (`JUDGE_INPUT_ENABLED=0`); server operator cấp opaque grant cho
+session qua `infra/judge_access.py`, không có UI tự cấp quyền. Đây là session sở hữu ẩn
+danh, không phải xác thực production. Quota, nonce, reservation và ownership hash lưu trong
+namespace `judge_c1:*` của settings bằng giao dịch BEGIN IMMEDIATE. Crash giữ reservation
+để fail closed; restart không cấp lại ngân sách. Hạn mức bảo thủ: grant 3 request/600 giây,
+session 10, toàn DB 500, tối đa 2 request đồng thời và 1/session. Không có tự reset ngân sách.
+
+Facade đồng bộ `core/judge_input.py` gọi pipeline chung với request context được reserve
+phía server. Worker không nhận job judge; pipeline kiểm lại payload/case binding và adapter
+chỉ cho replay/offline trong context judge. Ngân sách USD cho C1 bằng 0 vì không gọi
+provider; Judge LIVE tuân theo amendment C2 bên dưới.
+
+### C2 — Judge LIVE có kiểm soát (Coordinator-approved amendment 16/10/2026)
+
+Judge LIVE giữ nguyên lane C1 và chỉ mở khi `APP_MODE=restricted_demo`, hai switch Judge
+bật, `LLM_MODE=live`, provider OpenAI, model runtime khớp model được duyệt, cache tắt và
+credential có mặt. Mỗi browser session cần grant riêng do operator cấp; grant không truyền
+qua frontend/query, không dùng lại sau revoke và không vượt 3 case. Session tối đa 10 case;
+toàn DB tối đa 500 case và 2 case đồng thời, tối đa 1 case/session.
+
+Budget được reserve nguyên tử, bền vững và fail-closed trước pipeline: USD 0,01/case,
+USD 0,10/session và USD 5,00/toàn DB; tương ứng reserve 24.000 input + 6.000 output
+token/case, 300.000 token/session và 15.000.000 token/toàn DB. Mỗi case tối đa 3 provider
+attempt, 2.000 output token/attempt. Reservation, kể cả `FINISHED`, `HOLD` hoặc
+`RECOVERED`, không được refund và restart/grant mới không reset quota. Attempt chưa đối
+soát, usage không hợp lệ, ledger hỏng, model/config lệch, revoke hoặc kill switch phải chặn
+mọi provider call tiếp theo.
+
+Judge LIVE chỉ kết thúc ở preview: không tạo worker/send job, `send_deadline=NULL`, không
+`SEND_SCHEDULED`/`SEND_DISPATCHED`. `JUDGE_INPUT_ENABLED=0`, `JUDGE_LIVE_ENABLED=0`
+hoặc `LLM_MODE=replay` là kill switch. Amendment này không đổi SQLite schema, enum, audit
+action hay quyền gửi email thật.
+
 Luồng chính:
 
 ```text
@@ -66,7 +114,11 @@ Không chép lại enum/dataclass/chữ ký API trong tài liệu vì sẽ tạo
 | Gọi LLM, ngân sách gọi, audit | infra/llm.py, infra/audit.py |
 | Dữ liệu và tiêu chí so kết quả kiểm thử | verify/cases_*.json, verify/harness.py |
 
-Phân công: A — core/ và policies/; B — corpus/, trang Quy định và kiểm thử nguồn; C — infra/, UI còn lại, Verify và tích hợp. core/types.py và tài liệu chung phải được điều phối trước khi sửa. Corpus có thể dùng kiểu chung trong core/types.py, không gọi pipeline hoặc UI. Runtime đọc corpus qua corpus/api.py. Worker thuộc core/, không đặt logic nghiệp vụ vào infra/.
+Task Owner và phạm vi file do Trello Task Contract xác định. Ranh giới module vẫn
+giữ: Corpus có thể dùng kiểu chung trong `core/types.py`, không gọi pipeline hoặc
+UI; Runtime đọc corpus qua `corpus/api.py`; worker thuộc `core/`, không đặt logic
+nghiệp vụ vào `infra/`. `core/types.py` và contract dùng chung cần Coordinator phê
+duyệt cùng independent review trước khi sửa.
 
 Python 3.11 và các phụ thuộc trong requirements.txt là môi trường dự án. Không thêm dependency, adapter hoặc dịch vụ chỉ để giải quyết việc vài dòng stdlib/phụ thuộc sẵn có đã làm được.
 
@@ -129,7 +181,7 @@ Mọi lời gọi qua infra.llm.call_json. Không dùng replay/câu trả lời 
 
 Ngân sách và timeout lấy từ infra/settings.py và infra/llm.py: hiện tại tối đa bốn attempt và 60 giây cho một lượt xử lý, kể cả retry; mỗi call có timeout hữu hạn. Lỗi tạm thời chỉ thử lại tối đa một lần trong ngân sách. Lỗi cấu hình/schema không được retry vòng lặp. Không giữ giao dịch ghi SQLite qua call LLM.
 
-Schema gửi Gemini phải đúng dạng SDK đang dùng: type đơn, nullable khi cần, enum phù hợp. Không đưa JSON Schema union dạng type: [string, null] vào SDK không hỗ trợ. Ngày tiếp tục được kiểm tra trong mã, content_hash do hệ thống tính; đề xuất metadata không tự kích hoạt nguồn.
+Runtime chỉ hỗ trợ OpenAI qua infra/llm.py; provider khác bị từ chối, không fallback. Schema nguồn được sao chép và đóng object bằng `_openai_schema` trước khi gửi structured output; không mutate schema gốc. Ngày tiếp tục được kiểm tra trong mã, content_hash do hệ thống tính; đề xuất metadata không tự kích hoạt nguồn.
 
 Khi dịch vụ đang trả 503 hoặc lỗi cấu hình, lưu rõ vấn đề và ngừng vòng gọi lặp. Hướng khắc phục phải phân biệt thử lại sau với sửa cấu hình/mã; không khẳng định lỗi nhà cung cấp đã được sửa chỉ vì unit test xanh.
 
@@ -235,16 +287,22 @@ verify/cases_fresh5.json là dữ liệu bổ sung để phát hiện học thu�
 
 ## 11. Nghiệm thu và điều kiện DONE
 
-Sau khi hoàn thành tái cấu trúc và người dùng cho phép kiểm chứng lại:
+Validation chọn theo Task Contract và rủi ro thay đổi:
 
 - Kiểm tra format/lint/type/unit trên **trạng thái mã cuối**, ghi lệnh, môi trường, exit code và phạm vi; không đổi code chỉ để làm xanh expected sai.
 - Chạy riêng verify4, escalation5 và full15 bằng đường chung. Báo từng kết quả/rule/căn cứ, tổng thời gian và nhánh lỗi; giữ tiêu chí 90 giây.
-- Kiểm chứng LLM live với email mới và nguồn mới: nạp → đề xuất → xác nhận nguồn → hỏi được từ nguồn đó. Không dùng replay/cache cũ để tuyên bố đã gọi dịch vụ thật.
+- Khi được cấp quyền LIVE cụ thể, kiểm chứng LLM với email mới và nguồn mới: nạp →
+  đề xuất → xác nhận nguồn → hỏi được từ nguồn đó. Không dùng replay/cache cũ để
+  tuyên bố đã gọi dịch vụ thật.
 - Kiểm chứng thiếu trường, injection, đa ý định, thiếu fact, ngoài phạm vi, ngoại lệ, lỗi SDK/dịch vụ và hồi phục; lỗi kỹ thuật không lọt vào ba nhóm nghiệp vụ.
 - Thao tác thật: tạm dừng, hủy, chuyên viên quyết định/soạn lại/duyệt gửi, đổi trang/tải lại, worker bị gián đoạn, nguồn đổi trong lúc xử lý/chờ gửi.
 - Kiểm chứng DB cũ qua migration có backup, seed không ghi đè, snapshot không mất căn cứ, lỗi giữa giao dịch nguồn rollback toàn bộ và không lộ nguồn duyệt dở cho worker.
 
-Local đạt mới là cơ sở triển khai public; không suy ra URL công khai, trải nghiệm điện thoại/ẩn danh hay yêu cầu hồ sơ nộp đã đạt từ unit test. Các mục live URL, repo/lịch sử phát triển, slide/video/build log, phương pháp đo và người dùng thực tế tiếp tục đối chiếu brief, TASKBOARD và RUNBOOK; chưa có bằng chứng thì ghi chưa hoàn tất.
+Local đạt mới là cơ sở triển khai public; không suy ra URL công khai, trải nghiệm
+điện thoại/ẩn danh hay yêu cầu hồ sơ nộp đã đạt từ unit test. Các mục live URL,
+repo/lịch sử phát triển, slide/video/build log, phương pháp đo và người dùng thực tế
+tiếp tục đối chiếu brief, `docs/SPRINT_ROADMAP.md`, `docs/TEAM_WORKFLOW.md` và
+`docs/RUNBOOK.md`; chưa có bằng chứng thì ghi chưa hoàn tất.
 
 Chỉ ghi DONE khi đủ kết quả nghiệm thu và tài liệu trạng thái đúng sự thật. Không bịa số liệu tác động, người dùng hoặc ý kiến phản hồi. Danh sách hạn chế nuôi docs/known_failures.md và phần giới hạn của bài thi; không xóa lịch sử thất bại sau khi sửa.
 

@@ -1,0 +1,148 @@
+Captured pre-fix synthetic regression output; workspace paths redacted as <REPO>; trailing output whitespace stripped.
+test_case_schema_is_not_bypassed_by_semantic_helper (test_protocol.ProtocolTest.test_case_schema_is_not_bypassed_by_semantic_helper) ...
+  test_case_schema_is_not_bypassed_by_semantic_helper (test_protocol.ProtocolTest.test_case_schema_is_not_bypassed_by_semantic_helper) (record={'id': 's', 'is_synthetic': True, 'gold_version': 'SYNTHETIC-v1', 'input': {'sender': 'synthetic@example.test', 'subject': 'Synthetic contract check', 'body': 'Synthetic metadata validation only.', 'received_at': '2026-10-14T00:00:00Z'}, 'expected_decision': 'AUTO_REPLY', 'expected_type': None, 'expected_rule_id': 'P05', 'unexpected': True}) ... FAIL
+  test_case_schema_is_not_bypassed_by_semantic_helper (test_protocol.ProtocolTest.test_case_schema_is_not_bypassed_by_semantic_helper) (record={'id': 's', 'is_synthetic': True, 'input': {'sender': 'synthetic@example.test', 'subject': 'Synthetic contract check', 'body': 'Synthetic metadata validation only.', 'received_at': '2026-10-14T00:00:00Z'}, 'expected_decision': 'AUTO_REPLY', 'expected_type': None, 'expected_rule_id': 'P05'}) ... FAIL
+test_confusion_failures_and_denominators (test_protocol.ProtocolTest.test_confusion_failures_and_denominators) ... ok
+test_content_review_denominators (test_protocol.ProtocolTest.test_content_review_denominators) ... ok
+test_empty_and_all_failure_populations (test_protocol.ProtocolTest.test_empty_and_all_failure_populations) ... ok
+test_ids_and_gold_are_not_silently_repaired (test_protocol.ProtocolTest.test_ids_and_gold_are_not_silently_repaired) ... ok
+test_malformed_and_technical_are_distinct (test_protocol.ProtocolTest.test_malformed_and_technical_are_distinct) ... ok
+test_manifest_exact_bytes_and_rejected_drift (test_protocol.ProtocolTest.test_manifest_exact_bytes_and_rejected_drift) ... ok
+test_manifest_runtime_binding_and_falsey_authorization (test_protocol.ProtocolTest.test_manifest_runtime_binding_and_falsey_authorization) ...
+  test_manifest_runtime_binding_and_falsey_authorization (test_protocol.ProtocolTest.test_manifest_runtime_binding_and_falsey_authorization) (field='runtime_sha', value='0000000000000000000000000000000000000000') ... ERROR
+  test_manifest_runtime_binding_and_falsey_authorization (test_protocol.ProtocolTest.test_manifest_runtime_binding_and_falsey_authorization) (field='execution_authorized', value=None) ... ERROR
+  test_manifest_runtime_binding_and_falsey_authorization (test_protocol.ProtocolTest.test_manifest_runtime_binding_and_falsey_authorization) (field='execution_authorized', value=0) ... ERROR
+  test_manifest_runtime_binding_and_falsey_authorization (test_protocol.ProtocolTest.test_manifest_runtime_binding_and_falsey_authorization) (field='unexpected', value=True) ... ERROR
+test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) ...
+  test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'elapsed_ms': 1, 'outcome': 'TECHNICAL_ERROR', 'error_code': None, 'artifact_ref': 'synthetic-result'}) ... FAIL
+  test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'elapsed_ms': 1, 'outcome': 'VALID', 'error_code': None, 'artifact_ref': 'synthetic-result', 'unexpected': True}) ... FAIL
+  test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'outcome': 'VALID', 'error_code': None, 'artifact_ref': 'synthetic-result'}) ... FAIL
+  test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'elapsed_ms': -1, 'outcome': 'VALID', 'error_code': None, 'artifact_ref': 'synthetic-result'}) ... FAIL
+  test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'elapsed_ms': nan, 'outcome': 'VALID', 'error_code': None, 'artifact_ref': 'synthetic-result'}) ... FAIL
+test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) ... FAIL
+test_rule_and_stop_mismatch_stay_business (test_protocol.ProtocolTest.test_rule_and_stop_mismatch_stay_business) ... ok
+test_schema_case_and_timestamp (test_protocol.ProtocolTest.test_schema_case_and_timestamp) ... ok
+test_schema_result_normalization (test_protocol.ProtocolTest.test_schema_result_normalization) ... ok
+test_source_harness_contract_without_importing_app (test_protocol.ProtocolTest.test_source_harness_contract_without_importing_app) ... ok
+test_wilson_bounds_and_symmetry (test_protocol.ProtocolTest.test_wilson_bounds_and_symmetry) ... ok
+test_wilson_known_values_and_empty (test_protocol.ProtocolTest.test_wilson_known_values_and_empty) ... ok
+test_wilson_rejects_invalid_counts (test_protocol.ProtocolTest.test_wilson_rejects_invalid_counts) ... ok
+
+======================================================================
+ERROR: test_manifest_runtime_binding_and_falsey_authorization (test_protocol.ProtocolTest.test_manifest_runtime_binding_and_falsey_authorization) (field='runtime_sha', value='0000000000000000000000000000000000000000')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 286, in test_manifest_runtime_binding_and_falsey_authorization
+    validate_manifest({**manifest, key: value}, data, protocol,
+TypeError: validate_manifest() got an unexpected keyword argument 'runtime_sha'
+
+======================================================================
+ERROR: test_manifest_runtime_binding_and_falsey_authorization (test_protocol.ProtocolTest.test_manifest_runtime_binding_and_falsey_authorization) (field='execution_authorized', value=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 286, in test_manifest_runtime_binding_and_falsey_authorization
+    validate_manifest({**manifest, key: value}, data, protocol,
+TypeError: validate_manifest() got an unexpected keyword argument 'runtime_sha'
+
+======================================================================
+ERROR: test_manifest_runtime_binding_and_falsey_authorization (test_protocol.ProtocolTest.test_manifest_runtime_binding_and_falsey_authorization) (field='execution_authorized', value=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 286, in test_manifest_runtime_binding_and_falsey_authorization
+    validate_manifest({**manifest, key: value}, data, protocol,
+TypeError: validate_manifest() got an unexpected keyword argument 'runtime_sha'
+
+======================================================================
+ERROR: test_manifest_runtime_binding_and_falsey_authorization (test_protocol.ProtocolTest.test_manifest_runtime_binding_and_falsey_authorization) (field='unexpected', value=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 286, in test_manifest_runtime_binding_and_falsey_authorization
+    validate_manifest({**manifest, key: value}, data, protocol,
+TypeError: validate_manifest() got an unexpected keyword argument 'runtime_sha'
+
+======================================================================
+FAIL: test_case_schema_is_not_bypassed_by_semantic_helper (test_protocol.ProtocolTest.test_case_schema_is_not_bypassed_by_semantic_helper) (record={'id': 's', 'is_synthetic': True, 'gold_version': 'SYNTHETIC-v1', 'input': {'sender': 'synthetic@example.test', 'subject': 'Synthetic contract check', 'body': 'Synthetic metadata validation only.', 'received_at': '2026-10-14T00:00:00Z'}, 'expected_decision': 'AUTO_REPLY', 'expected_type': None, 'expected_rule_id': 'P05', 'unexpected': True})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 270, in test_case_schema_is_not_bypassed_by_semantic_helper
+    with self.subTest(record=invalid), self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_case_schema_is_not_bypassed_by_semantic_helper (test_protocol.ProtocolTest.test_case_schema_is_not_bypassed_by_semantic_helper) (record={'id': 's', 'is_synthetic': True, 'input': {'sender': 'synthetic@example.test', 'subject': 'Synthetic contract check', 'body': 'Synthetic metadata validation only.', 'received_at': '2026-10-14T00:00:00Z'}, 'expected_decision': 'AUTO_REPLY', 'expected_type': None, 'expected_rule_id': 'P05'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 270, in test_case_schema_is_not_bypassed_by_semantic_helper
+    with self.subTest(record=invalid), self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'elapsed_ms': 1, 'outcome': 'TECHNICAL_ERROR', 'error_code': None, 'artifact_ref': 'synthetic-result'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 259, in test_result_schema_is_enforced_before_scoring
+    self.assertEqual(outcome(invalid), "MALFORMED")
+AssertionError: 'VALID' != 'MALFORMED'
+- VALID
++ MALFORMED
+
+
+======================================================================
+FAIL: test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'elapsed_ms': 1, 'outcome': 'VALID', 'error_code': None, 'artifact_ref': 'synthetic-result', 'unexpected': True})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 259, in test_result_schema_is_enforced_before_scoring
+    self.assertEqual(outcome(invalid), "MALFORMED")
+AssertionError: 'VALID' != 'MALFORMED'
+- VALID
++ MALFORMED
+
+
+======================================================================
+FAIL: test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'outcome': 'VALID', 'error_code': None, 'artifact_ref': 'synthetic-result'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 259, in test_result_schema_is_enforced_before_scoring
+    self.assertEqual(outcome(invalid), "MALFORMED")
+AssertionError: 'VALID' != 'MALFORMED'
+- VALID
++ MALFORMED
+
+
+======================================================================
+FAIL: test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'elapsed_ms': -1, 'outcome': 'VALID', 'error_code': None, 'artifact_ref': 'synthetic-result'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 259, in test_result_schema_is_enforced_before_scoring
+    self.assertEqual(outcome(invalid), "MALFORMED")
+AssertionError: 'VALID' != 'MALFORMED'
+- VALID
++ MALFORMED
+
+
+======================================================================
+FAIL: test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring) (record={'case_id': 's', 'actual_decision': 'AUTO_REPLY', 'actual_type': None, 'rule_id': 'P05', 'elapsed_ms': nan, 'outcome': 'VALID', 'error_code': None, 'artifact_ref': 'synthetic-result'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 259, in test_result_schema_is_enforced_before_scoring
+    self.assertEqual(outcome(invalid), "MALFORMED")
+AssertionError: 'VALID' != 'MALFORMED'
+- VALID
++ MALFORMED
+
+
+======================================================================
+FAIL: test_result_schema_is_enforced_before_scoring (test_protocol.ProtocolTest.test_result_schema_is_enforced_before_scoring)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<REPO>\docs\evaluation\test_protocol.py", line 265, in test_result_schema_is_enforced_before_scoring
+    self.assertEqual(outcome(error_claiming_valid), "MALFORMED")
+AssertionError: 'TECHNICAL_ERROR' != 'MALFORMED'
+- TECHNICAL_ERROR
++ MALFORMED
+
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.052s
+
+FAILED (failures=8, errors=4)

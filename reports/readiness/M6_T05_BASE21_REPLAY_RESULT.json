@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "task": "M6-T05",
+  "scope": "BASE_PACK_V1",
+  "tested_sha": "8371b34385c39696d8ccfd06dae93311fd3e58fa",
+  "cassette_count": 21,
+  "observed_calls": 24,
+  "replay_hits": 21,
+  "replay_misses": 3,
+  "zero_miss_flows": [
+    "DEV_HUMAN_R11",
+    "DEV_ROUTINE",
+    "V01",
+    "V02",
+    "V04"
+  ],
+  "blocked_flows": [
+    "DEV_AUTHORITY",
+    "DEV_FACT",
+    "V03"
+  ],
+  "missing_calls": [
+    {
+      "flow": "DEV_AUTHORITY",
+      "step": "R7_question_repair",
+      "prompt_hash": "33f1ec4b55430905cdac8c374a67001370e34fce11bcfca2033be18ad5c13882",
+      "reason": "Không có cassette hợp lệ cho prompt này."
+    },
+    {
+      "flow": "DEV_FACT",
+      "step": "R7_question_repair",
+      "prompt_hash": "436b6d239c2b25acc563ee85a6447002f8331cda4c1e9e9943faa68bbea6fdbf",
+      "reason": "Không có cassette hợp lệ cho prompt này."
+    },
+    {
+      "flow": "V03",
+      "step": "R7_question_repair",
+      "prompt_hash": "6a737acc3a5baf535f278ed20021f9fdc6bbfc12822ed0598dd040ffdc63793c",
+      "reason": "Không có cassette hợp lệ cho prompt này."
+    }
+  ],
+  "flows": [
+    {
+      "flow": "DEV_AUTHORITY",
+      "observed_calls": 4,
+      "replay_misses": 1,
+      "status": "ERROR",
+      "decision": "ERROR",
+      "escalation_type": null,
+      "business_match": null,
+      "job": null,
+      "draft_count": 0
+    },
+    {
+      "flow": "DEV_FACT",
+      "observed_calls": 4,
+      "replay_misses": 1,
+      "status": "ERROR",
+      "decision": "ERROR",
+      "escalation_type": null,
+      "business_match": null,
+      "job": null,
+      "draft_count": 0
+    },
+    {
+      "flow": "DEV_HUMAN_R11",
+      "observed_calls": 1,
+      "replay_misses": 0,
+      "status": "HUMAN_DECIDED",
+      "decision": null,
+      "escalation_type": null,
+      "business_match": null,
+      "job": {
+        "state": "failed"
+      },
+      "draft_count": 0
+    },
+    {
+      "flow": "DEV_ROUTINE",
+      "observed_calls": 3,
+      "replay_misses": 0,
+      "status": "PENDING_SEND",
+      "decision": "AUTO_REPLY",
+      "escalation_type": null,
+      "business_match": null,
+      "job": null,
+      "draft_count": 1
+    },
+    {
+      "flow": "V01",
+      "observed_calls": 3,
+      "replay_misses": 0,
+      "status": null,
+      "decision": "AUTO_REPLY",
+      "escalation_type": null,
+      "business_match": true,
+      "job": null,
+      "draft_count": 1
+    },
+    {
+      "flow": "V02",
+      "observed_calls": 3,
+      "replay_misses": 0,
+      "status": null,
+      "decision": "ESCALATE",
+      "escalation_type": "FACT_UNRESOLVED",
+      "business_match": false,
+      "job": null,
+      "draft_count": 1
+    },
+    {
+      "flow": "V03",
+      "observed_calls": 4,
+      "replay_misses": 1,
+      "status": null,
+      "decision": "ERROR",
+      "escalation_type": null,
+      "business_match": false,
+      "job": null,
+      "draft_count": 0
+    },
+    {
+      "flow": "V04",
+      "observed_calls": 2,
+      "replay_misses": 0,
+      "status": null,
+      "decision": "ESCALATE",
+      "escalation_type": "OUT_OF_POLICY",
+      "business_match": true,
+      "job": null,
+      "draft_count": 0
+    }
+  ],
+  "live_provider_calls": 0,
+  "network_guard": "socket, provider live call and cache read denied",
+  "coverage_status": "FAIL_3_UNRECORDED_REPAIR_PROMPTS_AFTER_SEMANTIC_VALIDATION_FAILURE",
+  "business_status": "FAIL_SEPARATE_FROM_REPLAY_INTEGRITY",
+  "task_status": "NOT_DONE; Minh self-review, Nam final review and Coordinator acceptance pending"
+}

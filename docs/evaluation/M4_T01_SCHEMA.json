@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M4-T01 evaluation preparation records; no execution authorization",
+  "oneOf": [
+    {"$ref": "#/$defs/case"},
+    {"$ref": "#/$defs/result"},
+    {"$ref": "#/$defs/manifest"}
+  ],
+  "$defs": {
+    "stop": {"enum": ["AUTHORITY_REQUIRED", "OUT_OF_POLICY", "FACT_UNRESOLVED", null]},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "is_synthetic", "gold_version", "input", "expected_decision", "expected_type", "expected_rule_id"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "is_synthetic": {"type": "boolean"},
+        "gold_version": {"type": "string", "minLength": 1},
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sender", "subject", "body", "received_at"],
+          "properties": {
+            "sender": {"type": "string", "minLength": 1, "pattern": "\\S"},
+            "subject": {"type": "string", "minLength": 1, "pattern": "\\S"},
+            "body": {"type": "string"},
+            "received_at": {"type": "string", "format": "date-time", "pattern": "T.*(Z|[+-][0-9]{2}:[0-9]{2})$"}
+          }
+        },
+        "expected_decision": {"enum": ["AUTO_REPLY", "ESCALATE"]},
+        "expected_type": {"$ref": "#/$defs/stop"},
+        "expected_rule_id": {"enum": ["P01", "P02", "P03", "P04", "P05"]}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "actual_decision", "actual_type", "rule_id", "elapsed_ms", "outcome", "error_code", "artifact_ref"],
+      "properties": {
+        "case_id": {"type": "string", "minLength": 1, "pattern": "\\S"},
+        "actual_decision": {"enum": ["AUTO_REPLY", "ESCALATE", "ERROR", "INVALID_INPUT", null]},
+        "actual_type": {"$ref": "#/$defs/stop"},
+        "rule_id": {"type": ["string", "null"]},
+        "elapsed_ms": {"type": ["number", "null"], "minimum": 0},
+        "outcome": {"enum": ["VALID", "TECHNICAL_ERROR", "MALFORMED", "INVALID_INPUT", "MISSING"]},
+        "error_code": {"type": ["string", "null"]},
+        "artifact_ref": {"type": ["string", "null"]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"outcome": {"const": "VALID"}}},
+          "then": {
+            "properties": {"actual_decision": {"enum": ["AUTO_REPLY", "ESCALATE"]}, "rule_id": {"type": "string", "minLength": 1, "pattern": "\\S"}, "error_code": {"const": null}},
+            "allOf": [
+              {"if": {"properties": {"actual_decision": {"const": "AUTO_REPLY"}}}, "then": {"properties": {"actual_type": {"const": null}}}},
+              {"if": {"properties": {"actual_decision": {"const": "ESCALATE"}}}, "then": {"properties": {"actual_type": {"type": "string"}}}}
+            ]
+          }
+        },
+        {
+          "if": {"properties": {"outcome": {"const": "TECHNICAL_ERROR"}}},
+          "then": {"properties": {"actual_decision": {"const": "ERROR"}, "actual_type": {"const": null}, "rule_id": {"const": "TECHNICAL_ERROR"}, "error_code": {"type": "string", "minLength": 1}}}
+        },
+        {
+          "if": {"properties": {"outcome": {"const": "INVALID_INPUT"}}},
+          "then": {"properties": {"actual_decision": {"const": "INVALID_INPUT"}, "actual_type": {"const": null}}}
+        },
+        {
+          "if": {"properties": {"outcome": {"enum": ["MISSING", "MALFORMED"]}}},
+          "then": {"properties": {"actual_decision": {"const": null}, "actual_type": {"const": null}, "rule_id": {"const": null}, "elapsed_ms": {"const": null}, "error_code": {"type": "string", "minLength": 1}}}
+        }
+      ]
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_version", "protocol_sha256", "dataset_id", "dataset_sha256", "gold_version", "case_ids", "planned_count", "runtime_sha", "mode", "eligibility", "execution_authorized", "official_config", "pending_authorization"],
+      "properties": {
+        "protocol_version": {"const": "M4-T01-v1"},
+        "protocol_sha256": {"$ref": "#/$defs/sha256"},
+        "dataset_id": {"type": "string", "minLength": 1},
+        "dataset_sha256": {"$ref": "#/$defs/sha256"},
+        "gold_version": {"type": "string", "minLength": 1},
+        "case_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "planned_count": {"type": "integer", "minimum": 0},
+        "runtime_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "mode": {"enum": ["OFFLINE_UNIT", "SYNTHETIC_DEV", "REPLAY", "LIVE"]},
+        "eligibility": {"enum": ["ELIGIBLE", "NOT VERIFIED", "NOT ELIGIBLE", "SYNTHETIC_ONLY"]},
+        "execution_authorized": {"const": false},
+        "official_config": {"const": null},
+        "pending_authorization": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}

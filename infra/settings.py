@@ -65,8 +65,14 @@ PENDING_STATUS_REFRESH_SECONDS: int = _read_int(
 LLM_TIMEOUT_S: int = _read_int("LLM_TIMEOUT_S", 30, _MINIMUM_POSITIVE)
 # Số lần thử lại LLM sau lần gọi đầu tiên.
 LLM_RETRIES: int = _read_int("LLM_RETRIES", 1)
+# Tối đa bốn provider attempts cho toàn bộ vòng đời case, kể cả retry và R11.
 LLM_MAX_ATTEMPTS: int = 4
+LLM_PROCESSING_MAX_ATTEMPTS: int = 3
+LLM_RESUME_MAX_ATTEMPTS: int = 1
 CASE_TIMEOUT_SECONDS: int = 60
+# Judge LIVE reserve đúng ba attempt x 2.000 output token trong envelope 6.000/case.
+JUDGE_LIVE_MAX_PROVIDER_ATTEMPTS: int = LLM_PROCESSING_MAX_ATTEMPTS
+JUDGE_LIVE_MAX_OUTPUT_TOKENS: int = 2_000
 # Số chunk tối đa retrieval trả về cho pipeline.
 RETRIEVAL_TOP_K: int = _read_int("RETRIEVAL_TOP_K", 6, _MINIMUM_POSITIVE)
 # Giới hạn số từ của một câu hỏi chuyển tiếp.

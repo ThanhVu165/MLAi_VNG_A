@@ -18,6 +18,7 @@ from core.types import CaseInput, Decision, EscalationType, PipelineResult
 from corpus.api import is_active
 from infra.audit import log_event
 from infra.db import now_iso, to_local
+from infra.llm import _provider_config
 
 LOGGER = logging.getLogger(__name__)
 CASE_SETS = {
@@ -25,6 +26,7 @@ CASE_SETS = {
     "escalation5": Path("verify/cases_escalation5.json"),
     "full15": Path("verify/cases_full15.json"),
     "fresh5": Path("verify/cases_fresh5.json"),
+    "m2_combined_dev": Path("verify/cases_m2_combined_dev.json"),
 }
 VERIFY_ACTOR = "SYSTEM"
 
@@ -202,6 +204,7 @@ def main(arguments: list[str] | None = None) -> int:
     parser.add_argument("--case", dest="case_id")
     parser.add_argument("--output", type=Path, help="Lưu kết quả và thời gian thực dạng JSON.")
     options = parser.parse_args(arguments)
+    provider, model = _provider_config()
     started = perf_counter()
     try:
         results = run_cases(
@@ -219,7 +222,8 @@ def main(arguments: list[str] | None = None) -> int:
                 {
                     "case_set": options.case_set,
                     "llm_mode": os.getenv("LLM_MODE", "live"),
-                    "model": os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
+                    "provider": provider,
+                    "model": model,
                     "cache_enabled": os.getenv("LLM_CACHE", "1") != "0",
                     "elapsed_seconds": elapsed,
                     "within_time_limit": within_time_limit,

@@ -1,0 +1,18 @@
+test_confusion_failures_and_denominators (test_protocol.ProtocolTest.test_confusion_failures_and_denominators) ... ok
+test_content_review_denominators (test_protocol.ProtocolTest.test_content_review_denominators) ... ok
+test_empty_and_all_failure_populations (test_protocol.ProtocolTest.test_empty_and_all_failure_populations) ... ok
+test_ids_and_gold_are_not_silently_repaired (test_protocol.ProtocolTest.test_ids_and_gold_are_not_silently_repaired) ... ok
+test_malformed_and_technical_are_distinct (test_protocol.ProtocolTest.test_malformed_and_technical_are_distinct) ... ok
+test_manifest_exact_bytes_and_rejected_drift (test_protocol.ProtocolTest.test_manifest_exact_bytes_and_rejected_drift) ... ok
+test_rule_and_stop_mismatch_stay_business (test_protocol.ProtocolTest.test_rule_and_stop_mismatch_stay_business) ... ok
+test_schema_case_and_timestamp (test_protocol.ProtocolTest.test_schema_case_and_timestamp) ... ok
+test_schema_result_normalization (test_protocol.ProtocolTest.test_schema_result_normalization) ... ok
+test_source_harness_contract_without_importing_app (test_protocol.ProtocolTest.test_source_harness_contract_without_importing_app) ... ok
+test_wilson_bounds_and_symmetry (test_protocol.ProtocolTest.test_wilson_bounds_and_symmetry) ... ok
+test_wilson_known_values_and_empty (test_protocol.ProtocolTest.test_wilson_known_values_and_empty) ... ok
+test_wilson_rejects_invalid_counts (test_protocol.ProtocolTest.test_wilson_rejects_invalid_counts) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.052s
+
+OK

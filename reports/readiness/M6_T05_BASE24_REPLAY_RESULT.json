@@ -1,0 +1,142 @@
+{
+  "schema_version": 2,
+  "task": "M6-T05",
+  "scope": "APPROVED_CRITICAL_PACK",
+  "tested_source_sha": "dfcdec2f6d557a72f5adf742bb4fc1bb36fa5359",
+  "cassette_count": 24,
+  "observed_calls": 24,
+  "replay_hits": 24,
+  "replay_misses": 0,
+  "zero_miss_flows": [
+    "DEV_AUTHORITY",
+    "DEV_FACT",
+    "DEV_HUMAN_R11",
+    "DEV_ROUTINE",
+    "V01",
+    "V02",
+    "V03",
+    "V04"
+  ],
+  "blocked_flows": [],
+  "missing_calls": [],
+  "flows": [
+    {
+      "flow": "DEV_AUTHORITY",
+      "observed_calls": 4,
+      "replay_misses": 0,
+      "status": "AWAITING_HUMAN",
+      "decision": "ESCALATE",
+      "escalation_type": "AUTHORITY_REQUIRED",
+      "business_match": null,
+      "job": null,
+      "draft_count": 0,
+      "error": null
+    },
+    {
+      "flow": "DEV_FACT",
+      "observed_calls": 4,
+      "replay_misses": 0,
+      "status": "AWAITING_HUMAN",
+      "decision": "ESCALATE",
+      "escalation_type": "FACT_UNRESOLVED",
+      "business_match": null,
+      "job": null,
+      "draft_count": 0,
+      "error": null
+    },
+    {
+      "flow": "DEV_HUMAN_R11",
+      "observed_calls": 1,
+      "replay_misses": 0,
+      "status": "HUMAN_DECIDED",
+      "decision": null,
+      "escalation_type": null,
+      "business_match": null,
+      "job": {
+        "state": "failed"
+      },
+      "draft_count": 0,
+      "error": null
+    },
+    {
+      "flow": "DEV_ROUTINE",
+      "observed_calls": 3,
+      "replay_misses": 0,
+      "status": "PENDING_SEND",
+      "decision": "AUTO_REPLY",
+      "escalation_type": null,
+      "business_match": null,
+      "job": null,
+      "draft_count": 1,
+      "error": null
+    },
+    {
+      "flow": "V01",
+      "observed_calls": 3,
+      "replay_misses": 0,
+      "status": null,
+      "decision": "AUTO_REPLY",
+      "escalation_type": null,
+      "business_match": true,
+      "job": null,
+      "draft_count": 1,
+      "error": null
+    },
+    {
+      "flow": "V02",
+      "observed_calls": 3,
+      "replay_misses": 0,
+      "status": null,
+      "decision": "ESCALATE",
+      "escalation_type": "FACT_UNRESOLVED",
+      "business_match": false,
+      "job": null,
+      "draft_count": 1,
+      "error": null
+    },
+    {
+      "flow": "V03",
+      "observed_calls": 4,
+      "replay_misses": 0,
+      "status": null,
+      "decision": "ESCALATE",
+      "escalation_type": "AUTHORITY_REQUIRED",
+      "business_match": true,
+      "job": null,
+      "draft_count": 0,
+      "error": null
+    },
+    {
+      "flow": "V04",
+      "observed_calls": 2,
+      "replay_misses": 0,
+      "status": null,
+      "decision": "ESCALATE",
+      "escalation_type": "OUT_OF_POLICY",
+      "business_match": true,
+      "job": null,
+      "draft_count": 0,
+      "error": null
+    }
+  ],
+  "live_provider_calls": 0,
+  "network_guard": "socket, provider live call and cache read denied",
+  "database": "fresh isolated temporary DB per flow",
+  "aggregate_harness_observation": "Stopped at R11 UI lookup KeyError after seven flows; no cassette miss and no LIVE; per-flow isolated replay used for final evidence",
+  "coverage_status": "PASS_ZERO_MISS_24_OF_24",
+  "business_status": "EVIDENCED_WITH_KNOWN_DEFECTS",
+  "known_business_defects": [
+    "V02 clock normalization mismatch: 5:00 p.m. versus 17 giờ 00",
+    "DEV_HUMAN_R11 worker failed because generated draft did not preserve human choice/reason"
+  ],
+  "task_status": "READY_FOR_COORDINATOR_ACCEPTANCE_AFTER_REQUIRED_TRELLO_OWNER_REVIEW_UPDATE",
+  "ac_matrix": {
+    "AC1": "PASS",
+    "AC2": "PASS",
+    "AC3": "PASS",
+    "AC4": "PASS_ZERO_MISS",
+    "AC5": "PASS_EVIDENCE; BUSINESS_DEFECTS_REPORTED",
+    "AC6": "PASS",
+    "AC7": "PASS_TECHNICAL; HUMAN_ACCEPTANCE_PENDING"
+  }
+}

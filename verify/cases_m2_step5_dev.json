@@ -1,0 +1,86 @@
+[
+  {
+    "id": "A1",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Em muốn hỏi trường hợp của em phải được tính điểm rèn luyện theo văn bản/quy định nào ạ? Em thấy có nhiều quy định khác nhau nên chưa biết trường hợp của mình phải theo cái nào.",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "FACT_UNRESOLVED",
+    "expected_rule_id": "P03",
+    "rationale": "DEV-ONLY; NOT SET A; NOT SET B; NOT FINAL HELD-OUT. Primary path: informational -> no authority lock -> missing applicability facts -> P03. Full semantic verdict and diagnostic status: reports/sprints/M2_core_decision_escalation_quality.md"
+  },
+  {
+    "id": "A2",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Trước khi quyết định có làm phúc khảo hay không, em muốn biết hồ sơ này sẽ do đơn vị hoặc cấp nào xử lý, và nếu làm thì em cần chuẩn bị những giấy tờ gì ạ?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "DEV-ONLY; NOT SET A; NOT SET B; NOT FINAL HELD-OUT. Primary path: informational -> no authority lock -> both premises supported -> P05. Full semantic verdict and diagnostic status: reports/sprints/M2_core_decision_escalation_quality.md"
+  },
+  {
+    "id": "A3",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Em đã qua thời hạn rút học phần vì thời gian đó có việc gia đình đột xuất. Trường hợp của em bây giờ nhà trường có xem xét cho em rút học phần này được không ạ?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "AUTHORITY_REQUIRED",
+    "expected_rule_id": "P01",
+    "rationale": "DEV-ONLY; NOT SET A; NOT SET B; NOT FINAL HELD-OUT. Primary path: exception/approval -> AUTHORITY_REQUIRED -> P01. Full semantic verdict and diagnostic status: reports/sprints/M2_core_decision_escalation_quality.md"
+  },
+  {
+    "id": "B1",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Cho em hỏi lệ phí phúc khảo một học phần hiện là bao nhiêu, và tính từ lúc nộp đơn thì chậm nhất sau bao nhiêu ngày em sẽ nhận được kết quả ạ?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "OUT_OF_POLICY",
+    "expected_rule_id": "P02",
+    "rationale": "DEV-ONLY; NOT SET A; NOT SET B; NOT FINAL HELD-OUT. Primary path: fee supported; numeric result SLA unsupported -> unanswered_request -> P02. Full semantic verdict and diagnostic status: reports/sprints/M2_core_decision_escalation_quality.md"
+  },
+  {
+    "id": "B2",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Nếu rút học phần vào tuần thứ 5 thì em được hoàn lại bao nhiêu phần trăm học phí, và từ lúc hoàn tất thủ tục rút thì trong bao nhiêu ngày tiền hoàn sẽ về ạ?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "ESCALATE",
+    "expected_type": "OUT_OF_POLICY",
+    "expected_rule_id": "P02",
+    "rationale": "DEV-ONLY; NOT SET A; NOT SET B; NOT FINAL HELD-OUT. Primary path: refund conflict 70%/60% + missing duration -> safe P02; C-B attribution CONFOUNDED. Full semantic verdict and diagnostic status: reports/sprints/M2_core_decision_escalation_quality.md"
+  },
+  {
+    "id": "B3",
+    "input": {
+      "sender": "student.dev@example.invalid",
+      "subject": "Nhờ hỗ trợ thông tin",
+      "body": "Cho em hỏi khi làm phúc khảo thì hồ sơ cần chuẩn bị những gì và lệ phí phải nộp là bao nhiêu ạ?",
+      "received_at": "2026-10-06T09:00:00+07:00",
+      "channel": "verify"
+    },
+    "expected_decision": "AUTO_REPLY",
+    "expected_type": null,
+    "expected_rule_id": "P05",
+    "rationale": "DEV-ONLY; NOT SET A; NOT SET B; NOT FINAL HELD-OUT. Primary path: form/info + fee supported -> P05. Full semantic verdict and diagnostic status: reports/sprints/M2_core_decision_escalation_quality.md"
+  }
+]

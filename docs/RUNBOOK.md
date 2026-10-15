@@ -1,19 +1,23 @@
-# Vận hành local — Sprint 1A
+# Vận hành local — Exodia Sprint 2
 
-> Trạng thái bàn giao mã ngày 22/09/2026: tái cấu trúc trước, nghiệm thu sau theo yêu cầu người dùng.
-> Không chạy thêm test, kiểm tra định dạng/kiểu dữ liệu, LLM live hay thao tác E2E trong đợt chốt mã này.
-> Các lệnh ở mục Kiểm chứng dành cho giai đoạn tiếp theo, không phải kết quả đã đạt.
+Offline tests, format/lint/type checks và E2E local được phép theo Task Contract.
+LIVE/API chỉ được chạy khi Project Coordinator cấp authorization cụ thể về run,
+scope và budget; cấu hình môi trường không tự tạo quyền gọi provider. Quy trình đội:
+[TEAM_WORKFLOW.md](TEAM_WORKFLOW.md).
 
 ## Khởi động
 
-Python 3.11, các thư viện trong `requirements.txt`, Streamlit và SQLite hiện có.
-Tạo `.env` theo `.env.example`; điền `GOOGLE_API_KEY` riêng trên máy, không đưa vào Git.
-Giữ `GEMINI_MODEL=gemini-3.5-flash-lite` theo lựa chọn của người dùng.
+Python 3.11 theo `.python-version`; dependencies trong `requirements.txt`.
+Chạy setup và activate theo README trước các lệnh bên dưới.
+Tạo `.env` theo `.env.example`; điền `OPENAI_API_KEY` riêng trên máy, không đưa vào Git.
+Runtime chỉ hỗ trợ OpenAI: `LLM_PROVIDER=openai`, `OPENAI_MODEL=gpt-6-luna`,
+`OPENAI_REASONING_EFFORT=none`. Model phải được cấu hình; provider khác bị từ chối.
+Không có provider fallback.
 
 ```powershell
-cd F:\PLSRUN\MLAi_VNG_A
-py -3.11 -m pip install -r requirements.txt
-py -3.11 run_local.py --server.address 127.0.0.1 --server.port 8511
+powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
+.\.venv-bootstrap\Scripts\Activate.ps1
+python run_local.py --server.address 127.0.0.1 --server.port 8511
 ```
 
 Mở `http://127.0.0.1:8511`. Đây là ứng dụng local, không có xác thực phân quyền tài khoản;
@@ -71,28 +75,59 @@ Không xóa DB hoặc khởi tạo đè để sửa lỗi. File bản sao lưu k
 Muốn phục hồi: dừng ứng dụng, giữ lại DB hiện tại cùng các file WAL/SHM, sao chép bản sao lưu
 thành một **đường dẫn mới**, đặt `DATABASE_PATH` trỏ đến bản đó rồi kiểm tra trước khi dùng.
 
-## Kiểm chứng — thực hiện sau khi hoàn tất tái cấu trúc
+Sau khi activate venv, migration/setup chính thức (không gọi OpenAI):
 
 ```powershell
-py -3.11 -m black --check --line-length 100 .
-py -3.11 -m ruff check .
-py -3.11 -m mypy --ignore-missing-imports .
+python -c "from corpus.seed import ensure_seeded; print(ensure_seeded())"
+```
+
+Lệnh này dùng migration trong `infra/db.py`, sao lưu DB cũ trước khi nâng schema;
+chỉ seed khi chưa có nguồn và khôi phục bản gốc seed khi hash khớp, không ghi đè corpus.
+
+## Cấu hình LIVE không dùng cache
+
+Các lệnh dưới đây chỉ cấu hình, chưa gọi OpenAI. Không chạy pipeline/harness LIVE
+nếu Task Contract chưa cấp quyền:
+
+```powershell
+$env:LLM_PROVIDER='openai'
+$env:OPENAI_MODEL='gpt-6-luna'
+$env:OPENAI_REASONING_EFFORT='none'
+$env:LLM_MODE='live'
+$env:LLM_CACHE='0'
+python -c "import os; import infra.llm as llm; assert os.getenv('LLM_MODE') == 'live'; assert os.getenv('LLM_CACHE') == '0'; print('model=' + llm._provider_config()[1])"
+```
+
+`infra/llm.py` chọn Replay trước cache khi mode là `replay`; mode `live` với
+`LLM_CACHE=0` bỏ đọc cache và gọi OpenAI khi pipeline cần LLM. Cache vẫn có thể được
+ghi sau call thành công; không có cache/cassette fallback cho lỗi LIVE.
+Giữ cả hai biến trong cùng terminal với lệnh evaluation; giữ `OPENAI_MODEL=gpt-6-luna`.
+
+## Kiểm chứng offline
+
+```powershell
+python -m black --check --line-length 100 .
+python -m ruff check .
+python -m mypy --ignore-missing-imports .
 $env:LLM_MODE='replay'
-py -3.11 -m pytest -q
+python -m pytest -q
 ```
 
 Kiểm thử offline thay dịch vụ AI ở ranh giới hoặc dùng dữ liệu cố định để phát hiện lỗi lặp lại.
-Chúng không chứng minh LLM live đúng. Để kiểm tra live bằng DB riêng:
+Chúng không chứng minh LLM live đúng. Chỉ khi có authorization riêng, kiểm tra LIVE
+bằng DB riêng theo đúng case/run và budget được duyệt:
 
 ```powershell
 $env:DATABASE_PATH='data/validation/manual-live.db'
+$env:LLM_PROVIDER='openai'
+$env:OPENAI_MODEL='gpt-6-luna'
+$env:OPENAI_REASONING_EFFORT='none'
 $env:LLM_MODE='live'
 $env:LLM_CACHE='0'
-$env:GEMINI_MODEL='gemini-3.5-flash-lite'
 $env:PYTHONIOENCODING='utf-8'
-py -3.11 -c "from corpus.seed import ensure_seeded; ensure_seeded()"
-py -3.11 -m verify.harness --set full15 --output data/validation/full15.json
-py -3.11 -m verify.harness --set escalation5 --output data/validation/escalation5.json
+python -c "from corpus.seed import ensure_seeded; ensure_seeded()"
+python -m verify.harness --set full15 --output data/validation/full15.json
+python -m verify.harness --set escalation5 --output data/validation/escalation5.json
 ```
 
 Phải đối chiếu quyết định, loại chuyển tiếp, quy tắc, trích dẫn, câu hỏi và thời gian.

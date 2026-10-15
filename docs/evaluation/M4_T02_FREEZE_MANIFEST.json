@@ -1,0 +1,129 @@
+{
+  "freeze_status": "FROZEN",
+  "created_at": "2026-10-15T03:21:31Z",
+  "coordinator_decision_reference": [
+    "trello-action:6ad04616863aaeb3c1fb352f",
+    "trello-action:6ad04dd2fb6c52f6121deaa4",
+    "trello-action:6ad04fd528b7095d4152b4c1",
+    "trello-action:6ad08b8a2dc7c9bc2cd7183a",
+    "trello-action:6ad090657fec4bfefeefcb0c",
+    "trello-action:6ad09a85feb1dedb88ea2c48",
+    "trello-action:6ad09d61dc90b3a61a7bd4e4",
+    "github-pr:59",
+    "reports/evaluation/M4_T02_GO_A_READINESS.md"
+  ],
+  "runtime_source_sha": "47a1fcd9686b5409674979b34a521ead2f65ae8d",
+  "collector_revision": "sha256:3bcff1577f2fde9e0716a3a75f77eba766244e5b916b4195dbcf52d9885c0d68",
+  "harness_revision": "sha256:76e476eb33b1bb8e5fa13f64b5c1ad45f2eb68ea4113774c2f66a87555b2109e",
+  "dataset": {
+    "identifier": "M4-SET-A-POSTTUNE",
+    "version": "v1",
+    "hash": "sha256:98d691c8437f1c466a6c2b7be1cd4ca3c34f4e0a0218f02376c2ae4f4a414385",
+    "reference": "M4T02_PRIVATE_SET_A_STORE",
+    "eligibility": "ELIGIBLE"
+  },
+  "gold": {
+    "identifier": "M4-SET-A-POSTTUNE-GOLD",
+    "version": "v1",
+    "hash": "sha256:e6b7ea08c03c93d3b952f5166a1cfcd0ecb0423cdb2c9c5cb532110f024509f5",
+    "reference": "M4T02_PRIVATE_SET_A_STORE"
+  },
+  "set_b": {
+    "existence": "DEFERRED_TO_M7",
+    "version": "DEFERRED_TO_M7",
+    "hash": "DEFERRED_TO_M7",
+    "seal": "DEFERRED_TO_M7",
+    "access_history": "DEFERRED_TO_M7"
+  },
+  "corpus": {
+    "identifier": "M4-T02-CORPUS",
+    "version": "v1",
+    "hash": "sha256:03f1f7d346775200d2c9cecd94efeeb14a4de0f90047a62f9eba00de705d44fd",
+    "reference": "M4T02_EVAL_DB_V1"
+  },
+  "policy_hash": "git-blob-sha1:381a80e095af8b0b9d9baa63fdeb9abbd67a3b3c",
+  "prompt_config_hashes": {
+    "protocol": "sha256:c8f55327d80e39770e5ec764c7bfcb50014398d9b012e6e46eb75189b2a0a982",
+    "case_schema": "sha256:653ab5de6b52b8d907b75e048242abaa44ba4a57ad17e9b26dbf0fe29167072f",
+    "freeze_schema": "sha256:47c0d5c562af015c66183b36185eada4979bffdb507509ac0035f190b1fc34de",
+    "settings": "git-blob-sha1:74a509237afdcccce433b089a871e6ac6ff6ebfa",
+    "llm": "git-blob-sha1:227162cebeccec9a6126edeed5b4037807fad658",
+    "extract": "git-blob-sha1:73d51b4fd9b3c181d0219f01d6621740aa26adb8",
+    "retrieval": "git-blob-sha1:d8f96452c008550971d8f0670e4b4cd5cb0cf12b",
+    "generate": "git-blob-sha1:9037843e71d80e7eaa823332a523a74ad7675e5a",
+    "question_gen": "git-blob-sha1:d6229ca79ba91bae2e7b8e6fa7ea4e92cd12a3aa",
+    "resume": "git-blob-sha1:c1fc2f6366dee4d9847578e81fd813654eff28fd"
+  },
+  "adaptation": {
+    "state": "NONE",
+    "version": "NONE"
+  },
+  "provider": "openai",
+  "model": "gpt-6-luna",
+  "model_parameters": {
+    "reasoning_effort": "none",
+    "temperature": 0
+  },
+  "environment": {
+    "python_version": "3.11",
+    "docker_base_image": "python:3.11-slim",
+    "dockerfile_hash": "git-blob-sha1:ad19ffc707e886b9fda9369cf5b9bcaca6c7161f",
+    "compose_hash": "git-blob-sha1:dc9d75253e3190505e4c0d4acff8abc2b582cbd4",
+    "dependency_manifest_hash": "git-blob-sha1:828309b78eb21a2e9642efe695638ffa819bb17a",
+    "deployed_image_digest": "NOT_APPLICABLE_LOCAL_EVALUATION"
+  },
+  "execution_mode": "LIVE",
+  "timeout_seconds": 30,
+  "retries": 1,
+  "per_case_deadline_seconds": 60,
+  "gates": {
+    "quality": {
+      "mode": "DESCRIPTIVE",
+      "post_hoc_pass_threshold": false,
+      "required_reporting": [
+        "MER",
+        "OER",
+        "route_correctness",
+        "stop_correctness",
+        "rule_correctness",
+        "technical_failure",
+        "raw_n_N",
+        "wilson_95",
+        "limitations"
+      ]
+    },
+    "sample_size": {
+      "planned_count": 18,
+      "required_normalized_results": 18
+    },
+    "strata": {
+      "P01": 7,
+      "P03": 5,
+      "P02": 4,
+      "P05": 2,
+      "P04": 0,
+      "minimum_P04_required": false,
+      "rebalance_allowed": false
+    },
+    "coverage": {
+      "planned": 18,
+      "required_normalized": 18,
+      "missing_allowed": 0
+    },
+    "abort_threshold": {
+      "action": "STOP",
+      "conditions": [
+        "candidate_hash_mismatch",
+        "gold_hash_mismatch",
+        "corpus_hash_mismatch",
+        "runtime_config_model_drift",
+        "unauthorized_provider_call",
+        "budget_exceed",
+        "evidence_leakage",
+        "safety_violation"
+      ]
+    }
+  },
+  "budget": 0,
+  "execution_authorized": false
+}
