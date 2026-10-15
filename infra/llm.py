@@ -280,10 +280,11 @@ def _run_mode(
                 provider=provider,
             )
         return _failure("Judge chỉ cho phép replay hoặc LIVE được cấp quyền.", prompt_hash, model)
-    if is_restricted_demo() and mode != "replay":
-        return _failure("Restricted DEMO hiện không cho phép LIVE hoặc record.", prompt_hash, model)
-    if mode == "replay":
-        return _replay(prompt_hash, model)
+    if is_restricted_demo():
+        if mode in {"live", "replay"}:
+            # Chỉ active Judge lease ở nhánh trên được phép đi LIVE.
+            return _replay(prompt_hash, model)
+        return _failure("Restricted DEMO không cho phép record hoặc mode lạ.", prompt_hash, model)
     if mode not in {"live", "record"}:
         return _failure("LLM_MODE phải là live, replay hoặc record.", prompt_hash, model)
 

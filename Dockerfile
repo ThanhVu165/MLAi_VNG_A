@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 
     && pip install --no-cache-dir -r requirements.txt
 
 COPY . ./
+RUN install -d -m 0700 /app/.judge-ipc
 
 EXPOSE 8511
 

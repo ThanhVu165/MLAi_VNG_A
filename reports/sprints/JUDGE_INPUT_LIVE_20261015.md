@@ -38,3 +38,29 @@ Chưa được phép gọi API. Coordinator phải điền/xác nhận riêng:
 - Black/Ruff: PASS. Full suite, Unix IPC smoke, LIVE quality, Railway/deploy: NOT RUN.
 
 Không có secret/PII thật, API call, SMTP/Gmail/dispatch, deploy hoặc merge.
+
+## PR #74 final fix
+
+- Trong cùng cấu hình `restricted_demo + LLM_MODE=live`, chỉ case có active Judge
+  lease đi provider; email canonical và Verify4 luôn đọc cassette Replay. `record` vẫn bị chặn.
+- Hai browser session dùng binding server/WebSocket riêng; session B không đọc hoặc dùng
+  grant/case của session A. Public browser không có issuer endpoint hoặc operator secret.
+- Image tạo sẵn `/app/.judge-ipc` mode `0700`; cấu hình Railway dùng
+  `JUDGE_GATEWAY_SOCKET=/app/.judge-ipc/operator.sock`.
+
+Railway hỗ trợ [SSH vào deployed service container](https://docs.railway.com/cli/ssh),
+chạy một command và chọn exact deployment instance. Vì vậy operator provisioning
+khả thi mà không mở HTTP issuer: giám khảo gửi mã đối chiếu đang hiển thị;
+Coordinator SSH vào đúng instance, chạy `scripts/judge_operator.py ... provision`, rồi
+giám khảo reload. [Railway Variables](https://docs.railway.com/variables) được cấp
+cho running deployment và hỗ trợ sealed secret.
+
+Điều kiện triển khai bắt buộc: **một replica**, SSH đúng instance, SQLite
+`DATABASE_PATH` trên Railway Volume, operator giữ `JUDGE_ISSUER_SECRET`, và các biến LIVE
+trong decision packet. Nhiều replica không được hỗ trợ vì binding/socket nằm trong
+bộ nhớ từng process. Restart làm mất binding và buộc cấp grant mới; durable quota
+không được reset.
+
+Targeted final validation: **17 passed** — Judge LIVE, LIVE+Replay+Verify4 cùng config,
+hai session, revoke/kill/HOLD/no-send và image socket contract. Railway CLI không có trên
+máy validation; không SSH/deploy/thay config theo đúng authorization.
