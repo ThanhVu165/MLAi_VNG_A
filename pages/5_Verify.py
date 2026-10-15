@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict
 from time import perf_counter
 from urllib.parse import quote
@@ -34,6 +35,7 @@ SET_LABELS: dict[str, str] = {
 
 def main() -> None:
     inject_app_css()
+    llm_mode = os.getenv("LLM_MODE", "live").strip().lower()
 
     # 1. Header
     st.markdown(
@@ -45,13 +47,20 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
+    if llm_mode == "replay":
+        st.info(
+            "Chế độ hiện tại: **Replay offline**. Nút **Chạy kiểm thử** vẫn chạy Verify "
+            "qua pipeline chuẩn, nhưng phản hồi mô hình được đọc từ cassette đã ghi; không gọi "
+            "provider LIVE."
+        )
+
     with st.expander("ℹ️ Hướng dẫn — Xem cách diễn giải kết quả kiểm thử", expanded=False):
         st.markdown(
             """
             - **AUTO_REPLY:** Hệ thống đối chiếu đủ căn cứ hợp lệ đang có hiệu lực và tự động soạn thảo phản hồi kèm trích dẫn.
             - **ESCALATE:** Hệ thống phát hiện vượt thẩm quyền (`AUTHORITY_REQUIRED`), ngoài quy định (`OUT_OF_POLICY`), hoặc thiếu dữ kiện (`FACT_UNRESOLVED`) và dừng lại để chuyên viên xử lý.
-            - **PASS:** Hành vi thực tế khớp hoàn toàn với mong đợi (về quyết định, loại chuyển tiếp và quy tắc áp dụng).
-            - **FAIL:** Hành vi thực tế không khớp với mong đợi, cần kiểm tra lại quy định hoặc logic xử lý.
+            - **PASS:** Ca vừa chạy khớp kỳ vọng về quyết định, loại chuyển tiếp, quy tắc và các điều kiện kiểm tra liên quan. PASS của một ca không tự chứng nhận toàn bộ hệ thống.
+            - **FAIL:** Ít nhất một điều kiện của ca vừa chạy không khớp kỳ vọng. Cần đọc phần đối chiếu để xác định sai lệch; không được sửa kỳ vọng chỉ để chuyển FAIL thành PASS.
             - **Nhật ký kiểm toán:** Toàn bộ quá trình chạy kiểm thử được ghi nhận đầy đủ như email thật.
             """
         )
@@ -135,6 +144,26 @@ def main() -> None:
             "DỮ LIỆU MÔ PHỎNG — Kết quả này chỉ dùng để kiểm tra giao diện, "
             "không phải bằng chứng chạy pipeline hay kết quả nghiệm thu."
         )
+    elif results is not None:
+        source_label = "pipeline replay" if llm_mode == "replay" else "pipeline hiện hành"
+        st.success(
+            f"KẾT QUẢ PIPELINE — Các ca bên dưới được tạo bởi {source_label}, "
+            "không phải fixture dựng sẵn của giao diện."
+        )
+
+    if results is not None:
+        timestamps = [result.timestamp.strip() for result in results if result.timestamp.strip()]
+        if timestamps:
+            timestamp_source = "fixture giao diện" if is_synthetic else "lần chạy pipeline"
+            st.caption(
+                f"Thời điểm hoàn tất theo {timestamp_source}: **{timestamps[-1]}**. "
+                "Giá trị này được giữ trong dữ liệu kết quả và không thay đổi khi chỉ render lại trang."
+            )
+        else:
+            st.warning(
+                "Kết quả hiện tại không có timestamp có provenance; giao diện không tự tạo "
+                "thời điểm thay thế."
+            )
 
     # 5. Empty State (Chưa chạy)
     if results is None:
@@ -258,6 +287,8 @@ def main() -> None:
                 {
                     "set": active_set,
                     "synthetic": is_synthetic,
+                    "execution_source": ("synthetic_ui_fixture" if is_synthetic else "pipeline"),
+                    "llm_mode": llm_mode,
                     "elapsed_seconds": elapsed,
                     "total": total,
                     "passed": pass_count,
@@ -305,6 +336,7 @@ def main() -> None:
             f'<td style="padding: 10px 14px;">{decision_badge_html(r.actual_decision.value)}</td>'
             f'<td style="padding: 10px 14px;">{pass_fail_badge_html(r.passed)}</td>'
             f'<td style="padding: 10px 14px; color: #64748B;">{r.elapsed_ms / 1000:.1f}s</td>'
+            f'<td style="padding: 10px 14px; color: #64748B; white-space: nowrap;">{escape_html(r.timestamp or "Thiếu timestamp")}</td>'
             f"</tr>"
         )
     table_rows = "".join(rows_html)
@@ -320,6 +352,7 @@ def main() -> None:
         '<th style="padding: 11px 14px; width: 190px;">Kết quả thực tế</th>'
         '<th style="padding: 11px 14px; width: 100px;">Trạng thái</th>'
         '<th style="padding: 11px 14px; width: 90px;">Thời gian</th>'
+        '<th style="padding: 11px 14px; width: 190px;">Ghi nhận lúc</th>'
         "</tr>"
         "</thead>"
         f"<tbody>{table_rows}</tbody>"
