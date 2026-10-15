@@ -42,6 +42,44 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m ruff check --no-cache ui/judge_
 git diff --check
 ```
 
+## Owner final rerun — 15/10/2026 21:40 +07
+
+Owner reran the authorized macOS-only checks against reviewed PR #72 code SHA
+`c4ff44a102194ac9fa119d6eb31ef8c847381f82`. Current branch commits after that SHA
+change only this report; `git diff --quiet c4ff44a..HEAD -- ui scripts pages tests core
+infra policies corpus verify streamlit_app.py pyproject.toml requirements.txt` returned 0.
+SHA-256 values for `ui/judge_gateway.py`, `scripts/judge_operator.py` and
+`tests/test_judge_input_c2b.py` also match the reviewed SHA byte-for-byte.
+
+Exact two Windows-blocked tests:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q -rs -p no:cacheprovider tests/test_judge_input_c2b.py::test_socket_path_rejects_unsafe_directory tests/test_judge_input_c2b.py::test_local_ipc_staging_smoke_network_and_provider_blocked --tb=short
+```
+
+Result: **2 passed in 0.73s**, exit 0. Evidence confirms unsafe 0755 parent rejection,
+actual AF_UNIX socket mode 0600 in a 0700 private directory, wrong operator secret denial,
+correct-secret provision/revoke, one-use provisioning denial, PREVIEW_READY and no send/job
+side effects. AF_INET, DNS and OpenAI constructors remained blocked.
+
+The unchanged external probe at
+`/private/tmp/exodia-c2b-final.B0wyZp/test_final_unix.py` retained SHA-256
+`a6e14fc60f737d15e7272268cc3f0e8b5158e1a393949eeec016dc8eaf63082d` and was rerun
+with the command already recorded above. Result: **1 passed, 1 failed, 1 warning in 0.59s**,
+exit 1. UID/socket probe passed on actual UID 501 with directory/socket modes 0700/0600;
+the client-side UID mismatch gate rejected before secret prompt. The reconnect assertion
+failed again with `KNOWN_ID_RECONNECT`: after native disconnect, a new client supplying the
+known old session ID recovered the same stored `AppSession`, existing valid grant and judge
+case read access without a new operator approval. Active-session negative control, explicit
+revoke and no-send assertions passed.
+
+Final rerun disposition: requested platform tests **2/2 PASS**, additional security probes
+**1 PASS / 1 FAIL**, overall **FAIL / HOLD PR #72** because C2B-R01 remains reproducible.
+Operator secret and Unix permissions protect the local operator socket but do not protect
+the browser reconnect path. Remaining unverified limits are deployed-browser handshake E2E,
+origin/proxy behavior, attacker acquisition of a valid session ID and a real foreign-OS-user
+test. Full suite, LIVE/API, merge and deploy were not run. No source/test correction was made.
+
 **457 PASS, 3 SKIP in 26.88s**, exit 0 (12 new C2-B cases). SKIP: historical LIVE artifacts
 không có tại test_r2_validation_diagnostics.py:355; không skip security/smoke. Black/Ruff/
 diff check PASS. No-fail-open/no-over-escalation, Verify4 4/4, Core #71, C1/C2-A/CR01,
