@@ -15,7 +15,10 @@
   `dev@b728d00ba6e53b8568554082fe7f4cb6a0dc03e1`.
 - **Branch:** `codex/judge-new-input-candidate`.
 - **Implementation SHA:** `a661fff9499f60a687ec32e4718b942f90a97f66`.
-- **Pull request:** sẽ bổ sung sau khi push branch; bắt buộc nhắm `dev`.
+- **Validated candidate/report SHA trước metadata handoff:**
+  `52588d6a0add17eee905f47c89fb1440cf25694e`.
+- **Pull request:** [#66](https://github.com/ThanhVu165/MLAi_VNG_A/pull/66), nhắm `dev`;
+  open, không merge.
 - **LIVE/API calls:** `0`.
 - **Merge/deploy:** `NOT RUN`.
 
@@ -31,7 +34,7 @@ deployment hoặc authorization contract.
 |---|---|---|
 | Remote `dev` mới nhất | **PASS** | `git fetch origin dev`; `origin/dev=b728d00ba6e53b8568554082fe7f4cb6a0dc03e1`. |
 | PR #64 / UI-01 | **PASS** | GitHub xác nhận PR #64 merged; merge commit đúng `b728d00...`; local baseline chứa thay đổi UI-01. |
-| PR #63 / ownership | **PASS** | PR #63 còn open, chỉ sửa trang Quy định do Lenovo sở hữu, test và report riêng; không đụng file candidate. |
+| PR #63 / ownership | **PASS** | Lúc preflight PR #63 còn open; sau đó được merge vào `dev`. Scope chỉ gồm trang Quy định do Lenovo sở hữu, test và report riêng; không đụng file candidate. |
 | Local branch/HEAD | **PASS** | Branch tạo trực tiếp từ verified `origin/dev`; không clone/worktree phụ. |
 | Tracked tree | **PASS** | Không có tracked modification trước task. |
 | M7 local artifact | **PASS** | Hai untracked artifact được giữ nguyên và không stage/commit. |
@@ -43,6 +46,13 @@ Fingerprint M7 trước khi tạo branch:
   `sha256:7a37ba82d7126ed9c617c28b00c72f8c3de08f23087ec17d870e836c55a8f3d1`.
 - `outputs/m7_blind_private_work/render_blank.mjs`:
   `sha256:55eab88ec53e0c5a3814555d7e00c347160f35d6616b9de5e119bb11b93bdbe4`.
+
+Sau khi PR #66 được mở, remote `dev` tiến tới
+`01517939edb366c15905c14074d84959340ef0eb` do PR #63 được merge. Candidate đã kiểm tra
+lại: thay đổi mới chỉ gồm `pages/3_Quan_tri_quy_dinh.py`, report và test của PR #63; không
+chồng lấn hai file candidate. `git diff origin/dev...HEAD` vẫn chỉ có report và test judge-input;
+`git merge-tree` không báo `changed in both` hoặc conflict. Không merge `dev` vào branch vì task
+contract cấm merge; PR #66 tiếp tục nhắm đúng baseline `dev` mới trên GitHub.
 
 ## 3. Root cause trên code thực tế
 
