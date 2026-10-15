@@ -114,10 +114,10 @@ def _record(case_id: str, status: str, **values: object) -> dict:
 
 
 def reconcile(expected_case_ids: list[str], attempts: list[object], binding: dict) -> dict:
-    """Reconcile attempts without dropping missing, malformed, duplicate, or unexpected IDs.
+    """Đối soát mà không bỏ qua ID thiếu, sai cấu trúc, trùng hoặc ngoài dự kiến.
 
-    A complete run is structurally valid; a terminal technical error is accounted for but
-    remains distinct from a successful business result.
+    Lượt chạy complete phải hợp lệ về cấu trúc; lỗi kỹ thuật cuối vẫn được ghi nhận nhưng
+    không được coi là kết quả nghiệp vụ thành công.
     """
     required_binding = {
         "run_id",

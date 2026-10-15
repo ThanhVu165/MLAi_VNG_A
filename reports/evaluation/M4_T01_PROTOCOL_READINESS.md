@@ -1,73 +1,76 @@
-# COLLECTOR / FREEZE GATE CORRECTION — M4-T01 (15/10/2026)
+# SỬA BỘ THU THẬP / CỔNG ĐÓNG BĂNG — M4-T01 (15/10/2026)
 
-**RESULT: READY_FOR_COORDINATOR_REVIEW.** This change request corrects two
-evaluation-integrity defects without running Set A/B, LIVE/provider/API/email, tuning or
-M4-T02. It does not grant GO-A, merge the PR or upgrade the official freeze.
+**KẾT QUẢ: READY_FOR_COORDINATOR_REVIEW.** Yêu cầu thay đổi này sửa hai lỗi làm sai tính
+toàn vẹn của phép đánh giá mà không chạy Set A/B, LIVE/provider/API/email, tinh chỉnh hoặc
+M4-T02. Thay đổi không cấp GO-A, không hợp nhất PR và không nâng trạng thái đóng băng
+chính thức.
 
-## Correction preflight and revision
+## Kiểm tra ban đầu và phiên bản của lượt sửa
 
-- Remote `dev` verified at `029126ec3c17a24e51c5c4a3118a4373f528f081`, whose tip is
-  the merge of M5-T01 PR #58.
-- Draft PR #52 was open, unmerged and unchanged at reviewed head
-  `2408e4063d8552b9b56aed49af5cc82d4ac41175` before implementation.
-- The existing M4-T01 branch was merged normally with current `origin/dev`; no rebase,
-  force-push or history rewrite was used and the branch/dev path sets had no overlap.
-- Unrelated untracked `.codex_tmp/` and `outputs/` directories were preserved untouched.
-- **Tested implementation SHA:** `7702d2b9a7db7c66880e8d8e4a8894b34403e3d9`.
-  The final evidence-only commit changes this report; it does not change tested Python.
+- Nhánh `dev` trên remote đã được xác minh tại
+  `029126ec3c17a24e51c5c4a3118a4373f528f081`; đây là commit hợp nhất M5-T01 PR #58.
+- PR nháp #52 đang mở, chưa hợp nhất và không đổi so với head đã được review
+  `2408e4063d8552b9b56aed49af5cc82d4ac41175` trước khi triển khai.
+- Nhánh M4-T01 hiện có đã hợp nhất bình thường với `origin/dev`; không rebase,
+  force-push hoặc viết lại lịch sử, và tập đường dẫn thay đổi giữa hai nhánh không giao nhau.
+- Hai thư mục chưa được theo dõi và không liên quan `.codex_tmp/`, `outputs/` được giữ nguyên.
+- **SHA triển khai đã kiểm thử:** `7702d2b9a7db7c66880e8d8e4a8894b34403e3d9`.
+  Commit bằng chứng cuối chỉ thay đổi báo cáo này, không đổi mã Python đã kiểm thử.
 
-## Fix 1 — official readiness requires eligible data
+## Sửa lỗi 1 — trạng thái sẵn sàng chính thức bắt buộc dữ liệu đủ điều kiện
 
-`validate_freeze_manifest(..., official_execution_ready=True)` now fails unless
-`dataset.eligibility == "ELIGIBLE"`, in addition to its existing resolved-field,
-authorization, positive-budget and LIVE-mode requirements. Fully resolved synthetic
-manifests with `NOT_VERIFIED` or `NOT_ELIGIBLE` fail closed; an `ELIGIBLE` manifest can
-pass this validator only when every other existing condition passes. `FROZEN` remains a
-configuration state separate from execution authorization, and validator success is not
-GO-A or proof of eligibility.
+`validate_freeze_manifest(..., official_execution_ready=True)` giờ sẽ thất bại nếu
+`dataset.eligibility != "ELIGIBLE"`, bên cạnh các điều kiện sẵn có về trường đã giải quyết,
+ủy quyền, ngân sách dương và chế độ LIVE. Manifest tổng hợp đã giải quyết đầy đủ nhưng có
+`NOT_VERIFIED` hoặc `NOT_ELIGIBLE` sẽ bị từ chối an toàn; manifest `ELIGIBLE` chỉ có thể
+qua bộ kiểm tra khi mọi điều kiện cũ khác đều đạt. `FROZEN` vẫn là trạng thái cấu hình tách
+biệt với ủy quyền thực thi; kết quả PASS của bộ kiểm tra không phải GO-A hoặc bằng chứng
+về tính đủ điều kiện.
 
-## Fix 2 — complete means structurally valid reconciliation
+## Sửa lỗi 2 — complete nghĩa là đối soát hợp lệ về cấu trúc
 
-`reconcile()` now reports `complete=true` only when every expected case has a valid
-terminal `BUSINESS_RESULT` or `TECHNICAL_ERROR`, there are no foreign IDs and there is no
-unidentified malformed attempt. `MISSING`, `DUPLICATE`, `MALFORMED` and `UNEXPECTED`
-therefore make the reconciliation incomplete. A terminal `TECHNICAL_ERROR` remains an
-accounted terminal attempt and may coexist with `complete=true`, but its status and null
-business result remain explicit: it is not a successful quality/business result.
+`reconcile()` giờ chỉ trả `complete=true` khi mọi ca dự kiến có kết quả cuối
+`BUSINESS_RESULT` hoặc `TECHNICAL_ERROR` hợp lệ, không có ID ngoài dự kiến và không có
+lần thử sai cấu trúc mà thiếu ID. Vì vậy `MISSING`, `DUPLICATE`, `MALFORMED` và
+`UNEXPECTED` đều làm lượt đối soát không complete. `TECHNICAL_ERROR` cuối vẫn là lần thử
+đã được ghi nhận và có thể đi cùng `complete=true`, nhưng trạng thái và kết quả nghiệp vụ
+null vẫn được giữ rõ: đây không phải kết quả chất lượng/nghiệp vụ thành công.
 
-Regression coverage includes valid expected results plus a foreign case, duplicate attempt
-IDs, multiple terminal attempts, malformed expected and unidentified rows, clean business
-results, missing expected cases, and terminal technical-error semantics.
+Kiểm thử hồi quy bao phủ kết quả hợp lệ kèm ca ngoài dự kiến, ID lần thử bị trùng, nhiều
+lần thử cuối, bản ghi dự kiến hoặc không định danh bị sai cấu trúc, kết quả nghiệp vụ sạch,
+ca dự kiến bị thiếu và ngữ nghĩa lỗi kỹ thuật cuối.
 
-## Validation on tested implementation SHA
+## Kiểm thử xác nhận trên SHA triển khai
 
-| Command/check | Result |
+| Lệnh/kiểm tra | Kết quả |
 |---|---|
-| `.\.venv\Scripts\python.exe -B -m unittest docs/evaluation/test_collector.py -v` | **PASS — 19/19** focused collector/freeze tests |
-| `.\.venv\Scripts\python.exe -B -m unittest discover -s docs/evaluation -p 'test_*.py' -v` | **PASS — 37/37** evaluation tests |
-| `.\.venv\Scripts\python.exe -m black --check --line-length 100 docs/evaluation/collector.py docs/evaluation/test_collector.py` | **PASS — 2 files unchanged** |
+| `.\.venv\Scripts\python.exe -B -m unittest docs/evaluation/test_collector.py -v` | **PASS — 19/19** test collector/freeze tập trung |
+| `.\.venv\Scripts\python.exe -B -m unittest discover -s docs/evaluation -p 'test_*.py' -v` | **PASS — 37/37** test evaluation |
+| `.\.venv\Scripts\python.exe -m black --check --line-length 100 docs/evaluation/collector.py docs/evaluation/test_collector.py` | **PASS — 2 file không đổi** |
 | `.\.venv\Scripts\python.exe -m ruff check docs/evaluation/collector.py docs/evaluation/test_collector.py` | **PASS** |
 | `git diff --check origin/dev...HEAD` | **PASS** |
-| `git diff --name-only 9b2223e..7702d2b` | **PASS — only collector.py and test_collector.py** |
-| Known credential/private-key/non-example-email scan of the correction diff | **PASS — no match** |
+| `git diff --name-only 9b2223e..7702d2b` | **PASS — chỉ collector.py và test_collector.py** |
+| Quét mẫu thông tin xác thực/khóa riêng/email không thuộc miền mẫu trong diff sửa lỗi | **PASS — không khớp mẫu** |
 
-Application LIVE/API/provider/email calls: **0**. Official Set A/B runs: **0**.
-Private Set A/B/Gold content reads: **0**. Tuning/adaptation operations: **0**.
+Số lần gọi LIVE/API/nhà cung cấp/email của ứng dụng: **0**. Số lượt chạy Set A/B chính
+thức: **0**. Số lần đọc nội dung riêng tư Set A/B/Gold: **0**. Số thao tác tinh chỉnh/
+thích nghi: **0**.
 
-## Current AC1–AC7 disposition
+## Trạng thái AC1–AC7 hiện tại
 
-| AC | Current disposition | Evidence / remaining condition |
+| AC | Trạng thái hiện tại | Bằng chứng / điều kiện còn thiếu |
 |---|---|---|
-| AC1 Provenance | NOT_VERIFIED | Existing honest disposition; no new historical Set A/Gold evidence |
-| AC2 Independence/seal | NOT_VERIFIED | Existing honest disposition; no new Set B attestation or private inspection |
-| AC3 Metrics | PASS candidate, unchanged | Metric definitions and protocol tests unchanged |
-| AC4-A Collector | PASS candidate | Both corrections and focused/full offline regressions pass |
-| AC4-B Official Freeze | FREEZE_INCOMPLETE | Required metadata remains unresolved; readiness fix grants no GO-A |
-| AC5 Reproducibility | PASS_OFFLINE candidate | Exact tested SHA and commands/results recorded above |
-| AC6 Safety | PASS_SCOPED candidate | Three evaluation-only files; no execution, private content or production change |
-| AC7 Evidence | Pending Coordinator review | Updated evidence and PR handoff prepared; no acceptance/DONE claim |
+| AC1 Nguồn gốc | NOT_VERIFIED | Giữ kết luận trung thực; không có bằng chứng lịch sử mới cho Set A/Gold |
+| AC2 Độc lập/niêm phong | NOT_VERIFIED | Giữ kết luận trung thực; không có xác nhận Set B hoặc kiểm tra riêng tư mới |
+| AC3 Chỉ số | PASS candidate, không đổi | Định nghĩa chỉ số và kiểm thử giao thức không đổi |
+| AC4-A Bộ thu thập | PASS candidate | Hai lỗi đã sửa và hồi quy offline tập trung/toàn bộ đều PASS |
+| AC4-B Đóng băng chính thức | FREEZE_INCOMPLETE | Metadata bắt buộc chưa giải quyết; bản sửa không cấp GO-A |
+| AC5 Khả năng tái lập | PASS_OFFLINE candidate | SHA đã kiểm thử cùng lệnh/kết quả chính xác được ghi ở trên |
+| AC6 An toàn | PASS_SCOPED candidate | Ba file đánh giá; không thực thi, đọc nội dung riêng tư hoặc đổi production |
+| AC7 Bằng chứng | Chờ Coordinator review | Đã cập nhật bằng chứng và PR bàn giao; không tuyên bố acceptance/DONE |
 
-**SELF-REVIEW: COMPLETED. MERGE: NOT PERFORMED.** Next: Coordinator exact-SHA review.
+**TỰ REVIEW: ĐÃ HOÀN TẤT. HỢP NHẤT: CHƯA THỰC HIỆN.** Bước tiếp theo: Coordinator
+review đúng SHA.
 
 ---
 
