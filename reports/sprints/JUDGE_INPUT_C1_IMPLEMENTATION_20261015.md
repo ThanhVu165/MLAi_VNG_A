@@ -12,6 +12,7 @@
 - PR #66: GitHub xác nhận merged, merge commit đúng baseline trên.
 - LIVE/API provider calls: 0. Merge/deploy: NOT RUN.
 - Implementation SHA: `c810f5b5ea86b209662c1c6a1048022f202146bc`.
+- Security review fix SHA: `fbe17355db85040955546e57453a618316474d7d`.
 - PR C1: [#68](https://github.com/ThanhVu165/MLAi_VNG_A/pull/68), open, nhắm `dev`.
 
 ## Preflight
@@ -322,7 +323,8 @@ dispatch đã có judge guard trong baseline. Không phát hiện đường case
 ngoài scope trong lượt review này.
 
 Result: READY_FOR_REVIEW cho bản sửa hai findings; không tự xác nhận independent security gate.
-Implementation SHA sẽ bổ sung trong metadata handoff; PR vẫn #68. Reviewer cần đối chiếu SHA
-head sau push. Các giới hạn C1/C2 đã ghi ở trên tiếp tục áp dụng; semantic/provider LIVE vẫn
+Fix SHA: `fbe17355db85040955546e57453a618316474d7d`; PR vẫn #68. Commit handoff sau fix chỉ
+ghi SHA vào report; reviewer cần đối chiếu SHA head cuối trong GitHub/chat. Các giới hạn C1/C2
+đã ghi ở trên tiếp tục áp dụng; semantic/provider LIVE vẫn
 NOT VERIFIED. LIVE/API=0; merge/deploy NOT RUN. Next: independent security review lại hai
 findings và regression → Coordinator acceptance.
