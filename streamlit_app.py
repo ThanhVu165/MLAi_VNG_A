@@ -11,6 +11,7 @@ from core.worker import start_worker
 from corpus.seed import ensure_seeded
 from infra.demo_access import is_restricted_demo, validate_runtime_mode
 from infra.judge_access import live_enabled
+from infra.public_demo import enabled as public_demo_enabled
 from ui.presentation import inject_app_css, readable_text
 
 
@@ -93,9 +94,13 @@ def main() -> None:
     if restricted_demo:
         shell_title = "🔵 Restricted DEMO"
         shell_description = (
-            "Judge LIVE được giới hạn; chỉ phiên có operator grant mới xử lý email mới."
-            if judge_live
-            else "Môi trường mô phỏng dùng replay offline; email LIVE không hoạt động."
+            "Public LIVE: nhập email synthetic mới, tối đa 10 email/phiên; không gửi email."
+            if judge_live and public_demo_enabled()
+            else (
+                "Judge LIVE được giới hạn; chỉ phiên có operator grant mới xử lý email mới."
+                if judge_live
+                else "Môi trường mô phỏng dùng replay offline; email LIVE không hoạt động."
+            )
         )
     else:
         shell_title = "🟢 Ứng dụng sẵn sàng"
