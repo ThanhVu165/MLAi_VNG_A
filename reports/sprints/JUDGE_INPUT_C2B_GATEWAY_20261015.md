@@ -413,6 +413,9 @@ def test_known_disconnected_session_id_must_not_recover_judge_grant(judge, monke
 Validation on 15/10/2026 21:49 +0700, starting branch HEAD
 `37005d82ad4546bb0d89fec1eaf434f005398ed9`. Scope changed only
 `ui/judge_gateway.py`, `tests/test_judge_input_c2b.py` and this report.
+Validated hotfix implementation/test commit:
+`fae3029bd64ba0db508484f0997a3bce363298cf`; the final pushed artifact is its
+report-metadata-only descendant, returned in the handoff.
 
 Minimal fail-closed fix binds each server registry entry to both the Streamlit session ID
 and a SHA-256 fingerprint of the current WebSocket handshake key. The raw key is not stored,
