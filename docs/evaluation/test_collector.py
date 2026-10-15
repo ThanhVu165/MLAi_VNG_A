@@ -48,6 +48,20 @@ class CollectorTest(unittest.TestCase):
             (HERE / "M4_T01_FREEZE_TEMPLATE.json").read_text(encoding="utf-8")
         )
 
+    def official_manifest(self, eligibility: str) -> dict:
+        manifest = deepcopy(self.template)
+        manifest["freeze_status"] = "FROZEN"
+        for section in ("dataset", "gold", "set_b", "corpus"):
+            for key, value in manifest[section].items():
+                if value == "NOT_RESOLVED":
+                    manifest[section][key] = "synthetic-resolved"
+        manifest["dataset"]["eligibility"] = eligibility
+        manifest["environment"]["deployed_image_digest"] = "synthetic-resolved"
+        manifest["gates"] = {key: "synthetic-resolved" for key in manifest["gates"]}
+        manifest["budget"] = 1
+        manifest["execution_authorized"] = True
+        return manifest
+
     def test_normal_terminal_result(self) -> None:
         result = reconcile(["case-1"], [attempt()], BINDING)
         self.assertEqual(result["results"][0]["status"], "BUSINESS_RESULT")
@@ -60,9 +74,11 @@ class CollectorTest(unittest.TestCase):
             business_result=None,
             technical_failure={"code": "SYNTHETIC_TIMEOUT"},
         )
-        result = reconcile(["case-1"], [row], BINDING)["results"][0]
+        reconciliation = reconcile(["case-1"], [row], BINDING)
+        result = reconciliation["results"][0]
         self.assertEqual(result["status"], "TECHNICAL_ERROR")
         self.assertIsNone(result["business_result"])
+        self.assertTrue(reconciliation["complete"])
 
     def test_missing_expected_case(self) -> None:
         result = reconcile(["case-1"], [], BINDING)
@@ -70,19 +86,37 @@ class CollectorTest(unittest.TestCase):
         self.assertFalse(result["complete"])
 
     def test_duplicate_attempt_or_terminal_is_detected(self) -> None:
-        duplicate = attempt()
-        result = reconcile(["case-1"], [duplicate, duplicate], BINDING)
-        self.assertEqual(result["results"][0]["status"], "DUPLICATE")
+        duplicate_attempt_id = [attempt(), attempt()]
+        duplicate_terminal = [attempt(), attempt(attempt_id="attempt-2")]
+        for rows in (duplicate_attempt_id, duplicate_terminal):
+            with self.subTest(rows=rows):
+                result = reconcile(["case-1"], rows, BINDING)
+                self.assertEqual(result["results"][0]["status"], "DUPLICATE")
+                self.assertFalse(result["complete"])
 
     def test_unexpected_case_is_reported(self) -> None:
-        result = reconcile(["case-1"], [attempt("other")], BINDING)
-        self.assertEqual([item["status"] for item in result["results"]], ["MISSING", "UNEXPECTED"])
+        result = reconcile(["case-1"], [attempt(), attempt("other")], BINDING)
+        self.assertEqual(
+            [item["status"] for item in result["results"]],
+            ["BUSINESS_RESULT", "UNEXPECTED"],
+        )
+        self.assertFalse(result["complete"])
 
     def test_malformed_result_is_reported(self) -> None:
         row = attempt()
         row.pop("result_status")
         result = reconcile(["case-1"], [row], BINDING)
         self.assertEqual(result["results"][0]["status"], "MALFORMED")
+        self.assertFalse(result["complete"])
+
+    def test_unidentified_malformed_attempt_prevents_completion(self) -> None:
+        result = reconcile(["case-1"], [attempt(), {"not_case_id": "case-1"}], BINDING)
+        self.assertEqual(result["malformed_without_id"], 1)
+        self.assertFalse(result["complete"])
+
+    def test_clean_expected_business_results_are_complete(self) -> None:
+        result = reconcile(["case-1", "case-2"], [attempt(), attempt("case-2")], BINDING)
+        self.assertTrue(result["complete"])
 
     def test_multiple_attempts_choose_single_terminal(self) -> None:
         retry = attempt(
@@ -126,6 +160,27 @@ class CollectorTest(unittest.TestCase):
             validate_freeze_manifest(
                 self.template, expected_runtime_sha=RUNTIME_SHA, official_execution_ready=True
             )
+
+    def test_official_readiness_requires_verified_eligibility(self) -> None:
+        for eligibility in ("NOT_VERIFIED", "NOT_ELIGIBLE"):
+            with self.subTest(eligibility=eligibility), self.assertRaisesRegex(
+                ValueError, "OFFICIAL_EXECUTION_READY"
+            ):
+                validate_freeze_manifest(
+                    self.official_manifest(eligibility),
+                    expected_runtime_sha=RUNTIME_SHA,
+                    official_execution_ready=True,
+                )
+
+    def test_official_readiness_accepts_eligible_resolved_manifest(self) -> None:
+        self.assertEqual(
+            validate_freeze_manifest(
+                self.official_manifest("ELIGIBLE"),
+                expected_runtime_sha=RUNTIME_SHA,
+                official_execution_ready=True,
+            ),
+            "FROZEN",
+        )
 
     def test_private_fields_are_not_copied(self) -> None:
         private_marker = "PRIVATE-SYNTHETIC-MARKER"

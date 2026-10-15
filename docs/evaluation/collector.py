@@ -114,7 +114,11 @@ def _record(case_id: str, status: str, **values: object) -> dict:
 
 
 def reconcile(expected_case_ids: list[str], attempts: list[object], binding: dict) -> dict:
-    """Reconcile attempts without dropping missing, malformed, duplicate, or unexpected IDs."""
+    """Reconcile attempts without dropping missing, malformed, duplicate, or unexpected IDs.
+
+    A complete run is structurally valid; a terminal technical error is accounted for but
+    remains distinct from a successful business result.
+    """
     required_binding = {
         "run_id",
         "runtime_source_sha",
@@ -192,8 +196,10 @@ def reconcile(expected_case_ids: list[str], attempts: list[object], binding: dic
         "malformed_without_id": malformed_without_id,
         "results": all_results,
         "counts": dict(sorted(counts.items())),
-        "complete": len(results) == len(expected_case_ids)
-        and all(result["status"] != "MISSING" for result in results),
+        "complete": malformed_without_id == 0
+        and all(
+            result["status"] in {"BUSINESS_RESULT", "TECHNICAL_ERROR"} for result in all_results
+        ),
     }
 
 
@@ -231,6 +237,7 @@ def validate_freeze_manifest(
         raise ValueError("freeze_status does not match unresolved fields")
     if official_execution_ready and (
         unresolved
+        or manifest["dataset"]["eligibility"] != "ELIGIBLE"
         or not manifest["execution_authorized"]
         or manifest["budget"] <= 0
         or manifest["execution_mode"] != "LIVE"
