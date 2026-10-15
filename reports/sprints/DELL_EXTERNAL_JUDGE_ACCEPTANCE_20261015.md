@@ -102,7 +102,7 @@ Cách tái hiện:
 
 ### A5 — Hai phiên độc lập và cách ly case
 
-**PASS cho session isolation; giới hạn môi trường được ghi nhận.**
+**Quan sát lịch sử: PASS cho isolation giữa hai Streamlit session trong IAB. AC4 theo contract hai browser profile: PARTIAL / NOT VERIFIED.**
 
 - Phiên A giữ case thẩm quyền `c_01M4ZPWTWXNETAMHZQJ20CBDAG`.
 - Phiên B xử lý mẫu **Văn bản rèn luyện áp dụng**, tạo case `c_01M4ZPYCARTBJ0WH0GPG57CSKV`, kết quả `ESCALATE · Cần bổ sung thông tin`, lúc `2026-10-15 19:00:14 +07:00`.
@@ -113,6 +113,8 @@ Cách tái hiện:
 Bằng chứng ảnh phiên B, không lưu thành file: SHA-256 `ab81aa293453ac1106ed11599e3a4bbdf179a977bd68ff404788f054179afc1c`, 90,876 byte, chụp `2026-10-15T12:00:26.154Z`.
 
 Hai phiên là hai tab IAB có Streamlit session độc lập trong cùng ứng dụng, không phải hai profile Chrome/Edge cấp hệ điều hành.
+
+Final evidence correction: công cụ browser hiện có không cung cấp khả năng tạo hai browser profile độc lập; không chạy thêm bài thử profile. Giữ nguyên các quan sát IAB phía trên, nhưng chúng chưa xác minh yêu cầu hai browser profile của contract và không đủ để ghi AC4 PASS.
 
 ### A6 — Trạng thái input mới
 
@@ -127,10 +129,10 @@ Các trường người gửi, tiêu đề và nội dung hiển thị và nhậ
 | AC1 — xác nhận build/SHA | PASS | `dev` đúng SHA; deployed SHA được ghi rõ **NOT VERIFIED** |
 | AC2 — public UX/navigation | PARTIAL | Website tải được; public Email → Audit FAIL, root cause NOT VERIFIED |
 | AC3 — Verify4/Escalation5/Email-Audit | PARTIAL | Verify4 PASS; Escalation5 NOT AVAILABLE; Email-Audit FAIL |
-| AC4 — hai session độc lập | PASS | Không ghi đè và deep link chéo bị từ chối; giới hạn IAB được nêu rõ |
+| AC4 — hai browser profile độc lập | PARTIAL / NOT VERIFIED | Hai Streamlit session trong hai tab IAB không ghi đè và deep link chéo bị từ chối; chưa kiểm thử hai browser profile độc lập theo contract |
 | AC5 — không LIVE/API/prod change | PASS trong phạm vi thao tác | Không chủ động gọi LIVE/provider API, gửi thật hoặc deploy; UI báo replay/mô phỏng. Không có backend telemetry để xác nhận tổng số provider API call |
 | AC6 — báo cáo và handoff | PASS | Môi trường, timestamp, evidence, bug và trạng thái đều có trong báo cáo này |
-| AC7 — điều kiện Phase B | PASS | **Phase B NOT RUN** |
+| AC7 — Phase B | DEFERRED — PHASE B NOT RUN | Chờ implementation, review, xác minh actual deployed SHA và authorization phù hợp; ghi nhận điều kiện chuyển pha không phải nghiệm thu Phase B |
 
 ## Risk register và handoff
 
@@ -139,9 +141,11 @@ Các trường người gửi, tiêu đề và nội dung hiển thị và nhậ
 | P1 | Public Email → Audit FAIL; deployed version/root cause chưa xác minh | Deployment/Web owner | Xác minh actual deployed SHA, so sánh merged dev/PR #64 trước khi đề xuất sửa code hoặc redeploy |
 | P1 | Escalation5 không xuất hiện trên public Verify UI | Verify/UI owner | Xác nhận đây là chủ ý hay thiếu cấu hình; công bố trạng thái rõ cho judge |
 | P2 | Không xác minh được SHA đang deploy | Deployment owner | Hiển thị build SHA trên UI/health page hoặc cấp project evidence đọc-only |
-| P3 | Chưa kiểm tra bằng hai browser profile OS độc lập | Dell owner | Chạy lại isolation trên Chrome/Edge profile riêng nếu cần bằng chứng mạnh hơn |
+| P3 | AC4 chưa xác minh bằng hai browser profile độc lập theo contract | Dell owner | Kiểm thử isolation trên hai browser profile độc lập khi có công cụ phù hợp trước khi kết luận AC4 PASS |
 
 **Quyết định:** chưa khuyến nghị chạy Phase B. Điều kiện chuyển pha trong brief chưa thỏa vì Phase A còn lỗi hành trình Audit và Escalation5 chưa khả dụng.
+
+**AC7: DEFERRED — PHASE B NOT RUN.** Phase B chờ implementation, review, actual deployed SHA được xác minh và authorization phù hợp. Việc ghi nhận các dependency này không phải bằng chứng đã chạy hoặc nghiệm thu Phase B.
 
 ## Tự rà soát
 
@@ -160,5 +164,6 @@ Các trường người gửi, tiêu đề và nội dung hiển thị và nhậ
 - Evidence commit: `1873f4d5c3a614a6b0ef300f48551b51fb2905f5` — `docs(dell-judge-acceptance): finalize phase A external judge evidence`.
 - PR nhắm `dev`: [#69](https://github.com/ThanhVu165/MLAi_VNG_A/pull/69), OPEN; không merge/deploy. Commit bổ sung reference này được xác định qua lịch sử Git của file.
 - Validation closeout: full diff/Markdown self-review, secret/PII pattern scan và `git diff --cached --check` PASS; chỉ report được stage. Không có private Set A/B/Gold; nội dung case là synthetic.
+- Final evidence correction baseline: `d2aab05088258b1413888223c32dc9d5fb7175a4`; remote `dev` xác minh lại là `11bd04205e560e489203da43874e332505727a2a`. Chỉ sửa phân loại AC4/AC7 và dependency; giữ nguyên kết quả Phase A, timestamp và screenshot hash gốc. Không chạy lại browser smoke/full pytest hoặc gọi LIVE/provider API trong lượt correction này.
 
 Ma trận AC1–AC7 ghi trạng thái kiểm tra và bằng chứng; hoàn tất ghi nhận Phase A không đồng nghĩa sản phẩm đạt acceptance. Kết luận sản phẩm vẫn là **PARTIAL**.
