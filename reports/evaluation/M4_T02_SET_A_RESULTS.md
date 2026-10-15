@@ -172,5 +172,73 @@ Git. Private evidence được giữ bằng opaque references dưới run ID, g�
 provider-attempt ledger, raw pipeline results, normalized results và aggregate summary.
 Không có real email send, tuning/adaptation, label change, best-of hoặc second official run.
 
+## Acceptance Criteria Mapping
+
+### AC1 — Eligibility: PASS
+
+Evidence:
+
+- Post-Tuning Independent Evaluation Set được cho phép theo Coordinator amendment
+  `6ad0466ee12c3c2891436b98e0730f5f90c19a3d`.
+- Candidate ID, version và hash đã được đóng băng trước khi thực thi.
+- Bằng chứng provenance/independence được lưu trong
+  [M4_T02_SET_A_CANDIDATE_PREPARATION.md](M4_T02_SET_A_CANDIDATE_PREPARATION.md)
+  và các evidence reference đã ghi trong báo cáo này.
+- Không tuyên bố đây là historical pre-M2 held-out set.
+
+### AC2 — Freeze: PASS
+
+Evidence:
+
+- Freeze status là `FROZEN` trước provider call.
+- Candidate, Gold, corpus, runtime, config, provider/model, gates và abort conditions
+  đã được cố định trước khi thực thi.
+
+### AC3 — Execution: PASS
+
+Evidence:
+
+- Chính xác 1 official run.
+- Đã đối soát đủ 18/18 planned IDs.
+- `VALID=13`, `TECHNICAL_ERROR=5`, `MISSING=0`.
+- Không rerun, cherry-picking hoặc best-of.
+
+### AC4 — Metrics: PASS
+
+Evidence:
+
+- Raw n/N, Wilson 95%, MER/OER, route/stop/rule correctness, technical failure,
+  missingness, latency và end-to-end metrics đều đã được ghi trong báo cáo.
+
+### AC5 — Integrity: PASS
+
+Evidence:
+
+- Không tuning/adaptation.
+- Không thay đổi Gold.
+- Không case dropping/rebalancing.
+- Không truy cập Set B Gold.
+- Không có second official run.
+
+### AC6 — Evidence: PASS
+
+Evidence:
+
+- Frozen manifest, GO-A references, run ID, exact candidate/Gold/corpus hashes,
+  sanitized report, validation results, PR/SHA và limitations đều đã được ghi nhận.
+
+## Owner Self-Review
+
+**Owner self-review: COMPLETED**
+
+- Report matches exact official run evidence: CONFIRMED.
+- Metrics arithmetic checked: CONFIRMED.
+- 18/18 reconciliation checked: CONFIRMED.
+- Limitations preserved: CONFIRMED.
+- Private/raw artifacts not committed: CONFIRMED.
+- No secret leakage: CONFIRMED.
+- No rerun performed: CONFIRMED.
+- Set A exposure state: `DEV_DIAGNOSTIC_AFTER_OFFICIAL_RUN`.
+
 **MERGE: NO.** PR #60 tiếp tục OPEN để Coordinator/MLAI review execution evidence và ra
 final M4-T02 acceptance.
