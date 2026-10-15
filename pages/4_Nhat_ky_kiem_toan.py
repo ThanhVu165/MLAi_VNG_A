@@ -111,7 +111,7 @@ def _render_restricted_audit() -> None:
         page_header_html(
             "KIỂM TOÁN & TRUY VẾT",
             "Nhật ký kiểm toán",
-            "Chỉ hiển thị sự kiện synthetic của email thuộc phiên hiện tại.",
+            "Chỉ hiển thị sự kiện đã che định danh của email thuộc phiên hiện tại.",
         ),
         unsafe_allow_html=True,
     )

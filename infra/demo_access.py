@@ -9,7 +9,12 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from infra.judge_access import authorize_payload, is_judge_case
+from infra.judge_access import (
+    authorize_payload,
+    is_judge_case,
+    live_enabled,
+    require_live_configuration,
+)
 
 APP_MODE_ENV = "APP_MODE"
 PRIVATE_MODE = "private"
@@ -81,12 +86,16 @@ def is_restricted_demo() -> bool:
 
 
 def validate_runtime_mode() -> None:
-    """Chặn record/LIVE khi restricted; HF1 chỉ cho phép replay offline."""
+    """Restricted mặc định replay; LIVE chỉ qua kill switch/config judge riêng."""
     if not is_restricted_demo():
         return
     llm_mode = os.getenv("LLM_MODE", "").strip().lower()
-    if llm_mode != "replay":
-        raise RuntimeError("Restricted DEMO hiện chỉ được chạy với LLM_MODE=replay.")
+    if llm_mode == "replay":
+        return
+    if llm_mode == "live" and live_enabled():
+        require_live_configuration()
+        return
+    raise RuntimeError("Restricted DEMO chỉ cho LLM_MODE=replay hoặc Judge LIVE được phê duyệt.")
 
 
 def authorize_demo_action(action: str) -> None:

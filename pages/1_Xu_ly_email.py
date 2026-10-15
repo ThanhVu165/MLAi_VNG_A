@@ -168,7 +168,8 @@ def _render_first_time_guidance() -> None:
     """Giải thích đúng khả năng của từng mode trước khi người dùng nhập email."""
     if is_restricted_demo() and judge_gateway.grant_valid():
         st.info(
-            "Phiên judge đã được cấp quyền nhập email synthetic để xem kết quả offline; không gửi email."
+            "Phiên judge đã được cấp quyền xử lý email mới để xem kết quả; "
+            "không gửi email. Chỉ dùng dữ liệu thử nghiệm, không nhập PII thật."
         )
     elif is_restricted_demo():
         st.info(
@@ -655,7 +656,8 @@ def main() -> None:
         if is_restricted_demo():
             if judge_gateway.grant_valid():
                 st.caption(
-                    "Nhập email synthetic với địa chỉ .invalid hoặc .test để xem bản nháp; chưa gửi."
+                    "Nhập email mới để xem quyết định và bản nháp; không gửi. "
+                    "Không dùng dữ liệu cá nhân thật."
                 )
             else:
                 st.caption("Public mode chỉ xử lý nội dung được điền từ 3 email mẫu ở phía trên.")

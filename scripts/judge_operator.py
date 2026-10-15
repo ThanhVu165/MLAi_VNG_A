@@ -1,4 +1,4 @@
-"""Client operator Unix IPC; secret nhập ẩn, không truyền qua argv/environment/frontend."""
+"""Client operator cùng container; secret nhập ẩn, không qua argv/frontend."""
 
 import argparse
 import getpass
@@ -11,7 +11,9 @@ import sys
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Vận hành judge local, không HTTP/provider.")
+    parser = argparse.ArgumentParser(
+        description="Vận hành judge cùng container, không HTTP/provider."
+    )
     parser.add_argument("--socket", required=True, type=Path)
     parser.add_argument(
         "operation", choices=("sessions", "provision", "revoke", "holds", "recover")

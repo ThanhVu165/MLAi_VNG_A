@@ -1,4 +1,4 @@
-"""Facade đồng bộ C1; không hàng gửi, không API thật, không thay public interfaces cũ."""
+"""Facade đồng bộ Judge; không hàng gửi và không thay public interfaces cũ."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def process_judge_case(
     """Capability được server cấp; nonce chỉ chống replay, không cấp quyền."""
     validate_text(inp.sender, inp.subject, inp.body)
     if inp.received_at.utcoffset() is None or inp.channel != "paste" or inp.external_id is not None:
-        raise ValueError("Judge chỉ nhận email synthetic dán mới có thời điểm hợp lệ.")
+        raise ValueError("Judge chỉ nhận email dán mới có thời điểm hợp lệ.")
     case_id = "c_" + _new_ulid()
     fingerprint = payload_hash(inp.sender, inp.subject, inp.body, inp.received_at)
     try:

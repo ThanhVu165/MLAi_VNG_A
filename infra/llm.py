@@ -21,8 +21,12 @@ from infra.demo_access import is_restricted_demo
 from infra.judge_access import (
     CASE_INPUT_TOKEN_RESERVATION,
     CASE_OUTPUT_TOKEN_RESERVATION,
+    JUDGE_LIVE_MAX_OUTPUT_TOKENS,
     active_case,
     check_active,
+    finish_live_attempt,
+    require_live_configuration,
+    reserve_live_attempt,
 )
 from infra.provider_observability import (
     current_correlation,
@@ -254,14 +258,33 @@ def _run_mode(
         return _c2c_replay(simulation, prompt_hash, model, timeout_s)
     if active_case() is not None:
         check_active()
-        if mode != "replay" or case_id != active_case():
-            return _failure("C1 judge chỉ cho phép provider offline.", prompt_hash, model)
-        _attempt_timeout(timeout_s)
-        return _replay(prompt_hash, model)
-    if is_restricted_demo() and mode != "replay":
-        return _failure("Restricted DEMO hiện không cho phép LIVE hoặc record.", prompt_hash, model)
-    if mode == "replay":
-        return _replay(prompt_hash, model)
+        if case_id != active_case():
+            return _failure("Case không khớp reservation judge.", prompt_hash, model)
+        if mode == "replay":
+            _attempt_timeout(timeout_s)
+            return _replay(prompt_hash, model)
+        if mode == "live":
+            try:
+                require_live_configuration()
+            except Exception:
+                return _failure("Cấu hình Judge LIVE không hợp lệ.", prompt_hash, model)
+            return _call_live(
+                prompt,
+                schema,
+                prompt_hash,
+                model,
+                timeout_s,
+                retries,
+                case_id=case_id,
+                step=step,
+                provider=provider,
+            )
+        return _failure("Judge chỉ cho phép replay hoặc LIVE được cấp quyền.", prompt_hash, model)
+    if is_restricted_demo():
+        if mode in {"live", "replay"}:
+            # Chỉ active Judge lease ở nhánh trên được phép đi LIVE.
+            return _replay(prompt_hash, model)
+        return _failure("Restricted DEMO không cho phép record hoặc mode lạ.", prompt_hash, model)
     if mode not in {"live", "record"}:
         return _failure("LLM_MODE phải là live, replay hoặc record.", prompt_hash, model)
 
@@ -322,13 +345,35 @@ def _call_live(
         started = perf_counter()
         remaining_timeout = None
         request_started = False
+        judge_live = active_case() is not None
         try:
             remaining_timeout = _attempt_timeout(timeout_s)
+            if judge_live:
+                reserve_live_attempt(JUDGE_LIVE_MAX_OUTPUT_TOKENS)
             request_started = True
-            result = _request_openai(prompt, schema, prompt_hash, model, api_key, remaining_timeout)
+            result = _request_openai(
+                prompt,
+                schema,
+                prompt_hash,
+                model,
+                api_key,
+                remaining_timeout,
+                **({"max_output_tokens": JUDGE_LIVE_MAX_OUTPUT_TOKENS} if judge_live else {}),
+            )
         except Exception as error:
+            accounting_ok = True
+            if judge_live and request_started:
+                try:
+                    accounting_ok = finish_live_attempt(
+                        getattr(error, "_validated_response_usage", None),
+                        response_received=bool(
+                            getattr(error, "_provider_response_received", False)
+                        ),
+                    )
+                except Exception:
+                    accounting_ok = False
             LOGGER.warning("Lần gọi LLM %s thất bại: %s", attempt + 1, type(error).__name__)
-            transient = request_started and _openai_retryable(error)
+            transient = accounting_ok and request_started and _openai_retryable(error)
             will_retry = request_started and transient and attempt < retry_count
             retry_backoff_s = 0.0
             if will_retry:
@@ -411,6 +456,20 @@ def _call_live(
             if retry_backoff_s:
                 sleep(retry_backoff_s)
         else:
+            if judge_live:
+                try:
+                    if not finish_live_attempt(result.usage, response_received=True):
+                        return _failure(
+                            "Usage Judge LIVE thiếu hoặc không hợp lệ; đã dừng fail-closed.",
+                            prompt_hash,
+                            model,
+                        )
+                except Exception:
+                    return _failure(
+                        "Không đối soát được usage Judge LIVE; đã dừng fail-closed.",
+                        prompt_hash,
+                        model,
+                    )
             _record_provider_attempt(
                 prompt=prompt,
                 provider=provider,
@@ -549,6 +608,7 @@ def _request_openai(
     timeout_s: int,
     *,
     temperature: float = 0.0,
+    max_output_tokens: int | None = None,
 ) -> LLMResult:
     if _SIMULATION.get() is not None:
         raise ValueError("Mô phỏng C2-C không được gọi provider LIVE.")
@@ -562,11 +622,17 @@ def _request_openai(
         max_retries=0,
         timeout=min(timeout_s, LLM_TIMEOUT_S),
     ) as client:
+        output_limit = (
+            {"max_completion_tokens": max_output_tokens}
+            if type(max_output_tokens) is int and max_output_tokens > 0
+            else {}
+        )
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
             reasoning_effort=reasoning_effort,
             **sampling,
+            **output_limit,
             response_format={
                 "type": "json_schema",
                 "json_schema": {
@@ -588,6 +654,7 @@ def _request_openai(
     except Exception as error:
         # Giữ nguyên loại lỗi; chỉ mang numeric usage đã kiểm tra sang attempt telemetry.
         error._validated_response_usage = usage
+        error._provider_response_received = True
         raise
 
 

@@ -257,7 +257,7 @@ def test_technical_failures_never_create_preview(judge, monkeypatch, fault) -> N
         ("body", ""),
         ("body", "x" * 5001),
         ("subject", "bad\x00text"),
-        ("sender", "real@example.com"),
+        ("sender", "not-an-email"),
         ("body", "e\u0301"),
         ("body", "\ud800"),
     ],

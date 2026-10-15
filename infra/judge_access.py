@@ -1,7 +1,7 @@
-"""Capability judge offline; quota/ownership bền vững trong settings, không migration.
+"""Capability judge; quota/ownership bền vững trong settings, không migration.
 
 Issuer chỉ dành cho operator phía server, không được gọi từ form/query. Session là
-ngữ cảnh sở hữu ẩn danh, không phải danh tính đã xác thực. C1 không mở provider LIVE.
+ngữ cảnh sở hữu ẩn danh, không phải danh tính đã xác thực.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from infra.db import fetch_one, now_iso, transaction
+from infra.settings import JUDGE_LIVE_MAX_OUTPUT_TOKENS, JUDGE_LIVE_MAX_PROVIDER_ATTEMPTS
 
 STATE_KEY = "judge_c1:ledger"
 CASE_PREFIX = "judge_c1:case:"
@@ -39,6 +40,7 @@ MAX_PAYLOAD_CHARS = 6_000
 # Envelope dự toán offline cho tối đa 3 attempts; chưa là usage hoặc provider hard cap.
 C2_STATE_KEY = "judge_c2a:ledger"
 C2_ANCHOR_KEY = "judge_c2a:initialized"
+LIVE_ATTEMPT_PREFIX = "judge_live:attempts:"
 CASE_INPUT_TOKEN_RESERVATION = 24_000
 CASE_OUTPUT_TOKEN_RESERVATION = 6_000
 SESSION_TOKEN_RESERVATION_LIMIT = 300_000
@@ -71,6 +73,29 @@ _ACTIVE: ContextVar[_Lease | None] = ContextVar("judge_c1_lease", default=None)
 
 def enabled() -> bool:
     return os.getenv("JUDGE_INPUT_ENABLED", "0") == "1"
+
+
+def live_enabled() -> bool:
+    return os.getenv("JUDGE_LIVE_ENABLED", "0") == "1"
+
+
+def require_live_configuration() -> None:
+    """LIVE chỉ mở khi server pin đúng OpenAI model và tắt cache/record."""
+    model = os.getenv("OPENAI_MODEL", "").strip()
+    approved_model = os.getenv("JUDGE_LIVE_MODEL", "").strip()
+    if (
+        not enabled()
+        or not live_enabled()
+        or os.getenv("APP_MODE", "restricted_demo") != "restricted_demo"
+        or os.getenv("LLM_MODE", "").strip().lower() != "live"
+        or os.getenv("LLM_PROVIDER", "openai").strip().lower() != "openai"
+        or not model
+        or not approved_model
+        or not hmac.compare_digest(model, approved_model)
+        or not os.getenv("OPENAI_API_KEY", "")
+        or os.getenv("LLM_CACHE", "1") != "0"
+    ):
+        raise JudgeDenied("Cấu hình Judge LIVE chưa được phê duyệt hoặc không khớp.")
 
 
 def _hash(value: str) -> str:
@@ -358,8 +383,8 @@ def validate_text(sender: object, subject: object, body: object) -> None:
             raise ValueError("Email chứa ký tự không hợp lệ.")
     if sum(map(len, values)) > MAX_PAYLOAD_CHARS:
         raise ValueError("Tổng email vượt giới hạn cho phép.")
-    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.(?:invalid|test)", sender):
-        raise ValueError("Chỉ dùng địa chỉ synthetic kết thúc bằng .invalid hoặc .test.")
+    if not re.fullmatch(r"[^\s@]{1,64}@[^\s@]+\.[^\s@]+", sender):
+        raise ValueError("Địa chỉ email người gửi không hợp lệ.")
 
 
 def payload_hash(sender: str, subject: str, body: str, received_at: datetime) -> str:
@@ -454,6 +479,118 @@ def mark_processing() -> None:
             raise JudgeDenied("Reservation không ở trạng thái bắt đầu xử lý.")
         record["phase"] = "PROCESSING"
         _save_c2(connection, c2)
+
+
+def reserve_live_attempt(max_output_tokens: int) -> None:
+    """Ghi debit trước provider call; pending sau crash sẽ chặn mọi call tiếp."""
+    require_live_configuration()
+    check_active()
+    case_id = active_case()
+    if max_output_tokens != JUDGE_LIVE_MAX_OUTPUT_TOKENS or case_id is None:
+        raise JudgeDenied("Giới hạn output Judge LIVE không hợp lệ.")
+    with transaction() as connection:
+        request = _load_c2(connection)["requests"].get(case_id)
+        if request is None or request["phase"] != "PROCESSING":
+            raise JudgeDenied("Reservation Judge LIVE không còn ở trạng thái xử lý.")
+        key = LIVE_ATTEMPT_PREFIX + case_id
+        row = connection.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+        try:
+            state = (
+                json.loads(row["value"])
+                if row
+                else {
+                    "version": 1,
+                    "attempts": 0,
+                    "reserved_output_tokens": 0,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "pending": False,
+                    "blocked": False,
+                }
+            )
+            _validate_live_attempts(state)
+        except (ValueError, TypeError, KeyError):
+            raise JudgeDenied("Ledger attempt Judge LIVE không đọc được; giữ HOLD.") from None
+        if (
+            state["blocked"]
+            or state["pending"]
+            or state["attempts"] >= JUDGE_LIVE_MAX_PROVIDER_ATTEMPTS
+            or state["reserved_output_tokens"] + max_output_tokens > CASE_OUTPUT_TOKEN_RESERVATION
+        ):
+            raise JudgeDenied("Judge LIVE đã chạm giới hạn hoặc có attempt chưa đối soát.")
+        state["attempts"] += 1
+        state["reserved_output_tokens"] += max_output_tokens
+        state["pending"] = True
+        connection.execute(
+            "INSERT INTO settings(key,value,updated_at,actor) VALUES(?,?,?,'SYSTEM') "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at",
+            (key, json.dumps(state), now_iso()),
+        )
+
+
+def finish_live_attempt(usage: object, *, response_received: bool) -> bool:
+    """Chỉ usage provider hợp lệ mới đóng attempt có response."""
+    check_active()
+    case_id = active_case()
+    if case_id is None:
+        raise JudgeDenied("Không có case Judge LIVE đang hoạt động.")
+    with transaction() as connection:
+        key = LIVE_ATTEMPT_PREFIX + case_id
+        row = connection.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+        try:
+            state = json.loads(row["value"]) if row else None
+            _validate_live_attempts(state)
+        except (ValueError, TypeError, KeyError):
+            raise JudgeDenied("Ledger attempt Judge LIVE không đọc được; giữ HOLD.") from None
+        if not state["pending"] or state["blocked"]:
+            raise JudgeDenied("Attempt Judge LIVE không thể đối soát.")
+        valid = not response_received or (
+            isinstance(usage, dict)
+            and type(usage.get("input_tokens")) is int
+            and type(usage.get("output_tokens")) is int
+            and usage["input_tokens"] >= 0
+            and 0 <= usage["output_tokens"] <= JUDGE_LIVE_MAX_OUTPUT_TOKENS
+            and state["input_tokens"] + usage["input_tokens"] <= CASE_INPUT_TOKEN_RESERVATION
+            and state["output_tokens"] + usage["output_tokens"] <= state["reserved_output_tokens"]
+        )
+        state["pending"] = False
+        state["blocked"] = not valid
+        if valid and response_received:
+            state["input_tokens"] += usage["input_tokens"]
+            state["output_tokens"] += usage["output_tokens"]
+        connection.execute(
+            "UPDATE settings SET value=?,updated_at=?,actor='SYSTEM' WHERE key=?",
+            (json.dumps(state), now_iso(), key),
+        )
+        return valid
+
+
+def _validate_live_attempts(state: object) -> None:
+    if (
+        not isinstance(state, dict)
+        or set(state)
+        != {
+            "version",
+            "attempts",
+            "reserved_output_tokens",
+            "input_tokens",
+            "output_tokens",
+            "pending",
+            "blocked",
+        }
+        or state["version"] != 1
+        or any(
+            not _valid_count(state[key])
+            for key in ("attempts", "reserved_output_tokens", "input_tokens", "output_tokens")
+        )
+        or type(state["pending"]) is not bool
+        or type(state["blocked"]) is not bool
+        or state["attempts"] > JUDGE_LIVE_MAX_PROVIDER_ATTEMPTS
+        or state["reserved_output_tokens"] != state["attempts"] * JUDGE_LIVE_MAX_OUTPUT_TOKENS
+        or state["input_tokens"] > CASE_INPUT_TOKEN_RESERVATION
+        or state["output_tokens"] > state["reserved_output_tokens"]
+    ):
+        raise JudgeDenied("Ledger attempt Judge LIVE không hợp lệ; giữ HOLD.")
 
 
 def recover_reservations(operator_secret: str) -> dict[str, str]:
