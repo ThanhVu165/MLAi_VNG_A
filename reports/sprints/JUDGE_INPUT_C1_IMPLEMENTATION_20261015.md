@@ -234,3 +234,95 @@ PR #68 nhắm dev `11bd04205e560e489203da43874e332505727a2a`. Commit sau impleme
 chỉ bổ sung metadata SHA/PR vào report; SHA head cuối được bàn giao trong chat/GitHub.
 Independent reviewer cần đọc đúng PR head cuối; không mặc định test PASS là security gate PASS.
 LIVE/API provider calls=0. Merge/deploy NOT RUN. Feature chưa được bật public.
+
+## INDEPENDENT REVIEW CHANGE REQUEST — JUDGE CASE MUTATION GUARD
+
+### Authorization, baseline và findings
+
+Coordinator cấp amendment hẹp trong chat ngày 15/10/2026: chỉ sửa `core/controls.py`,
+`tests/test_judge_input_c1.py` và report này; tiếp tục branch `codex/judge-input-c1`, PR #68.
+Reviewed SHA: `129f106f53b8ed4da1991e19fbcdd6c2ffb65368`. Fetch xác nhận remote branch
+vẫn đúng SHA, dev vẫn `11bd04205e560e489203da43874e332505727a2a`, không conflict.
+
+Independent review xác nhận hai khoảng trống: `rerun_case()` có thể tạo case con từ judge
+preview/escalation trong private mode; `override_decision()` chưa chặn judge provenance ở
+các trạng thái được phép override. Checkpoint PASS trước chỉ phủ privileged denial trong
+restricted và worker retry/schedule, chưa phủ đủ các đường admin private này. Change request
+này bổ sung coverage và sửa cả hai finding; không dùng PASS lịch sử thay evidence mới.
+
+### Fix
+
+- `_require_non_judge()` nhận provenance từ `is_judge_case()` hiện có hoặc cùng namespace
+  CASE_PREFIX trên connection của giao dịch mutation. Kiểm tra độc lập status, flag và grant TTL.
+- `rerun_case()`: guard ngay sau kiểm ADMIN, trước đọc quyết định, gọi pipeline hoặc tạo case.
+  Không giữ transaction DB qua provider call.
+- `override_decision()`: guard trong BEGIN IMMEDIATE, trước bất kỳ mutation nào.
+- `_store_manual_decision()`: defense-in-depth dùng chính connection của caller, trước thay
+  decisions/status/escalations/Audit, chặn cả lời gọi gián tiếp qua helper.
+- Provenance store/query lỗi thì exception dừng thao tác, không fallback cho phép.
+- Không sửa module khác, schema, audit actions, enum, quota/grant/ownership hoặc expected cũ.
+
+### Tests và invariant
+
+Test IDs mới:
+
+- `test_private_admin_cannot_mutate_judge_provenance`: 12 tổ hợp rerun/override/manual
+  helper × preview/FACT_UNRESOLVED/OUT_OF_POLICY/AUTHORITY_REQUIRED.
+- `test_private_admin_cannot_override_judge_pending_approval`: provenance vẫn chặn khi
+  status được đặt vào trạng thái admin thường được override (fault setup chỉ trong DB test).
+- `test_admin_mutation_guard_store_error_fails_closed`: 2 nhánh rerun/override; injection
+  lỗi đọc provenance, gồm SQLite authorizer deny đọc settings trong transaction override.
+- `test_normal_private_admin_rerun_and_override_remain_available`: case thường vẫn
+  AUTO_REPLY/PENDING_SEND → admin ESCALATE → rerun child PENDING_SEND có audit đúng.
+
+Negative tests so sánh nguyên trạng 10 bảng trước/sau: cases, case_jobs, decisions,
+case_results, audit_events, drafts, escalations, extractions, human_decisions, settings.
+Judge mutation bị từ chối không đổi status/decision/snapshot/Audit/quota, không child case,
+job, PENDING_SEND hoặc SEND_SCHEDULED/SEND_DISPATCHED/RERUN_CASE/OVERRIDE_DECISION.
+Pipeline spy dùng pytest.fail để chứng minh denied rerun không chạm pipeline.
+
+### Validation exact commands / kết quả
+
+Môi trường Mac, `.venv` Python 3.11, DB tạm và seed synthetic, replay provider double;
+tests/conftest.py khóa network/DNS/OpenAI SDK. Không official evaluation hoặc Gold Set A/B.
+
+```text
+.venv/bin/python -m pytest -q tests/test_judge_input_c1.py -k 'private_admin_cannot_mutate_judge_provenance or normal_private_admin_rerun_and_override'
+```
+
+Trước fix: **12 failed, 1 passed** — tái hiện guard còn thiếu, normal compatibility PASS.
+Sau fix: **13 passed, 35 deselected in 1.94s**.
+
+```text
+.venv/bin/python -m pytest -q tests/test_judge_input_c1.py -k 'private_admin or admin_mutation_guard'
+```
+
+Sau bổ sung pending-approval/store faults: **16 passed, 35 deselected in 2.28s**.
+
+```text
+.venv/bin/python -m pytest -q tests/test_judge_input_c1.py tests/test_guards.py tests/test_runtime_worker.py tests/test_restricted_demo.py tests/test_judge_new_input_offline.py tests/test_audit_navigation_session.py tests/test_email_input_ui.py tests/test_pre_m4_ux.py tests/test_runtime_replay_audit.py tests/test_audit_coverage.py tests/test_audit_details.py tests/test_llm_budget.py tests/test_ux_responsive_cardless.py
+.venv/bin/python -m black --check --line-length 100 core/controls.py tests/test_judge_input_c1.py
+.venv/bin/python -m ruff check core/controls.py tests/test_judge_input_c1.py
+git diff --check
+```
+
+**253 passed in 13.22s**, gồm 51 C1 tests; Black/Ruff/diff check đều PASS, exit 0.
+Regression giữ Judge AUTO_REPLY=PREVIEW_READY, normal private AUTO_REPLY/rerun/override,
+canonical/Verify4 4/4, restricted privileged denial, UI-01 và Audit. Artifact M7 hashes khớp
+fingerprint preflight và không stage/commit.
+
+### Owner self-review / handoff
+
+Đã đọc toàn diff: đúng ba file amendment; helper không thêm quyền hoặc thay public interface;
+override/manual guard dùng connection của transaction; rerun guard chạy trước pipeline;
+không catch lỗi provenance thành allow; denied actions không tạo audit mutation giả.
+Đã kiểm tra các đường mutation còn lại trong controls.py: manual decision helper được bảo vệ;
+pause/resume là settings toàn cục, không sửa riêng case judge; cancel_send được import từ
+dispatch đã có judge guard trong baseline. Không phát hiện đường case mutation khác cần sửa
+ngoài scope trong lượt review này.
+
+Result: READY_FOR_REVIEW cho bản sửa hai findings; không tự xác nhận independent security gate.
+Implementation SHA sẽ bổ sung trong metadata handoff; PR vẫn #68. Reviewer cần đối chiếu SHA
+head sau push. Các giới hạn C1/C2 đã ghi ở trên tiếp tục áp dụng; semantic/provider LIVE vẫn
+NOT VERIFIED. LIVE/API=0; merge/deploy NOT RUN. Next: independent security review lại hai
+findings và regression → Coordinator acceptance.

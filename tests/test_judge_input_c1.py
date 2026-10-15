@@ -17,6 +17,7 @@ import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from core.dispatch import dispatch_due, schedule_auto_reply
+from core.controls import _store_manual_decision, override_decision, rerun_case
 from core.judge_input import process_judge_case
 from core.pipeline import process_case
 from core.results import load_result
@@ -430,3 +431,157 @@ def test_fresh_process_restores_preview_and_ownership(judge, monkeypatch) -> Non
         [sys.executable, "-c", code], env=environment, capture_output=True, timeout=20
     )
     assert completed.returncode == 0, "Fresh-process ownership/persistence check failed"
+
+
+def _mutation_snapshot() -> dict[str, list[tuple]]:
+    tables = (
+        "cases",
+        "case_jobs",
+        "decisions",
+        "case_results",
+        "audit_events",
+        "drafts",
+        "escalations",
+        "extractions",
+        "human_decisions",
+        "settings",
+    )
+    return {
+        name: [tuple(row) for row in db.fetch_all(f"SELECT * FROM {name} ORDER BY rowid")]
+        for name in tables
+    }
+
+
+@pytest.mark.parametrize(
+    "scenario", ["JUDGE-AUTO", "JUDGE-FACT", "JUDGE-OUT-OF-POLICY", "JUDGE-AUTHORITY"]
+)
+@pytest.mark.parametrize("operation", ["rerun", "override", "manual"])
+def test_private_admin_cannot_mutate_judge_provenance(
+    judge: access.JudgeGrant, monkeypatch: pytest.MonkeyPatch, scenario: str, operation: str
+) -> None:
+    _provider(monkeypatch, scenario)
+    result = process_judge_case(_input(scenario), grant=judge, session="session-a", nonce=NONCE)
+    assert result.status is (
+        CaseStatus.PREVIEW_READY if scenario == "JUDGE-AUTO" else CaseStatus.AWAITING_HUMAN
+    )
+    monkeypatch.setenv("APP_MODE", "private")
+    before = _mutation_snapshot()
+
+    def forbidden_pipeline(*args: object, **kwargs: object) -> None:
+        pytest.fail("Judge rerun không được gọi pipeline hoặc tạo child case")
+
+    monkeypatch.setattr("core.controls.process_case", forbidden_pipeline)
+    with pytest.raises(access.JudgeDenied, match="judge"):
+        if operation == "rerun":
+            rerun_case(result.case_id, "ADMIN:reviewer")
+        elif operation == "override":
+            decision = Decision.ESCALATE if scenario == "JUDGE-AUTO" else Decision.AUTO_REPLY
+            override_decision(result.case_id, decision, "ADMIN:reviewer", "Kiểm tra provenance.")
+        else:
+            with db.transaction() as connection:
+                case = connection.execute(
+                    "SELECT * FROM cases WHERE case_id=?", (result.case_id,)
+                ).fetchone()
+                _store_manual_decision(
+                    connection,
+                    case,
+                    Decision.AUTO_REPLY,
+                    "ADMIN:reviewer",
+                    "Kiểm tra helper gián tiếp.",
+                    rule_id="ADMIN_OVERRIDE",
+                    action="OVERRIDE_DECISION",
+                )
+    assert _mutation_snapshot() == before
+    assert not db.fetch_all("SELECT * FROM cases WHERE parent_case_id=?", (result.case_id,))
+    assert not db.fetch_all("SELECT * FROM case_jobs")
+    assert not db.fetch_all("SELECT * FROM cases WHERE status='PENDING_SEND'")
+    assert not db.fetch_all(
+        "SELECT * FROM audit_events WHERE action IN ('SEND_SCHEDULED','SEND_DISPATCHED','RERUN_CASE','OVERRIDE_DECISION')"
+    )
+
+
+def test_normal_private_admin_rerun_and_override_remain_available(
+    judge: access.JudgeGrant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("APP_MODE", "private")
+    _provider(monkeypatch)
+    original = process_case(_input())
+    assert original.status is CaseStatus.PENDING_SEND
+    assert not access.is_judge_case(original.case_id)
+    changed = override_decision(
+        original.case_id, Decision.ESCALATE, "ADMIN:reviewer", "Cần người đối chiếu."
+    )
+    assert changed.status is CaseStatus.AWAITING_HUMAN
+    _provider(monkeypatch)
+    rerun, _ = rerun_case(original.case_id, "ADMIN:reviewer")
+    assert rerun.status is CaseStatus.PENDING_SEND
+    child = db.fetch_one("SELECT parent_case_id FROM cases WHERE case_id=?", (rerun.case_id,))
+    assert child["parent_case_id"] == original.case_id
+    assert load_result(original.case_id).status is CaseStatus.CANCELLED
+    assert db.fetch_one("SELECT 1 FROM audit_events WHERE action='OVERRIDE_DECISION'")
+    assert db.fetch_one("SELECT 1 FROM audit_events WHERE action='RERUN_CASE'")
+
+
+def test_private_admin_cannot_override_judge_pending_approval(
+    judge: access.JudgeGrant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _provider(monkeypatch, "JUDGE-FACT")
+    result = process_judge_case(_input("JUDGE-FACT"), grant=judge, session="session-a", nonce=NONCE)
+    # Provenance phải chặn cả trạng thái được admin override thông thường cho phép.
+    db.execute(
+        "UPDATE cases SET status=? WHERE case_id=?", (CaseStatus.PENDING_APPROVAL, result.case_id)
+    )
+    monkeypatch.setenv("APP_MODE", "private")
+    before = _mutation_snapshot()
+    with pytest.raises(access.JudgeDenied):
+        override_decision(
+            result.case_id, Decision.AUTO_REPLY, "ADMIN:reviewer", "Không được đổi judge."
+        )
+    assert _mutation_snapshot() == before
+
+
+@pytest.mark.parametrize("operation", ["rerun", "override"])
+def test_admin_mutation_guard_store_error_fails_closed(
+    judge: access.JudgeGrant, monkeypatch: pytest.MonkeyPatch, operation: str
+) -> None:
+    import sqlite3
+    import core.controls as controls
+
+    _provider(monkeypatch, "JUDGE-FACT")
+    result = process_judge_case(_input("JUDGE-FACT"), grant=judge, session="session-a", nonce=NONCE)
+    monkeypatch.setenv("APP_MODE", "private")
+    before = _mutation_snapshot()
+
+    def forbidden(*args: object, **kwargs: object) -> None:
+        pytest.fail("Kho provenance lỗi không được gọi pipeline")
+
+    monkeypatch.setattr(controls, "process_case", forbidden)
+    if operation == "rerun":
+
+        def unavailable(case_id: str) -> bool:
+            raise sqlite3.OperationalError("offline provenance unavailable")
+
+        monkeypatch.setattr(controls, "is_judge_case", unavailable)
+    else:
+        original_connection = controls.get_connection
+
+        def denied_connection() -> sqlite3.Connection:
+            connection = original_connection()
+            connection.set_authorizer(
+                lambda action, table, *args: (
+                    sqlite3.SQLITE_DENY
+                    if action == sqlite3.SQLITE_READ and table == "settings"
+                    else sqlite3.SQLITE_OK
+                )
+            )
+            return connection
+
+        monkeypatch.setattr(controls, "get_connection", denied_connection)
+    with pytest.raises(sqlite3.Error):
+        if operation == "rerun":
+            rerun_case(result.case_id, "ADMIN:reviewer")
+        else:
+            override_decision(
+                result.case_id, Decision.AUTO_REPLY, "ADMIN:reviewer", "Không được bypass store."
+            )
+    assert _mutation_snapshot() == before
