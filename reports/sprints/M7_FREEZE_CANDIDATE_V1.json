@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "task_id": "M7",
+  "artifact": "M7_FREEZE_CANDIDATE_V1",
+  "generated_at": "2026-10-15T16:36:47+07:00",
+  "status": "FREEZE_CANDIDATE_HOLD",
+  "authorization": {
+    "approver": "Project Coordinator",
+    "source": "Direct instruction in the current Codex session on 2026-10-15",
+    "trello_check": "WAIVED_BY_COORDINATOR"
+  },
+  "source": {
+    "repository": "ThanhVu165/MLAi_VNG_A",
+    "branch": "dev",
+    "commit": "47a1fcd9686b5409674979b34a521ead2f65ae8d",
+    "preparation_branch": "codex/m7-technical-closeout"
+  },
+  "component_trees": {
+    "core": "a90c2f6a0cd35f7ec8ba72973929857a16a30e1e",
+    "corpus": "6a148eea2fcea6f9cf40a627204e9d3aabbc90db",
+    "infra": "d7f935c2adb2d4560dae9492046c6e2a7575c595",
+    "policies": "c426e2cddcccde1129a91a4142adbc1c1f674922",
+    "seed_documents": "e918b8c940e5a139ba89fbf58b5ca29f351f58a9",
+    "verify": "b577a6058b18a7dcffe3ec394068a9e66f6ee817",
+    "replay_cassettes": "3606888be58303a267e97c3a5bf4367d7f0e9619",
+    "evaluation_protocol": "1161729ae3d91a9a8073b8063a3c0787a782282f"
+  },
+  "file_sha256": {
+    "Dockerfile": "324dcfcce544b69a5893970034eb1c2085a26196473ee1766cc658ddb0bd5128",
+    "compose.yaml": "5cb06af0e5df87befa963cb7e4ca5297c49370e5f21a46f299ade7304dac9e89",
+    "requirements.txt": "2384055990789840679cb8ce52089c035dc57d177a402bc88cfdc465fbf41e2d",
+    "policies/policy.yaml": "274ea8f0fceb3bdec6a23edbd0af96a7639d1112f93b96a7a85c37900a6d40aa",
+    "data/seed_docs/HP-2026-1.json": "765a65530d7edc78ef004c984ca5514a08a3720f332b47216f031eebcc6243bd",
+    "data/seed_docs/PK-2026-204.json": "5b24c84754a69e9fcb317589b8c0b2c3608ef26d40ceb1c3e48c454ca3d0a15d",
+    "data/seed_docs/QDPQ-2026-01.json": "8809607390cd0b261e1a2648bc21c6dcdeb2ce6f852ff55e06cb4af261c59aac",
+    "data/seed_docs/RH-2026-101.json": "7f2e3c2188a2613f95399324bb163c6e59ad279d0b0e5ff67bd587bf2d9b597e",
+    "data/seed_docs/RL-2025-2363.json": "7b0f41bc63dc9558b95a3573b681d79f3ff7af255b49d51c6051cd6381995012",
+    "data/seed_docs/RL-2026-3150.json": "fcfe0098e313bbf9a5c25e71bfdd08dae14e6ca27b0e4c27f77ae43dcca685f6",
+    "verify/cases_m2_combined_dev.json": "d18cd77081c1ebb3bd72587d0a9cd438ecdbe5f06b0409ef7c61ba2408cccc04"
+  },
+  "runtime_configuration": {
+    "python_local": "3.11.17",
+    "container_base": "python:3.11-slim",
+    "openai_model": "gpt-6-luna",
+    "llm_mode": "replay",
+    "llm_cache": "0",
+    "app_mode": "restricted_demo",
+    "timeout_seconds": 30,
+    "max_retries": 1,
+    "reasoning_effort": "none",
+    "temperature": 0
+  },
+  "deployment_comparison": {
+    "reported_and_verified_railway_commit": "fe8c2dbca013e9344a678ba52f70588495c897ef",
+    "candidate_commit": "47a1fcd9686b5409674979b34a521ead2f65ae8d",
+    "candidate_ahead_by_commits": 27,
+    "relationship": "DEPLOYED_COMMIT_IS_ANCESTOR",
+    "alignment": "HOLD_COMPOSE_CONFIGURATION_DIFFERS"
+  },
+  "set_b": {
+    "candidate_identifier": "M7_SET_B_V2_CANDIDATE",
+    "candidate_case_count": 16,
+    "candidate_sha256": "9377eb0e4015d91a22aa60f722945a80934300a6ce1ece36c12e83fbbb14086e",
+    "adjudication": "COORDINATOR_ACCEPTED_16_OF_16",
+    "independent_gold_provenance": "NOT_VERIFIED",
+    "gold_seal": "NOT_VERIFIED",
+    "access_history": "NOT_VERIFIED",
+    "go_b": "NO_GO_B_HOLD",
+    "official_evaluation": "NOT_RUN"
+  },
+  "dependencies": {
+    "m4_t02_pull_request": 60,
+    "m4_t02_pull_request_state": "OPEN",
+    "m4_t02_head": "f45d0a0557ed8e9057c956aba63038f8afe37107",
+    "go_a": "NOT_COMPLETE"
+  },
+  "validation": {
+    "protocol_collector_compose_tests": "PASS_39_OF_39",
+    "restricted_demo_and_replay_audit_locked_env": "PASS_30_OF_30",
+    "verify4_offline_replay": "PASS_4_OF_4",
+    "docker_local_execution": "NOT_RUN_DOCKER_CLI_UNAVAILABLE",
+    "live_api_calls": 0
+  }
+}
