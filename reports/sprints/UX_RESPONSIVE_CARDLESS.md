@@ -6,7 +6,7 @@
 - Task ID: `UX-RESPONSIVE-CARDLESS`
 - Authorization: yêu cầu trực tiếp của Coordinator/user trong phiên ngày 2026-10-15; user chỉ định bỏ qua bước kiểm tra Trello.
 - Branch: `codex/ux-responsive-cardless`
-- Baseline đã xác minh: `origin/dev@a6f3b7c7c564cb7bde13e124eb03f121eca0a114`
+- Baseline đã xác minh và đồng bộ: `origin/dev@b728d00ba6e53b8568554082fe7f4cb6a0dc03e1`
 - Final implementation SHA: `14a98e6ff6c3176ddc16c4854959157eecc16695`
 - PR: cập nhật sau khi push/mở PR; target `dev`.
 - LIVE/API calls: **0**
@@ -15,9 +15,12 @@
 
 - Đã đọc `AGENT.md`, `docs/TEAM_WORKFLOW.md`, `PROJECT_SPEC.md`, `STATUS.md`,
   `docs/SPRINT_ROADMAP.md`, `docs/RUNBOOK.md` và các UI/presentation tests liên quan.
-- `git fetch origin dev` xác nhận remote `dev` vẫn đúng reference baseline `a6f3b7c...`.
+- `git fetch origin dev` ban đầu xác nhận remote `dev` đúng reference baseline `a6f3b7c...`.
 - PR #60 đã merge vào `dev` tại `53b6ad3...`; PR #62 đã merge vào `dev` tại
   `a6f3b7c...`. File của PR #62 không giao với scope hiện tại.
+- Trước handoff, `origin/dev` tiến tới `b728d00...` do PR #64. Đã kiểm tra ba commit mới:
+  chỉ thay các page/test/report của audit navigation, không giao bốn file scope. Branch được
+  merge-forward từ `origin/dev` không conflict và regression được chạy lại trên baseline mới.
 - Branch ban đầu là `sprint/m4-t02-official-set-a`, working tree chỉ có `.codex_tmp/` và
   `outputs/` untracked. Hai thư mục này được bảo toàn và không đưa vào commit.
 - Tạo `codex/ux-responsive-cardless` trực tiếp từ `origin/dev`; không reset, clean, stash,
@@ -44,7 +47,7 @@ runtime contract hoặc business logic.
 | AC | Kết quả | Evidence |
 | --- | --- | --- |
 | AC1 — menu đúng theo runtime mode | PASS | Điều kiện menu `restricted_demo` giữ nguyên; navigation regression nằm trong bộ 160 tests; smoke Restricted DEMO hiển thị đúng bốn mục cho phép. |
-| AC2 — không regression startup/navigation/access guard | PASS | `160 passed`; gồm baseline integration, Restricted DEMO, navigation, AppTest và guards. |
+| AC2 — không regression startup/navigation/access guard | PASS | `168 passed` sau khi đồng bộ `origin/dev`; gồm baseline integration, Restricted DEMO, navigation, AppTest và guards. |
 | AC3 — desktop 1440px | PASS | Browser smoke viewport CDP chính xác 1440px; `body/html scrollWidth=1440`, sidebar 320px, không có phần tử vượt viewport. |
 | AC4 — mobile 390px và table overflow | PASS | Browser smoke viewport CDP chính xác 390px; trang không overflow ngang; sidebar mở rộng 288px và đọc/thao tác được; Verify dataframe có `clientWidth=346`, `scrollWidth=361`, tức cuộn ngang nội bộ thay vì làm tràn trang. |
 | AC5 — không ảnh hưởng logic/permission | PASS | Diff giới hạn ở shell/presentation/tests/report; guard regression PASS; không mở lại controls bị khóa. |
@@ -60,6 +63,7 @@ Môi trường: Windows, Python 3.11.9 trong `.venv`, Streamlit 1.39.0,
 | --- | --- |
 | `.venv\\Scripts\\python.exe -m pytest -q --basetemp=.codex_tmp/ux-responsive-cardless/pytest-targeted tests/test_ux_responsive_cardless.py` | PASS — 2 passed |
 | `.venv\\Scripts\\python.exe -m pytest -q --basetemp=.codex_tmp/ux-responsive-cardless/pytest-regression tests/test_ux_responsive_cardless.py tests/test_presentation.py tests/test_ui_baseline_integration.py tests/test_restricted_demo.py tests/test_pre_m4_ux.py tests/test_email_input_ui.py tests/test_guards.py tests/test_ui_cleanup_phase2.py tests/test_ui_repository_cleanup_phase1.py` | PASS — 160 passed, 1 Altair deprecation warning không thuộc diff |
+| Cùng bộ regression trên sau khi merge-forward `origin/dev`, thêm `tests/test_audit_navigation_session.py` | PASS — 168 passed, 1 Altair deprecation warning không thuộc diff |
 | `.venv\\Scripts\\python.exe -m black --check --line-length 100 streamlit_app.py ui/presentation.py tests/test_ux_responsive_cardless.py` | PASS — 3 files unchanged |
 | `.venv\\Scripts\\python.exe -m ruff check streamlit_app.py ui/presentation.py tests/test_ux_responsive_cardless.py` | PASS |
 | `git diff --check` | PASS |
@@ -80,7 +84,7 @@ tuân thủ strict four-file scope.
 | After desktop 1440 | `after-1440-final.png` | `B2242A79C7E3A396D426D20BAA8555BC6B584F19ECB8CADC63F5102853B4F1` | Shell Restricted DEMO chính xác, không page overflow. |
 | After mobile 390 | `after-390-final-v2.png` | `01D92A800D96964F00CCFF60E3D178F770A669FD6AF3F384690166DE8D4C2B1C` | Content/card/button wrap và xếp cột, `body/html scrollWidth=390`. |
 | After mobile sidebar | `after-390-sidebar-final-v2.png` | `EC2E2ABA94205B13A20A046CEB46C962DDC0A8A99984B62FD0D3C68F3354FADA` | Sidebar rộng 288px trong viewport 390px; navigation/status đọc được và nút đóng khả dụng. |
-| After mobile table | `after-390-table-final-v2.png` | `767C47FF2B9D7AE9A9833D6812BA8E249C5B21153BF169CF2C1FBA122CB2CFF6` | Verify dataframe cuộn ngang nội bộ; trang vẫn `scrollWidth=390`. |
+| After mobile table | `after-390-table-final-v2.png` | `4754137CF1B63A5AF945B7641F0E6AF1926AEF25498F502B0895F06B58E1FC14` | Verify dataframe cuộn ngang nội bộ; trang vẫn `scrollWidth=390`. |
 
 Browser smoke dùng local Streamlit headless tại `127.0.0.1`, Microsoft Edge headless và
 Chrome DevTools Protocol để đặt/đo viewport thực. Không gọi provider hoặc dịch vụ LIVE.
