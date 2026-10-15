@@ -1,5 +1,15 @@
 # M5-T01 — Chuẩn bị nghiên cứu B0/B2
 
+**Đối soát bằng chứng cuối — 15/10/2026:** M5-T01 giữ trạng thái lịch sử
+**DONE**. Human independent review Gold đã **VERIFIED** với kết quả tổng hợp
+`PASS_8_OF_8`, và Project Coordinator **ACCEPT** quyết định Gold cuối này. Việc
+đối soát chỉ đóng khoảng trống bằng chứng Gold sign-off; không cấp `GO-STUDY` và
+không đáp ứng thay các entry condition độc lập của M5-T02/M5-T03. Xem
+[báo cáo đối soát public-safe](../../../reports/studies/M5_T01_GOLD_SIGNOFF_RECONCILIATION.md).
+
+Trạng thái correction bên dưới được giữ làm trạng thái lịch sử đã ghi trước lần
+đối soát cuối; nội dung đó đúng tại thời điểm được lập.
+
 **Owner correction v1.2 — CHANGE REQUEST đang xử lý.** Independent re-review: **PENDING**.
 Đây là sản phẩm chuẩn bị; chưa chạy session, chưa tuyển/consent người thật,
 chưa nghiệm thu M5-T01 hoặc M5. Next Task Unlocked: **NONE**.
