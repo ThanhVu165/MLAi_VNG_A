@@ -3,6 +3,8 @@
   "created_at": "2026-10-15T03:21:31Z",
   "coordinator_decision_reference": [
     "trello-action:6ad04616863aaeb3c1fb352f",
+    "trello-action:6ad04dd2fb6c52f6121deaa4",
+    "trello-action:6ad04fd528b7095d4152b4c1",
     "github-pr:59",
     "reports/evaluation/M4_T02_GO_A_READINESS.md"
   ],
@@ -10,11 +12,11 @@
   "collector_revision": "sha256:3bcff1577f2fde9e0716a3a75f77eba766244e5b916b4195dbcf52d9885c0d68",
   "harness_revision": "sha256:76e476eb33b1bb8e5fa13f64b5c1ad45f2eb68ea4113774c2f66a87555b2109e",
   "dataset": {
-    "identifier": "NOT_RESOLVED",
-    "version": "NOT_RESOLVED",
-    "hash": "NOT_RESOLVED",
-    "reference": "NOT_RESOLVED",
-    "eligibility": "NOT_VERIFIED"
+    "identifier": "M4-SET-A-POSTTUNE",
+    "version": "v1",
+    "hash": "sha256:98d691c8437f1c466a6c2b7be1cd4ca3c34f4e0a0218f02376c2ae4f4a414385",
+    "reference": "M4T02_PRIVATE_SET_A_STORE",
+    "eligibility": "ELIGIBLE"
   },
   "gold": {
     "identifier": "NOT_RESOLVED",

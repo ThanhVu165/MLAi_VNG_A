@@ -7,12 +7,14 @@
 - Branch: `sprint/m4-t02-official-set-a`
 - Coordinator amendment: Trello action `6ad04616863aaeb3c1fb352f`,
   `2026-10-15T03:18:46.576Z`
+- Candidate authorization: Trello action `6ad04dd2fb6c52f6121deaa4`
+- Private-storage authorization: Trello action `6ad04fd528b7095d4152b4c1`
 - Kết quả: **BLOCKED**
 - Freeze status: **FREEZE_INCOMPLETE**
 - GO-A recommendation: **NO_GO_A**
 - Official Set A runs: **0**
 - Application LIVE/API/provider/email calls: **0**
-- Private Set A/Set B/Gold content reads: **0**
+- Private access: **Set A input-only authoring; Set B input-only overlap; Gold reads 0**
 
 Đây là gói freeze-preparation cho một **POST-TUNING INDEPENDENT EVALUATION SET**
 mới theo amendment. Báo cáo không claim pre-M2 held-out, historical preregistration
@@ -29,7 +31,7 @@ Remote `dev` đã đổi từ baseline audit cũ do PR #59 được merge. Audit
 
 Nguồn đã kiểm:
 
-- Task Contract và amendment mới nhất trên Trello; card không có attachment.
+- Task Contract, amendment, authoring decision và private-storage decision trên Trello.
 - Tracked tree/current Git history và GitHub PR #59.
 - [`M4_T02_GO_A_READINESS.md`](M4_T02_GO_A_READINESS.md) và M4-T01
   [protocol](../../docs/evaluation/M4_T01_PROTOCOL.md),
@@ -37,31 +39,33 @@ Nguồn đã kiểm:
   [freeze schema](../../docs/evaluation/M4_T01_FREEZE_SCHEMA.json),
   [freeze template](../../docs/evaluation/M4_T01_FREEZE_TEMPLATE.json) và
   [readiness report](M4_T01_PROTOCOL_READINESS.md).
-- Inventory tên/metadata của vùng local được phép, lọc bỏ toàn bộ tên M7/Set B;
-  không mở nội dung private hoặc file không liên quan.
+- Candidate input-only/provenance trong controlled private store và đúng authorized
+  M7 input-only candidate để overlap check; không mở Gold/reviewer material.
 
-Không tìm thấy Set A/Gold candidate hay sidecar provenance trong các nguồn trên. Thiếu
-artifact không được lấp bằng cách tạo case, Gold, author, timestamp hoặc hash giả.
+Candidate Set A được tạo sau khi Coordinator cấp quyền preparation và storage. Gold
+chưa được tạo; không suy hoặc tạo expected labels trong authoring pass.
 
 ## 2. Set A mới
 
 | Metadata bắt buộc | Kết quả | Evidence / giới hạn |
 |---|---|---|
-| Identifier | **NOT_RESOLVED** | Không có candidate/reference được cung cấp |
-| Version | **NOT_RESOLVED** | Không có artifact version |
-| Case count | **NOT_RESOLVED** | Không mở hoặc suy case payload |
-| Artifact reference | **NOT_RESOLVED** | Trello attachment rỗng; Git/local filtered inventory không có candidate |
-| SHA-256/hash | **NOT_RESOLVED** | Không có bytes được ủy quyền để hash |
-| Creation timestamp | **NOT_RESOLVED** | Không suy từ task/amendment timestamp |
-| Author | **NOT_RESOLVED** | Owner/Coordinator không tự động là dataset author |
-| Creation method | **NOT_RESOLVED** | Không có generation/design receipt |
-| Independence from outputs on same cases | **NOT_VERIFIED** | Không có signed creation statement hoặc access history |
-| Access history từ creation đến freeze | **NOT_RESOLVED** | Candidate và custodian record chưa tồn tại trong evidence |
-| DEV/regression overlap | **NOT_VERIFIED** | Không thể exact/semantic/family check khi không có candidate |
+| Identifier | **RESOLVED** | `M4-SET-A-POSTTUNE` |
+| Version | **RESOLVED** | `v1` |
+| Case count | **RESOLVED** | `18`; coverage design, không phải numeric gate |
+| Artifact reference | **RESOLVED** | `M4T02_PRIVATE_SET_A_STORE` (opaque) |
+| SHA-256/hash | **RESOLVED** | `98d691c8437f1c466a6c2b7be1cd4ca3c34f4e0a0218f02376c2ae4f4a414385` |
+| Creation/finalization | **RESOLVED** | `2026-10-15T04:01:59Z` / `2026-10-15T04:03:53Z` |
+| Author | **RESOLVED** | Minh — Evaluation/Logic; authorized Codex assistance recorded |
+| Creation method | **RESOLVED** | Synthetic input-only authoring from requirements/protocol/domain boundaries |
+| Independence from outputs on same cases | **PASS** | No Exodia/model/harness execution; model output was not an authoring source |
+| Access history từ creation đến freeze | **RESOLVED** | Sanitized two-event history in public receipt; full log private |
+| DEV/regression overlap | **PASS** | 53 inputs; exact/fuzzy/template + offline family review |
+| Set B input-only overlap | **PASS** | 16 inputs; no Gold/reviewer material read |
 
-**Set A provenance: `NOT_VERIFIED`.** Đây không phải bằng chứng contamination và cũng
-không phải eligibility. Amendment cho phép tạo một bộ mới; nó không tự tạo artifact hay
-chứng nhận independence của một bộ chưa được bind.
+**Set A provenance: `PASS`; candidate eligibility: `ELIGIBLE_FOR_GOLD_REVIEW`.** Chi
+tiết public-safe nằm tại
+[`M4_T02_SET_A_CANDIDATE_PREPARATION.md`](M4_T02_SET_A_CANDIDATE_PREPARATION.md)
+và receipt tương ứng. Eligibility này không phải GO-A hoặc execution authorization.
 
 ## 3. Gold
 
@@ -79,9 +83,8 @@ Không đọc expected label hoặc rationale. Gold M5-T01 không được tái 
 ## 4. Runtime/config freeze candidate
 
 [`M4_T02_FREEZE_MANIFEST.json`](../../docs/evaluation/M4_T02_FREEZE_MANIFEST.json)
-được tạo theo M4-T01 freeze schema. SHA-256 của exact staged manifest bytes:
-`147944f94d186c520bb965fffef3738ec78df102b73f8f6cd918f0f844bce4d4`.
-Digest này là current receipt, không phải historical preregistration.
+được tạo theo M4-T01 freeze schema và đã bind dataset identity/version/hash/reference.
+Candidate receipt là current evidence, không phải historical preregistration.
 
 | Field | Trạng thái | Giá trị / binding |
 |---|---|---|
@@ -120,8 +123,8 @@ Chúng chỉ xác định exact bytes; independent review và manifest acceptanc
 
 | Hạng mục | Trạng thái | Freeze rule / phần còn thiếu |
 |---|---|---|
-| Planned population/denominator | **Định nghĩa RESOLVED; N NOT_RESOLVED** | `S` là toàn bộ planned eligible business cases; `V` là valid AUTO_REPLY/ESCALATE. Case count chưa có |
-| Sample size | **NOT_RESOLVED** | Không có candidate và không có Coordinator-approved numeric N |
+| Planned population/denominator | **Định nghĩa RESOLVED; candidate count 18** | `S` là toàn bộ planned eligible business cases; `V` là valid AUTO_REPLY/ESCALATE. Count không tự tạo gate |
+| Sample size | **NOT_RESOLVED** | Candidate có 18 case nhưng chưa có Coordinator-approved numeric gate |
 | Strata | **NOT_RESOLVED** | Domain/family/Gold-route minimum chưa được duyệt |
 | Coverage | **Định nghĩa RESOLVED; threshold NOT_RESOLVED** | `count(V)/count(S)`; không có numeric requirement |
 | Missingness | **RESOLVED** | `MISSING/count(S)`; aborted/unattempted IDs vẫn ở denominator |
@@ -139,23 +142,22 @@ quality gate và abort threshold chưa được duyệt, execution phải dừng
 
 ## 7. Unresolved fields và blocker
 
-1. Toàn bộ identity/version/hash/reference/count/creation provenance của Set A mới.
-2. Author, creation method, signed independence statement và access history của Set A.
-3. Exact/semantic/family overlap disposition với DEV/regression.
-4. Gold identity/version/hash/reference/author/reviewer/finalization và Set A binding.
-5. Actual corpus snapshot identifier/version/hash/reference cho baseline.
-6. Immutable deployed image digest, nếu Coordinator yêu cầu container/image execution.
-7. Numeric sample-size, strata, coverage, quality và abort gates.
-8. Independent review/acceptance của exact manifest và collector/harness binding.
-9. GO-A, execution authorization và nonzero budget.
+1. Gold identity/version/hash/reference/author/reviewer/finalization và Set A binding.
+2. Actual corpus snapshot identifier/version/hash/reference cho baseline.
+3. Immutable deployed image digest, nếu Coordinator yêu cầu container/image execution.
+4. Numeric sample-size, strata, coverage, quality và abort gates.
+5. Independent review/acceptance của exact manifest và collector/harness binding.
+6. GO-A, execution authorization và nonzero budget.
 
 Do các field bắt buộc còn thiếu, không thể trả `READY_FOR_GO_A_DECISION`.
 
 ## 8. Privacy, validation và recommendation
 
-- Không mở Set B, không liệt kê private Set B location và không đọc Set A/Gold payload.
+- Chỉ mở Set A input-only để author/validate và đúng Set B input-only candidate để
+  overlap; không mở Set B Gold/reviewer material hoặc Set A Gold.
 - Không commit case, expected label, rationale, PII, secret hoặc private artifact path.
-- Artifact search chỉ dùng names/metadata và explicit exclusion cho M7/Set B.
+- DEV/regression và M7 Set B access chỉ phục vụ offline overlap validation; Set B
+  access bị giới hạn ở đúng input-only candidate đã được ủy quyền.
 - Official Set A runs: **0**.
 - Application LIVE/API/provider/email: **0**; chỉ dùng GitHub/Trello read-only cho evidence.
 - Freeze schema + runtime/collector/harness hash assertions: **PASS**.
@@ -168,6 +170,6 @@ Do các field bắt buộc còn thiếu, không thể trả `READY_FOR_GO_A_DECI
 
 **FREEZE STATUS: `FREEZE_INCOMPLETE`.**
 
-**GO-A RECOMMENDATION: `NO_GO_A`.** Coordinator cần cung cấp/accept candidate Set A +
-Gold metadata packet, corpus/image disposition và numeric gates; sau đó independent reviewer
-kiểm exact manifest. Một quyết định GO-A riêng mới có thể đổi execution state.
+**GO-A RECOMMENDATION: `NO_GO_A`.** Independent reviewer cần tạo Gold và binding;
+Coordinator còn phải chốt corpus/image disposition cùng numeric gates, rồi review exact
+manifest. Một quyết định GO-A riêng mới có thể đổi execution state.
