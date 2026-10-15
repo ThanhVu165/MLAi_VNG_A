@@ -141,7 +141,7 @@ JUDGE_GATEWAY_SOCKET=MISSING
 - Billing/quota: NOT VERIFIED.
 - Judge switches: OFF (`0 / 0`), Replay retained.
 - Provider completion calls: `0`.
-- Evidence PR: #76, pending addition of this report.
+- Evidence PR: #76 (`codex/final-deploy-closeout`).
 - Risks: billing/quota and future completion acceptance remain unverified.
 - Next step: Coordinator decision packet for a separately authorized, one-email
   synthetic GO-LIVE; do not activate under this task.
