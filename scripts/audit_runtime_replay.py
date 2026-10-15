@@ -264,6 +264,8 @@ def observe_human_resume(process_case: Callable, db: ModuleType) -> dict:
     case_id = result.case_id
     page = AppTest.from_file(str(ROOT / "pages/2_Hang_cho_duyet.py")).run(timeout=20)
     assert not page.exception
+    page.selectbox(key="selected_case_id_select").set_value(case_id)
+    page.run(timeout=20)
     page.radio(key=f"choice_{case_id}").set_value(HUMAN_INPUT["choice"])
     page.text_area(key=f"reason_{case_id}").set_value(HUMAN_INPUT["reason"])
     page.run(timeout=20)
@@ -316,6 +318,8 @@ def observe_cited_resumes(
             continue
         page = AppTest.from_file(str(ROOT / "pages/2_Hang_cho_duyet.py")).run(timeout=20)
         assert not page.exception
+        page.selectbox(key="selected_case_id_select").set_value(case_id)
+        page.run(timeout=20)
         page.radio(key=f"choice_{case_id}").set_value(item["choice"])
         page.text_area(key=f"reason_{case_id}").set_value(item["reason"])
         page.run(timeout=20)

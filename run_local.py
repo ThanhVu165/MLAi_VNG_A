@@ -7,9 +7,11 @@ from streamlit.web import cli
 
 from core.worker import start_worker
 from corpus.seed import ensure_seeded
+from infra.demo_access import validate_runtime_mode
 
 
 def main() -> None:
+    validate_runtime_mode()
     ensure_seeded()
     start_worker()
     sys.argv = [

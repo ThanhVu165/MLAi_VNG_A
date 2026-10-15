@@ -1,11 +1,13 @@
+x-app-environment: &app-environment
+  DATABASE_PATH: /runtime/app.db
+  LLM_MODE: replay
+  LLM_CACHE: "0"
+
 x-app: &app
   build:
     context: .
   image: exodia:m6-t02
-  environment:
-    DATABASE_PATH: /runtime/app.db
-    LLM_MODE: replay
-    LLM_CACHE: "0"
+  environment: *app-environment
   healthcheck:
     test:
       ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8511/_stcore/health', timeout=3).read()"]
@@ -29,6 +31,9 @@ services:
   study:
     <<: *app
     profiles: [study]
+    environment:
+      <<: *app-environment
+      APP_MODE: private
     ports:
       - "127.0.0.1:${STUDY_HOST_PORT:-8512}:8511"
     volumes:
@@ -37,6 +42,9 @@ services:
   demo:
     <<: *app
     profiles: [demo]
+    environment:
+      <<: *app-environment
+      APP_MODE: restricted_demo
     ports:
       - "127.0.0.1:${DEMO_HOST_PORT:-8513}:8511"
     volumes:

@@ -33,9 +33,7 @@ def _numeric_address_only(
 def pytest_configure(config: pytest.Config) -> None:
     # DEFAULT_DATABASE_PATH được chốt khi import infra.db; không sửa muộn rồi tiếp tục.
     if "infra.db" in sys.modules:
-        raise pytest.UsageError(
-            "TEST_DATABASE_ISOLATION: infra.db imported before isolation"
-        )
+        raise pytest.UsageError("TEST_DATABASE_ISOLATION: infra.db imported before isolation")
     try:
         directory = tempfile.TemporaryDirectory(prefix="mlai-pytest-db-")
         config.add_cleanup(directory.cleanup)
@@ -49,6 +47,8 @@ def pytest_configure(config: pytest.Config) -> None:
         ) from error
     # Cài trước collection/import settings; .env dùng setdefault không thể ghi đè.
     _isolation.setenv("LLM_MODE", "replay")
+    _isolation.setenv("APP_MODE", "private")
+    _isolation.setenv("OPENAI_API_KEY", "")
     for name in ("connect", "connect_ex", "sendto"):
         _isolation.setattr(socket.socket, name, _forbidden)
     _isolation.setattr(socket, "create_connection", _forbidden)
