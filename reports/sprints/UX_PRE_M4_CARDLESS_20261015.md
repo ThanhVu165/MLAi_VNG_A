@@ -6,7 +6,9 @@
 - **Owner:** Project Coordinator operating the current Mac with Codex implementation support.
 - **Repository:** `ThanhVu165/MLAi_VNG_A`
 - **Baseline:** `dev@cefd3db950f76b35d2960490f161141145172919`
-- **Validated implementation SHA:** `3457f90b9e0edb965163e69ccbb867a09083db58`
+- **Previously reviewed SHA:** `0630a1a6878d685257eb1fda0f2edfe36d0dd457`
+- **Initial implementation SHA:** `3457f90b9e0edb965163e69ccbb867a09083db58`
+- **Final validated implementation SHA:** `3d3934cb4e343b95e40ba92b2d83ff65c9fccd94`
 - **Branch:** `codex/ux-pre-m4-cardless`
 - **Result:** `READY_FOR_REVIEW`
 - **LIVE/API calls:** 0
@@ -17,6 +19,7 @@ Authorization was limited to UI-03, UX-07, UI-05 and UI-04. It did not authorize
 ## Preflight
 
 - Remote `dev` was verified at the requested baseline `cefd3db950f76b35d2960490f161141145172919` before branching.
+- At minor-correction preflight, remote `dev` had advanced to `53b6a8e3c0f90b11fc9c9b87e110bd29505639b8` through merged M4-T02 documentation/evidence only. Those files do not overlap the correction, and GitHub reported PR #62 clean and mergeable before editing.
 - The preceding M7 PR #61 was already merged, so no implementation task remained active on the prior branch.
 - The task branch was created from verified `origin/dev`; no reset, clean, stash, rebase, extra clone or worktree was used.
 - The required report path did not exist before implementation.
@@ -32,6 +35,8 @@ Authorization was limited to UI-03, UX-07, UI-05 and UI-04. It did not authorize
 | `pages/5_Verify.py` | Identifies replay mode, distinguishes pipeline results from UI fixtures, explains PASS/FAIL, and renders stored result timestamps without generating render-time timestamps. |
 | `tests/test_pre_m4_ux.py` | Adds five AppTest regressions for onboarding, regulations empty/table states, replay explanation, pipeline provenance and timestamp stability. |
 | `tests/test_restricted_demo.py` | Makes the restricted fixture self-contained with the locked replay model/cache configuration. |
+
+Minor correction after review changed only `pages/1_Xu_ly_email.py` and its assertion in `tests/test_pre_m4_ux.py`: step 5 now instructs users to open Audit from the left sidebar in the same session. It does not advertise deep-link recovery and does not change navigation, ownership or access control.
 
 No file under `core/`, `corpus/`, `policies/`, `infra/`, `verify/`, deployment configuration or evaluation data was changed.
 
@@ -60,8 +65,11 @@ All test commands used the project Python 3.11 environment. Network/provider acc
 | Full targeted suite after fix | **PASS** | `pytest tests/test_restricted_demo.py tests/test_email_input_ui.py tests/test_presentation.py tests/test_ui_baseline_integration.py tests/test_source_workflow.py tests/test_pre_m4_ux.py -q` → 67 passed, one pre-existing Altair deprecation warning. |
 | Verify4 isolated replay | **PASS** | Locked environment (`gpt-6-luna`, replay, cache off, restricted demo, empty API key) and fresh temporary DB → 4/4 PASS in 0.18 s; corpus `cv_f6eb04187bb0`. |
 | Local browser desktop smoke | **PASS** | Email page guidance, existing regulations table, Verify replay notice, 4/4 pipeline result, stored timestamps and timestamp column visually/semantically confirmed. |
+| Audit sidebar smoke in the same session | **PASS** | A canonical email was processed, then Audit was opened through the left sidebar in the same browser session; the page retained ownership and displayed the correct case/events. No deep-link claim was tested or added. |
 | Mobile browser smoke | **NOT RUN** | The available in-app browser did not expose a viewport override. AppTest coverage passed, but no mobile visual claim is made. |
 | LIVE/API | **NOT RUN** | Explicitly prohibited; call count 0. |
+
+Minor-correction validation: `pytest tests/test_pre_m4_ux.py tests/test_restricted_demo.py tests/test_email_input_ui.py -q` → **35 passed**. Black, Ruff and `git diff --check` also passed.
 
 The restricted fixture fix is intentionally test-only. Production continues to fail closed when `OPENAI_MODEL` is missing; no silent production default was introduced.
 
@@ -73,6 +81,7 @@ The restricted fixture fix is intentionally test-only. Production continues to f
 - The timestamp shown by Verify comes from `VerifyResult.timestamp`; rerendering does not replace it with current time. When no timestamp exists, the UI says it is missing.
 - Restricted Regulations checks an empty list successfully; database exceptions are not caught or relabeled as an empty catalog.
 - No Audit navigation fix was attempted and no claim was made that UI-01 is resolved.
+- The correction verifies and documents only sidebar navigation inside the current session; it does not claim that direct Audit links restore a lost session.
 
 ## M4-T02 isolation
 
@@ -89,6 +98,7 @@ This change does not modify or consume the M4-T02 manifest, rubric, Set A, Set B
 
 - Implementation commit: `3457f90b9e0edb965163e69ccbb867a09083db58`
 - Evidence report commit: `0b0ba84ff67e4d1c5959e080764e1ead14e725f3`.
+- Minor-correction implementation commit: `3d3934cb4e343b95e40ba92b2d83ff65c9fccd94`.
 - Pull request: [#62 — feat(ux): clarify pre-M4 restricted demo workflow](https://github.com/ThanhVu165/MLAi_VNG_A/pull/62), targeting `dev`.
 - Merge/deploy: not authorized and not performed.
 
