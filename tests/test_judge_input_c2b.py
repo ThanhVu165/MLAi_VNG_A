@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 from types import SimpleNamespace
@@ -13,6 +14,7 @@ import pytest
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
@@ -190,7 +192,7 @@ def test_ui_rerun_binding_and_audit_ownership(judge, monkeypatch, caplog):
     app = AppTest.from_file("pages/1_Xu_ly_email.py").run()
     assert not app.exception
     reference = next(iter(gateway._BINDINGS.values()))["reference"]
-    assert any(reference in item.value for item in app.caption)
+    assert any(reference in item.value for item in app.info)
     assert _operator("provision", reference) == {"ok": True}
     grant = next(iter(gateway._BINDINGS.values()))["grant"]
     _provider(monkeypatch)
@@ -214,11 +216,72 @@ def test_ui_rerun_binding_and_audit_ownership(judge, monkeypatch, caplog):
     other.run()
     assert not other.exception
     assert any("quyền" in item.value or "phiên" in item.value for item in other.warning)
-    rendered = str([item.value for item in app.markdown]) + str(
-        [item.value for item in app.caption]
+    rendered = (
+        str([item.value for item in app.markdown])
+        + str([item.value for item in app.info])
+        + str([item.value for item in app.caption])
     )
     assert grant.token not in rendered and SECRET not in rendered
     assert grant.token not in str(dict(app.query_params)) and SECRET not in caplog.text
+
+
+def test_navigation_shows_guest_session_reference_in_stable_info(judge, monkeypatch):
+    get_context = gateway.get_script_run_ctx
+
+    def test_context(**kwargs):
+        context = get_context(**kwargs)
+        return SimpleNamespace(session_id=str(id(context.session_state._state)))
+
+    monkeypatch.setattr(gateway, "get_script_run_ctx", test_context)
+    monkeypatch.setattr(gateway, "_connection_fingerprint", lambda: "navigation-connection")
+    monkeypatch.setenv("JUDGE_GATEWAY_SOCKET", "/unopened/navigation.sock")
+    monkeypatch.setattr(gateway, "_BINDINGS", {})
+    monkeypatch.setattr(gateway, "_start_listener", lambda: None)
+    monkeypatch.setattr("core.worker.start_worker", lambda: None)
+    monkeypatch.setattr("corpus.seed.ensure_seeded", lambda: None)
+
+    def forbid_provider(*args, **kwargs):
+        pytest.fail("Guest reference validation must not reach any LLM path")
+
+    monkeypatch.setattr("infra.llm.call_json", forbid_provider)
+    # AppTest 1.39 tạo PagesManager không có ScriptCache nên page.run() chạy
+    # bytecode rỗng. Bổ sung cache của harness; giữ st.navigation/page.run thật.
+    script_cache = ScriptCache()
+    monkeypatch.setattr(
+        PagesManager,
+        "get_page_script_byte_code",
+        lambda self, path: script_cache.get_bytecode(path),
+    )
+
+    app = AppTest.from_file(str(Path.cwd() / "streamlit_app.py"))
+    app.run(timeout=20)
+
+    assert not app.exception
+    assert len(gateway._BINDINGS) == 1
+    binding = next(iter(gateway._BINDINGS.values()))
+    reference = binding["reference"]
+    assert re.fullmatch(r"[0-9a-f]{16}", reference)
+    expected_reference = f"Mã đối chiếu phiên với operator: {reference} (không cấp quyền)."
+    assert app.info[0].value == expected_reference
+    assert [item.value for item in app.info if reference in item.value] == [expected_reference]
+    main_elements = list(app.main)
+    reference_index = main_elements.index(app.info[0])
+    assert "<h1" in main_elements[reference_index - 1].value
+    assert "Restricted DEMO" in main_elements[reference_index + 1].value
+    assert _operator("sessions") == {"sessions": [reference]}
+    rendered = str(
+        [item.value for items in (app.info, app.caption, app.markdown) for item in items]
+    )
+    assert binding["grant"] is None and binding["session"] not in rendered
+    assert SECRET not in rendered
+    app.text_input(key="paste_sender").set_value("guest-new@example.invalid")
+    app.text_input(key="paste_subject").set_value("Email mới chưa được cấp quyền")
+    app.text_area(key="paste_body").set_value("Đây là email synthetic mới của guest.")
+    app.button(key="FormSubmitter:email_form-Xử lý email").click().run(timeout=20)
+    assert any("chưa được bật" in item.value for item in app.error)
+    assert not db.fetch_all("SELECT * FROM cases")
+    assert not db.fetch_all("SELECT * FROM case_jobs")
+    assert not db.fetch_all("SELECT * FROM audit_events WHERE action LIKE 'SEND_%'")
 
 
 def test_connection_fingerprint_uses_websocket_key_and_fails_closed(monkeypatch):
