@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import sqlite3
 from dataclasses import replace
 from datetime import date
+from typing import Callable, TypeVar
 
 import streamlit as st
 
@@ -42,6 +44,24 @@ STATUS_NAMES = {
     SourceStatus.REJECTED: "Đã từ chối",
 }
 
+SOURCE_READ_ERROR = (
+    "Hiện chưa thể truy xuất danh mục quy chế. " "Vui lòng thử lại sau hoặc liên hệ người quản trị."
+)
+_T = TypeVar("_T")
+
+
+def _read_or_stop(read: Callable[[], _T]) -> _T:
+    try:
+        return read()
+    except (sqlite3.Error, OSError):
+        LOGGER.exception("Không truy xuất được dữ liệu trang quy chế.")
+        st.error(SOURCE_READ_ERROR)
+        st.stop()
+
+
+def _list_sources_or_stop(status: SourceStatus | None = None) -> list[SourceRecord]:
+    return _read_or_stop(lambda: list_sources(status))
+
 
 def _date(value: str | None) -> date | None:
     if not value:
@@ -64,7 +84,7 @@ def _iso_date(value: object) -> str | None:
 
 
 def _show_content(source: SourceRecord, key: str) -> None:
-    original = get_source_content(source.doc_id)
+    original = _read_or_stop(lambda: get_source_content(source.doc_id))
     if source.is_synthetic:
         st.warning("Tài liệu giả lập để kiểm thử, không có giá trị pháp lý.")
     st.caption(
@@ -87,7 +107,9 @@ def _show_content(source: SourceRecord, key: str) -> None:
         st.warning(
             "Nguồn cũ chưa lưu bản gốc. Nội dung dưới đây được ghép từ các đoạn đã lưu, không thay thế bản gốc."
         )
-        text = "\n\n".join(chunk.text for chunk in list_chunks(source.doc_id))
+        text = "\n\n".join(
+            chunk.text for chunk in _read_or_stop(lambda: list_chunks(source.doc_id))
+        )
     st.text_area("Nội dung tài liệu", text, height=360, disabled=True, key=f"content:{key}")
     if source.cohorts:
         st.caption("Khóa áp dụng: " + ", ".join(source.cohorts))
@@ -228,7 +250,7 @@ def _edit_fields(draft: MetadataDraft) -> MetadataDraft:
         "Có điều khoản chuyển tiếp giữa các khóa hoặc thời điểm",
         value=bool(draft.transitional_clause),
     )
-    replacements = {item.doc_id: item for item in list_sources(SourceStatus.ACTIVE)}
+    replacements = {item.doc_id: item for item in _list_sources_or_stop(SourceStatus.ACTIVE)}
     supersedes = st.multiselect(
         "Thay thế tài liệu đã duyệt",
         list(replacements),
@@ -264,7 +286,7 @@ st.markdown(
 )
 
 if is_restricted_demo():
-    synthetic_sources = [source for source in list_sources() if source.is_synthetic]
+    synthetic_sources = [source for source in _list_sources_or_stop() if source.is_synthetic]
     public_sources = [
         {
             "Mã nguồn": source.doc_id,
@@ -294,7 +316,7 @@ actor = f"ADMIN:{name.strip()}"
 identified = bool(name.strip())
 
 # Sources inventory and metrics
-all_sources = list_sources()
+all_sources = _list_sources_or_stop()
 active_count = sum(1 for s in all_sources if s.status is SourceStatus.ACTIVE)
 superseded_count = sum(1 for s in all_sources if s.status is SourceStatus.SUPERSEDED)
 pending_count = sum(1 for s in all_sources if s.status is SourceStatus.PENDING_REVIEW)
@@ -374,7 +396,9 @@ with upload_tab:
     _upload(actor, identified)
 
 with pending_tab:
-    pending = {source.doc_id: source for source in list_sources(SourceStatus.PENDING_REVIEW)}
+    pending = {
+        source.doc_id: source for source in _list_sources_or_stop(SourceStatus.PENDING_REVIEW)
+    }
     if not pending:
         st.info("Chưa có tài liệu chờ xác nhận. Hãy nạp tài liệu mới nếu cần bổ sung căn cứ.")
     else:
@@ -384,7 +408,7 @@ with pending_tab:
             list(pending),
             format_func=lambda doc_id: pending[doc_id].title or "Tài liệu chưa có tên",
         )
-        source = get_source(selected_id)
+        source = _read_or_stop(lambda: get_source(selected_id))
         if source is not None and source.status is SourceStatus.PENDING_REVIEW:
             _review(source, actor, identified)
         else:
@@ -435,7 +459,8 @@ with browse_tab:
             matches_id = q in s.doc_id.lower()
             matches_issuer = q in (s.issuer or "").lower()
             matches_chunks = any(
-                q in c.text.lower() or q in c.breadcrumb.lower() for c in list_chunks(s.doc_id)
+                q in c.text.lower() or q in c.breadcrumb.lower()
+                for c in _read_or_stop(lambda: list_chunks(s.doc_id))
             )
             if not (matches_title or matches_id or matches_issuer or matches_chunks):
                 continue
@@ -497,7 +522,7 @@ with browse_tab:
                 domains_pills = " ".join(
                     badge_html(DOMAIN_NAMES.get(d.value, d.value), "info") for d in s.domains
                 )
-                chunk_count = len(list_chunks(s.doc_id))
+                chunk_count = len(_read_or_stop(lambda: list_chunks(s.doc_id)))
 
                 st.markdown(
                     f"""
@@ -589,7 +614,7 @@ with browse_tab:
             sub_cases = sub_map["Ca xử lý trích dẫn"]
 
             with sub_clauses:
-                chunks = list_chunks(selected_source.doc_id)
+                chunks = _read_or_stop(lambda: list_chunks(selected_source.doc_id))
                 st.caption(
                     f"Hiển thị {len(chunks)} điều khoản/căn cứ đã được trích xuất ngữ nghĩa và sẵn sàng kiểm toán."
                 )
@@ -680,16 +705,18 @@ with browse_tab:
 
             with sub_cases:
                 st.markdown("##### Ca xử lý đã trích dẫn văn bản này")
-                cases_cited = fetch_all(
-                    """
-                    SELECT d.case_id, d.decision, d.reason, d.created_at AS timestamp, c.subject, c.sender
-                    FROM decisions d
-                    LEFT JOIN cases c ON d.case_id = c.case_id
-                    WHERE d.evidence_ids_json LIKE ?
-                    ORDER BY d.created_at DESC
-                    LIMIT 15
-                    """,
-                    (f"%{selected_source.doc_id}%",),
+                cases_cited = _read_or_stop(
+                    lambda: fetch_all(
+                        """
+                        SELECT d.case_id, d.decision, d.reason, d.created_at AS timestamp, c.subject, c.sender
+                        FROM decisions d
+                        LEFT JOIN cases c ON d.case_id = c.case_id
+                        WHERE d.evidence_ids_json LIKE ?
+                        ORDER BY d.created_at DESC
+                        LIMIT 15
+                        """,
+                        (f"%{selected_source.doc_id}%",),
+                    )
                 )
                 if cases_cited:
                     st.caption(
