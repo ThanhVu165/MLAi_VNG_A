@@ -1,4 +1,4 @@
-"""Gateway judge local: capability chỉ nằm trong registry server, không qua widget/URL.
+"""Gateway judge: capability chỉ nằm trong registry server, không qua widget/URL.
 
 Không dùng session_state hoặc query để xác định session C2-B. Operator dùng Unix socket
 trong thư mục riêng 0700 và secret server; không có HTTP/authentication public.
@@ -48,12 +48,16 @@ def configured() -> bool:
     return bool(os.getenv(_KEY, ""))
 
 
-def _offline() -> None:
-    if (
-        os.getenv("APP_MODE", "restricted_demo") != "restricted_demo"
-        or os.getenv("LLM_MODE", "live").lower() != "replay"
-    ):
-        raise access.JudgeDenied("Gateway chỉ hoạt động trong restricted replay offline.")
+def _runtime_guard() -> None:
+    if os.getenv("APP_MODE", "restricted_demo") != "restricted_demo":
+        raise access.JudgeDenied("Gateway chỉ hoạt động trong Restricted DEMO.")
+    mode = os.getenv("LLM_MODE", "replay").strip().lower()
+    if mode == "replay":
+        return
+    if mode == "live":
+        access.require_live_configuration()
+        return
+    raise access.JudgeDenied("Gateway không cho phép mode runtime này.")
 
 
 def _current() -> dict | None:
@@ -75,7 +79,7 @@ def prepare_session() -> str | None:
     """Đăng ký session chưa có quyền; trả mã đối chiếu không phải capability."""
     if not configured():
         return None
-    _offline()
+    _runtime_guard()
     _start_listener()
     context = get_script_run_ctx(suppress_warning=True)
     if context is None:
@@ -105,7 +109,7 @@ def prepare_session() -> str | None:
 
 def _credentials() -> tuple[object, object]:
     if configured():
-        _offline()
+        _runtime_guard()
         with _LOCK:
             record = _current()
             return (record["grant"], record["session"]) if record else (None, None)
@@ -137,7 +141,7 @@ def _operate(message: dict) -> dict:
     """Chỉ gọi bởi IPC local; không expose qua Streamlit widget hoặc HTTP."""
     secret = message.get("secret")
     access._require_operator(secret)
-    _offline()
+    _runtime_guard()
     operation = message.get("operation")
     with _LOCK:
         if operation == "sessions":

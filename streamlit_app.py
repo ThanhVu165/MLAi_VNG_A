@@ -1,6 +1,7 @@
 """Điểm vào giao diện local và các dịch vụ dùng chung."""
 
 import logging
+import os
 from sqlite3 import Error as DatabaseError
 
 import streamlit as st
@@ -9,6 +10,7 @@ from core.controls import is_automation_paused, pause_automation, resume_automat
 from core.worker import start_worker
 from corpus.seed import ensure_seeded
 from infra.demo_access import is_restricted_demo, validate_runtime_mode
+from infra.judge_access import live_enabled
 from ui.presentation import inject_app_css, readable_text
 
 
@@ -26,6 +28,7 @@ def main() -> None:
         )
         st.stop()
     restricted_demo = is_restricted_demo()
+    judge_live = live_enabled() and os.getenv("LLM_MODE", "").strip().lower() == "live"
     pages = [
         st.Page("pages/1_Xu_ly_email.py", title="Xử lý email", icon="✉️", default=True),
     ]
@@ -63,7 +66,10 @@ def main() -> None:
     paused = is_automation_paused()
     if restricted_demo:
         st.sidebar.caption(
-            "Restricted DEMO: replay offline trên dữ liệu synthetic; không kết nối hộp thư, "
+            "Restricted DEMO: Judge LIVE có kiểm soát; không kết nối hộp thư và "
+            "không gửi email thật."
+            if judge_live
+            else "Restricted DEMO: replay offline trên dữ liệu synthetic; không kết nối hộp thư, "
             "không gửi email thật và không gọi provider LIVE."
         )
     else:
@@ -86,7 +92,11 @@ def main() -> None:
                         st.rerun()
     if restricted_demo:
         shell_title = "🔵 Restricted DEMO"
-        shell_description = "Môi trường mô phỏng dùng replay offline; email LIVE không hoạt động."
+        shell_description = (
+            "Judge LIVE được giới hạn; chỉ phiên có operator grant mới xử lý email mới."
+            if judge_live
+            else "Môi trường mô phỏng dùng replay offline; email LIVE không hoạt động."
+        )
     else:
         shell_title = "🟢 Ứng dụng sẵn sàng"
         shell_description = "Môi trường mô phỏng; email LIVE chưa được kết nối."
