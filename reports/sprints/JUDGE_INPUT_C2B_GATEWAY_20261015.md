@@ -111,3 +111,42 @@ Coordinator acceptance required before integration. Final commit/PR recorded in 
 Implementation/test SHA: `e2e8f7a48698568464449ded423e1216c0692afd`.
 PR: [#72](https://github.com/ThanhVu165/MLAi_VNG_A/pull/72), targets dev. Follow-up commit
 chỉ ghi metadata này; final HEAD bàn giao trong chat, reviewer kiểm đúng final SHA.
+
+## Fast self-review — PR #72 @ 32ede2cc
+
+Reviewed exact SHA: `32ede2cc43c7e51a6621cc52324af77286594b6e`, base
+`ac5184ee5f1568827df321b7c737f218885f293f`. Local HEAD khớp; reviewed six-file diff.
+Không sửa code, test hoặc policy trong lượt self-review; chỉ thêm section report này
+ở working tree, chưa commit/push. Không thay thế independent review/Coordinator acceptance.
+
+| Check | Result / evidence |
+|---|---|
+| Session isolation | PASS trong local trust boundary: server context binding, ignored forged credential/state/reference; two-context and Email/Audit AppTest cross-session denied |
+| Unix caller permissions | PASS trong trusted local UID scope: parent ownership/0700/no symlink, socket 0600; all operations require operator secret; unsafe-parent test and actual IPC wrong-secret denial PASS. Không claim kernel peer-UID attestation hoặc thực nghiệm bằng user OS thứ hai |
+| Secret/token disclosure | PASS trong inspected paths: getpass/TTY, no secret argv/widget/URL, no grant returned; generic IPC errors, UI/query/log assertions and sessions/holds response checks PASS |
+| Replay/reload issuance | PASS: one-use durable ID plus per-session provisioned flag; 8 concurrent attempts issue one grant, rerun/reload/new context/cleared registry never auto-issue or reset ledger |
+| Revoke/HOLD/no-send | PASS: revoked/expired/OFF deny; HOLD inspect/recovery keeps slot/debit with no pipeline/case/jobs/Audit mutation; actual gateway smoke PREVIEW_READY/no send, CLI revoke denies read |
+
+Targeted command only:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q -rs -p no:cacheprovider tests/test_judge_input_c2b.py --tb=short
+git diff --check ac5184ee5f1568827df321b7c737f218885f293f..32ede2cc43c7e51a6621cc52324af77286594b6e
+```
+
+**12 passed in 1.78s, zero failures/skips**, exit 0; Unix IPC smoke used local permission
+override, AF_INET/DNS/OpenAI blocked. Diff check PASS. Full suite NOT RUN this review.
+Verified no diff in Core, C2-A access ledger, LLM adapter, schema, audit or policy versus
+baseline; both M7 fingerprints unchanged. Confirmed actionable code findings: **NONE**
+within these checks; this is not proof of absence of all security defects.
+
+Code Review plugin CI discovery returned **Connect your GitHub account to continue**.
+Remote CI diagnostics NOT VERIFIED; no CLI fallback for plugin CI and no claim of remote
+CI PASS. Self-review above is direct local diff/test evidence, not plugin certification.
+
+Remaining risks: native Streamlit reconnect/session-ID behavior is not authenticated human
+identity; no hostile/deployed-browser session hijack test. Same-UID host processes remain
+trusted (no SO_PEERCRED enforcement). Registry 100-session saturation, stale socket and
+restart token loss are fail-closed operational availability limits described above.
+Recommendation: READY_FOR_INDEPENDENT_REVIEW, not automatic merge/GO-LIVE. LIVE/provider
+calls 0; no new HTTP endpoint, email, merge or deploy.
