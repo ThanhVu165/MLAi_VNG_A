@@ -1,3 +1,76 @@
+# COLLECTOR / FREEZE GATE CORRECTION — M4-T01 (15/10/2026)
+
+**RESULT: READY_FOR_COORDINATOR_REVIEW.** This change request corrects two
+evaluation-integrity defects without running Set A/B, LIVE/provider/API/email, tuning or
+M4-T02. It does not grant GO-A, merge the PR or upgrade the official freeze.
+
+## Correction preflight and revision
+
+- Remote `dev` verified at `029126ec3c17a24e51c5c4a3118a4373f528f081`, whose tip is
+  the merge of M5-T01 PR #58.
+- Draft PR #52 was open, unmerged and unchanged at reviewed head
+  `2408e4063d8552b9b56aed49af5cc82d4ac41175` before implementation.
+- The existing M4-T01 branch was merged normally with current `origin/dev`; no rebase,
+  force-push or history rewrite was used and the branch/dev path sets had no overlap.
+- Unrelated untracked `.codex_tmp/` and `outputs/` directories were preserved untouched.
+- **Tested implementation SHA:** `7702d2b9a7db7c66880e8d8e4a8894b34403e3d9`.
+  The final evidence-only commit changes this report; it does not change tested Python.
+
+## Fix 1 — official readiness requires eligible data
+
+`validate_freeze_manifest(..., official_execution_ready=True)` now fails unless
+`dataset.eligibility == "ELIGIBLE"`, in addition to its existing resolved-field,
+authorization, positive-budget and LIVE-mode requirements. Fully resolved synthetic
+manifests with `NOT_VERIFIED` or `NOT_ELIGIBLE` fail closed; an `ELIGIBLE` manifest can
+pass this validator only when every other existing condition passes. `FROZEN` remains a
+configuration state separate from execution authorization, and validator success is not
+GO-A or proof of eligibility.
+
+## Fix 2 — complete means structurally valid reconciliation
+
+`reconcile()` now reports `complete=true` only when every expected case has a valid
+terminal `BUSINESS_RESULT` or `TECHNICAL_ERROR`, there are no foreign IDs and there is no
+unidentified malformed attempt. `MISSING`, `DUPLICATE`, `MALFORMED` and `UNEXPECTED`
+therefore make the reconciliation incomplete. A terminal `TECHNICAL_ERROR` remains an
+accounted terminal attempt and may coexist with `complete=true`, but its status and null
+business result remain explicit: it is not a successful quality/business result.
+
+Regression coverage includes valid expected results plus a foreign case, duplicate attempt
+IDs, multiple terminal attempts, malformed expected and unidentified rows, clean business
+results, missing expected cases, and terminal technical-error semantics.
+
+## Validation on tested implementation SHA
+
+| Command/check | Result |
+|---|---|
+| `.\.venv\Scripts\python.exe -B -m unittest docs/evaluation/test_collector.py -v` | **PASS — 19/19** focused collector/freeze tests |
+| `.\.venv\Scripts\python.exe -B -m unittest discover -s docs/evaluation -p 'test_*.py' -v` | **PASS — 37/37** evaluation tests |
+| `.\.venv\Scripts\python.exe -m black --check --line-length 100 docs/evaluation/collector.py docs/evaluation/test_collector.py` | **PASS — 2 files unchanged** |
+| `.\.venv\Scripts\python.exe -m ruff check docs/evaluation/collector.py docs/evaluation/test_collector.py` | **PASS** |
+| `git diff --check origin/dev...HEAD` | **PASS** |
+| `git diff --name-only 9b2223e..7702d2b` | **PASS — only collector.py and test_collector.py** |
+| Known credential/private-key/non-example-email scan of the correction diff | **PASS — no match** |
+
+Application LIVE/API/provider/email calls: **0**. Official Set A/B runs: **0**.
+Private Set A/B/Gold content reads: **0**. Tuning/adaptation operations: **0**.
+
+## Current AC1–AC7 disposition
+
+| AC | Current disposition | Evidence / remaining condition |
+|---|---|---|
+| AC1 Provenance | NOT_VERIFIED | Existing honest disposition; no new historical Set A/Gold evidence |
+| AC2 Independence/seal | NOT_VERIFIED | Existing honest disposition; no new Set B attestation or private inspection |
+| AC3 Metrics | PASS candidate, unchanged | Metric definitions and protocol tests unchanged |
+| AC4-A Collector | PASS candidate | Both corrections and focused/full offline regressions pass |
+| AC4-B Official Freeze | FREEZE_INCOMPLETE | Required metadata remains unresolved; readiness fix grants no GO-A |
+| AC5 Reproducibility | PASS_OFFLINE candidate | Exact tested SHA and commands/results recorded above |
+| AC6 Safety | PASS_SCOPED candidate | Three evaluation-only files; no execution, private content or production change |
+| AC7 Evidence | Pending Coordinator review | Updated evidence and PR handoff prepared; no acceptance/DONE claim |
+
+**SELF-REVIEW: COMPLETED. MERGE: NOT PERFORMED.** Next: Coordinator exact-SHA review.
+
+---
+
 # AC4-A COLLECTOR & AC4-B FREEZE STATUS — M4-T01 (15/10/2026)
 
 **Current technical result: READY_FOR_COORDINATOR_REVIEW.** Coordinator clarification
