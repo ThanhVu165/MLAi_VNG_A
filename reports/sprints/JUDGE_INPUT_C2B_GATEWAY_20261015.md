@@ -107,3 +107,7 @@ authenticated human identity. Không mở rộng safety claim sang public/hostil
 
 LIVE/provider calls **0**. No email, merge or deploy. Independent security review and
 Coordinator acceptance required before integration. Final commit/PR recorded in handoff.
+
+Implementation/test SHA: `e2e8f7a48698568464449ded423e1216c0692afd`.
+PR: [#72](https://github.com/ThanhVu165/MLAi_VNG_A/pull/72), targets dev. Follow-up commit
+chỉ ghi metadata này; final HEAD bàn giao trong chat, reviewer kiểm đúng final SHA.
