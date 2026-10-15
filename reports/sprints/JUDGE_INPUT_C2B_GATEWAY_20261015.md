@@ -150,3 +150,220 @@ trusted (no SO_PEERCRED enforcement). Registry 100-session saturation, stale soc
 restart token loss are fail-closed operational availability limits described above.
 Recommendation: READY_FOR_INDEPENDENT_REVIEW, not automatic merge/GO-LIVE. LIVE/provider
 calls 0; no new HTTP endpoint, email, merge or deploy.
+
+## Final macOS Unix validation — FAIL / HOLD (supersedes earlier disposition)
+
+Reviewed exact PR #72 SHA: `c4ff44a102194ac9fa119d6eb31ef8c847381f82`.
+Owner authorization: MAC — C2-B FINAL UNIX VALIDATION; artifact-only commit/push approved.
+macOS Darwin arm64, Python 3.11.17, Streamlit **1.39.0**, actual OS UID **501**.
+Không sửa source/test trong repo; previous self-review PASS did not test native reconnect.
+This section supersedes its no-finding/READY recommendation: **HOLD pending correction**.
+
+### Two Windows-blocked tests — 2 PASS
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q -rs -p no:cacheprovider tests/test_judge_input_c2b.py::test_socket_path_rejects_unsafe_directory tests/test_judge_input_c2b.py::test_local_ipc_staging_smoke_network_and_provider_blocked --tb=short
+```
+
+**2 passed in 0.75s**, exit 0. Unix IPC local permission override used; child permits
+AF_UNIX only, blocks AF_INET/DNS/OpenAI. Directory 0755 rejected; actual operator socket
+0600 in 0700 private directory works. Wrong operator secret denied, correct secret can
+provision once/revoke, replay provisioning denied, PREVIEW_READY and no-send hold.
+
+### Additional focused UID + reconnect probes — 1 PASS / 1 FAIL
+
+Outside-repo probe: `/private/tmp/exodia-c2b-final.B0wyZp/test_final_unix.py`.
+SHA-256: `a6e14fc60f737d15e7272268cc3f0e8b5158e1a393949eeec016dc8eaf63082d`.
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/nguyenvoviettrinh/exodia-t06-work/MLAi_VNG_A/tests:/Users/nguyenvoviettrinh/exodia-t06-work/MLAi_VNG_A .venv/bin/python -B -c 'import pytest, conftest; raise SystemExit(pytest.main(["-q", "-p", "no:cacheprovider", "--tb=short", "/private/tmp/exodia-c2b-final.B0wyZp/test_final_unix.py"], plugins=[conftest]))'
+```
+
+**1 failed, 1 passed, 1 warning in 1.86s**, exit 1. Warning is anyio assertion-rewrite,
+not a network/provider attempt. Test conftest blocks network/DNS/OpenAI before imports.
+Total for this request: **3 PASS / 1 FAIL**, of which exactly two requested missing tests
+PASS. Full suite NOT RUN.
+
+UID probe PASS: actual directory/socket stat owners equal getuid()=501, modes 0700/0600.
+Client rejects UID mismatch before prompting for issuer secret. Mismatch predicate tested
+by replacing getuid() in test only; NOT a real second-user/setuid attempt. No SO_PEERCRED
+attestation claimed; trusted same-UID host processes remain in the trust boundary.
+
+### Confirmed finding C2B-R01 [P1] — known old session ID recovers judge capability
+
+Affected app code: `ui/judge_gateway.py:46–51,76–81`, registry keyed only by native
+Streamlit session_id, with no disconnect invalidation or reconnect approval boundary.
+
+Installed framework evidence:
+
+- browser_websocket_handler.py:112–129 reads client-supplied third WebSocket subprotocol
+  as existing_session_id, then passes it to runtime.connect_session.
+- websocket_session_manager.py:80–97 reattaches an inactive stored AppSession by ID,
+  without an independent identity/capability comparison; native default storage TTL is
+  120 seconds. Active sessions instead get a new ID (control verified).
+- app_session.py:726 puts session_id in the browser initialization message. This does
+  not prove attacker discovery of a victim ID; it disproves treating that ID as a
+  purely server-only, non-replayable identity.
+
+Reproduction uses real BrowserWebSocketHandler.open, WebsocketSessionManager,
+MemorySessionStorage and AppSession (not mocked reconnect decisions):
+
+1. Create native victim session, bind/provision through gateway operator path, run a
+   synthetic replay case; verify PREVIEW_READY and victim can_read=True.
+2. New client supplies the known victim ID while victim active: framework creates a
+   different ID, gateway cannot read the victim case (negative control PASS).
+3. Disconnect victim through native session manager; within default storage TTL a new
+   guest handler supplies `Sec-Websocket-Protocol: streamlit,unused,<old-session-id>`.
+4. Native manager returns exactly the victim ID and the same AppSession object, including
+   its owned case IDs. Gateway context now resolves the retained registry grant;
+   can_read=True and grant_valid=True without another operator approval or issuer/grant
+   token supplied by this guest. Negative assertion fails with KNOWN_ID_RECONNECT.
+5. Explicit operator revoke still makes can_read=False. No send events or jobs created.
+
+Only file watching is disabled in probe; gateway context accessor is supplied the native
+manager's returned ID to model the reconnecting script execution. No hand-edited registry
+grant or fake manager result. This is an in-process native handler/runtime + real gateway/
+SQLite proof, NOT browser-level/deployed WebSocket handshake E2E. It establishes a real
+application authorization path under the stated known-ID/disconnected-session precondition;
+it does not establish remote ID theft, random-ID guessing, or cross-origin handshake bypass.
+
+Impact: existing judge capability/case-read ownership can move to a new guest connection.
+No new grant or budget is issued; therefore the earlier no-reissuance tests can remain
+green while isolation fails. Operator secret and Unix permissions do not guard this judge
+reconnect path. Revoke/HOLD/no-send remain effective and limit, but do not remove, impact.
+
+### Decision / remaining work
+
+**FAIL — recommend HOLD PR #72** until Coordinator approves a focused correction of the
+disconnect/reconnect grant boundary, with regression for known-ID inactive reconnect and
+active-session control. Prefer invalidation/reapproval over treating transport ID as
+authenticated identity; precise hook/ownership/contract must be agreed before code change.
+No source fix was attempted in this validation request. Independent re-review required.
+
+Remaining unverified: deployed-browser E2E, origin/proxy behavior, actual foreign OS user
+connect denial, native-ID acquisition by an attacker. Do not claim these PASS. Other known
+availability limits (registry saturation/stale socket/restart token loss) still apply.
+M7 fingerprints unchanged; Core/LLM/schema/policy unchanged. LIVE/provider calls **0**;
+no public HTTP endpoint, real email, full suite, merge or deploy. Artifact-only final SHA
+is provided in handoff; source remains byte-identical to reviewed c4ff44a.
+
+### Reproduction appendix (copy to a temporary test file outside repo)
+
+```python
+import asyncio
+import os
+from pathlib import Path
+import stat
+import sys
+import tempfile
+from types import SimpleNamespace
+
+import pytest
+from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.memory_session_storage import MemorySessionStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.script_data import ScriptData
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
+from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
+
+from infra import db
+from scripts import judge_operator
+from ui import judge_gateway as gateway
+from test_judge_input_c1 import SECRET, _input, _provider
+from test_judge_input_c1 import judge as judge_fixture
+
+judge = judge_fixture
+
+
+def test_actual_socket_uid_modes_and_client_uid_gate(judge, monkeypatch):
+    monkeypatch.setattr(gateway, "_LISTENER", None)
+    with tempfile.TemporaryDirectory(prefix="c2b-uid-", dir="/private/tmp") as directory:
+        path = Path(directory) / "o.sock"
+        monkeypatch.setenv("JUDGE_GATEWAY_SOCKET", str(path))
+        gateway._start_listener()
+        listener = gateway._LISTENER
+        try:
+            assert Path(directory).stat().st_uid == path.stat().st_uid == os.getuid()
+            assert stat.S_IMODE(Path(directory).stat().st_mode) == 0o700
+            assert stat.S_IMODE(path.stat().st_mode) == 0o600
+            monkeypatch.setattr(sys, "argv", ["operator", "--socket", str(path), "sessions"])
+            monkeypatch.setattr(judge_operator.getpass, "getpass", lambda _: pytest.fail("SECRET_PROMPT_MUST_NOT_RUN"))
+            current_uid = os.getuid()
+            with monkeypatch.context() as different_uid:
+                different_uid.setattr(os, "getuid", lambda: current_uid + 1)
+                with pytest.raises(SystemExit) as denied:
+                    judge_operator.main()
+                assert denied.value.code == 2
+        finally:
+            listener.close()
+
+
+def test_known_disconnected_session_id_must_not_recover_judge_grant(judge, monkeypatch):
+    monkeypatch.setenv("JUDGE_GATEWAY_SOCKET", "/not-opened/reconnect.sock")
+    monkeypatch.setattr(gateway, "_BINDINGS", {})
+    monkeypatch.setattr(gateway, "_start_listener", lambda: None)
+    # Only filesystem watching is disabled; session creation/storage/reconnect remain native.
+    monkeypatch.setattr(AppSession, "register_file_watchers", lambda self: None)
+    context = SimpleNamespace(session_id="")
+    monkeypatch.setattr(gateway, "get_script_run_ctx", lambda **kwargs: context)
+    _provider(monkeypatch)
+
+    async def exercise():
+        script = ScriptData(str(Path.cwd() / "streamlit_app.py"))
+        manager = WebsocketSessionManager(MemorySessionStorage(),
+            MemoryUploadedFileManager("/unused"), ScriptCache(), None)
+
+        class LocalRuntime:
+            def connect_session(self, client, user_info, existing_session_id=None):
+                return manager.connect_session(client, script, user_info, existing_session_id)
+
+        runtime = LocalRuntime()
+
+        def open_client(previous=None):
+            headers = {} if previous is None else {
+                "Sec-Websocket-Protocol": "streamlit,unused," + previous
+            }
+            client = SimpleNamespace(request=SimpleNamespace(headers=headers), _runtime=runtime)
+            BrowserWebSocketHandler.open(client)
+            return client
+
+        victim = open_client()
+        context.session_id = victim._session_id
+        reference = gateway.prepare_session()
+        gateway._operate(dict(operation="provision", secret=SECRET, reference=reference,
+                              request_id="final-reconnect-proof-0001"))
+        result = gateway.submit(_input())
+        victim_session = manager.get_active_session_info(victim._session_id).session
+        victim_session.session_state["restricted_demo_case_ids"] = [result.case_id]
+        assert gateway.can_read(result.case_id)
+        # Active victim cannot be joined merely by supplying its ID.
+        active_attacker = open_client(victim._session_id)
+        assert active_attacker._session_id != victim._session_id
+        context.session_id = active_attacker._session_id
+        assert not gateway.can_read(result.case_id)
+        manager.close_session(active_attacker._session_id)
+        manager.disconnect_session(victim._session_id)
+        # Same old ID in a new guest connection; no operator or grant credentials.
+        attacker = open_client(victim._session_id)
+        assert attacker._session_id == victim._session_id
+        restored = manager.get_active_session_info(attacker._session_id).session
+        assert restored is victim_session
+        assert restored.session_state["restricted_demo_case_ids"] == [result.case_id]
+        context.session_id = attacker._session_id
+        regained_read = gateway.can_read(result.case_id)
+        regained_grant = gateway.grant_valid()
+        # Revoke still mitigates the restored session; no send side effect.
+        gateway._operate(dict(operation="revoke", secret=SECRET, reference=reference))
+        assert not gateway.can_read(result.case_id)
+        assert not db.fetch_all("SELECT * FROM case_jobs")
+        assert not db.fetch_all("SELECT * FROM audit_events WHERE action LIKE 'SEND_%'")
+        manager.close_session(attacker._session_id)
+        assert not (regained_read or regained_grant), (
+            "KNOWN_ID_RECONNECT: new guest recovered disconnected victim session, "
+            "existing grant and judge case read access without operator approval"
+        )
+
+    asyncio.run(exercise())
+
+```
