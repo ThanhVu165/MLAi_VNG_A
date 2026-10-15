@@ -1,0 +1,82 @@
+{
+  "schema_version": "M4-T02-set-a-candidate-receipt-v1",
+  "task_id": "M4-T02",
+  "classification": "POST-TUNING INDEPENDENT EVALUATION SET A",
+  "identifier": "M4-SET-A-POSTTUNE",
+  "version": "v1",
+  "case_count": 18,
+  "sha256": "98d691c8437f1c466a6c2b7be1cd4ca3c34f4e0a0218f02376c2ae4f4a414385",
+  "created_at": "2026-10-15T04:01:59Z",
+  "finalized_at": "2026-10-15T04:03:53Z",
+  "author": "Minh — Evaluation/Logic",
+  "authoring_assistance": "Authorized Codex task session",
+  "baseline_sha": "47a1fcd9686b5409674979b34a521ead2f65ae8d",
+  "storage_reference": "M4T02_PRIVATE_SET_A_STORE",
+  "coordinator_authorization": [
+    "trello-action:6ad04dd2fb6c52f6121deaa4",
+    "trello-action:6ad04fd528b7095d4152b4c1"
+  ],
+  "creation_method": "Synthetic input-only authoring from project requirements, supported-domain boundaries and the M4 evaluation protocol; no system output was used.",
+  "coverage_design": {
+    "fixed_before_authoring": true,
+    "supported_domains": 3,
+    "routine_informational": 3,
+    "authority_boundary": 3,
+    "missing_critical_fact": 3,
+    "unsupported_or_conflicting_evidence": 3,
+    "content_verification_guard": 2,
+    "multi_intent_or_precedence": 2,
+    "applicability_or_scope": 2,
+    "note": "Coverage design is not Gold and does not assign expected outcomes to cases."
+  },
+  "provenance": {
+    "model_execution_on_candidate": 0,
+    "gold_created_or_accessed": false,
+    "set_b_gold_accessed": false,
+    "dev_regression_used_as_authoring_source": false,
+    "m5_study_used_as_authoring_source": false,
+    "set_b_used_as_authoring_source": false,
+    "tuning_or_adaptation_from_candidate": 0
+  },
+  "access_history": [
+    {
+      "at": "2026-10-15T04:01:59Z",
+      "actor": "Minh — Evaluation/Logic via authorized Codex task session",
+      "action": "CREATE_INPUT_ONLY_CANDIDATE"
+    },
+    {
+      "at": "2026-10-15T04:03:53Z",
+      "actor": "Minh — Evaluation/Logic via authorized Codex task session",
+      "action": "FINALIZE_AFTER_OFFLINE_VALIDATION"
+    }
+  ],
+  "overlap": {
+    "internal": "PASS",
+    "dev_regression": "PASS",
+    "m5_public_study_material": "PASS",
+    "set_b_input_only": "PASS",
+    "set_b_gold_or_reviewer_material_accessed": false,
+    "method": "NFKC/casefold exact comparison, SequenceMatcher fuzzy comparison, token-trigram template comparison and offline family review",
+    "high_similarity_threshold": 0.86,
+    "template_jaccard_threshold": 0.65
+  },
+  "validation": {
+    "input_schema": "PASS",
+    "unique_ids": "PASS",
+    "deterministic_serialization": "PASS",
+    "hash_reproducibility": "PASS",
+    "synthetic_sender_domain": "PASS",
+    "timezone_aware_received_at": "PASS",
+    "pii_scan": "PASS",
+    "public_artifact_sensitive_data_scan": "PASS"
+  },
+  "statements": [
+    "No model execution on candidate before freeze",
+    "Gold not created in authoring pass"
+  ],
+  "freeze_status": "FREEZE_INCOMPLETE",
+  "execution_authorized": false,
+  "budget": 0,
+  "official_set_a_runs": 0,
+  "live_api_provider_email_calls": 0
+}
