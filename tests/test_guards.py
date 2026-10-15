@@ -572,9 +572,7 @@ def test_extract_strips_injection_before_llm_and_audits_removed_text(monkeypatch
     assert "12345678901" not in events[0].reason and "[MSSV]" in events[0].reason
 
 
-def test_extract_uses_schema_and_maps_eight_domain_samples(
-    monkeypatch, tmp_path
-) -> None:
+def test_extract_uses_schema_and_maps_eight_domain_samples(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(db, "DEFAULT_DATABASE_PATH", tmp_path / "extract.db")
     domains = iter(
         (
@@ -621,9 +619,7 @@ def test_extract_uses_schema_and_maps_eight_domain_samples(
         )
 
     monkeypatch.setattr("core.extract.call_json", fake_call)
-    extractions = [
-        extract_facts(f"Email mẫu {index}", f"case-{index}") for index in range(8)
-    ]
+    extractions = [extract_facts(f"Email mẫu {index}", f"case-{index}") for index in range(8)]
 
     assert all(extraction.llm_error is None for extraction in extractions)
     assert db.fetch_one("SELECT COUNT(*) AS n FROM audit_events")["n"] == 8
@@ -823,8 +819,13 @@ def test_r7_retry_and_basis_repair_share_bounded_budget(
             evidence=EvidenceResult(EvidenceStatus.OK, [_evidence_chunk()], []),
             inp=_input(),
         )
-        with pytest.raises(ValueError):
-            generate_escalation_card(**kwargs)
+        if timeout_stage == "repair":
+            with pytest.raises(ValueError):
+                generate_escalation_card(**kwargs)
+        else:
+            card = generate_escalation_card(**kwargs)
+            assert card.escalation_type is EscalationType.AUTHORITY_REQUIRED
+            assert card.basis == [(_evidence_chunk().breadcrumb, _evidence_chunk().text)]
         assert llm._BUDGET.get().remaining == 0
     assert len(seen) == llm.LLM_MAX_ATTEMPTS
     assert all(timeout <= 30 for _, timeout in seen)

@@ -301,7 +301,15 @@ def _fill_skipped_steps(latencies: dict[str, int]) -> None:
 def _fail_safe_decision(corpus_version: str, error: str = "") -> PolicyDecision:
     reason = (
         mask_pii(error)
-        if error.startswith(("Dịch vụ AI", "Chưa cấu hình", "Quy định đã thay đổi"))
+        if error.startswith(
+            (
+                "Dịch vụ AI",
+                "Chưa cấu hình",
+                "Quy định đã thay đổi",
+                "Đã hết số lượt xử lý email",
+                "Đã hết thời gian xử lý email",
+            )
+        )
         else FAIL_SAFE_REASON
     )
     return PolicyDecision(

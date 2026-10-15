@@ -9,6 +9,7 @@ from typing import Literal, cast
 from core.generate import generate_reply
 from core.ground_guard import guard_groundedness
 from core.prepolicy import multi_intent_plan
+from core.question_guard import _structured_fallback
 from core.sanitize import strip_prompt_injection
 from core.types import (
     CaseInput,
@@ -20,7 +21,7 @@ from core.types import (
     Extraction,
 )
 from infra.audit import log_event
-from infra.llm import call_json
+from infra.llm import call_json, has_call_capacity
 
 QUESTION_PROMPT_V1 = """Tạo thẻ escalation bằng tiếng Việt cho chuyên viên DSA.
 Chỉ dùng facts và căn cứ bên dưới; không suy đoán hay tự tạo dữ kiện.
@@ -116,6 +117,30 @@ def _basis(value: object, evidence: EvidenceResult) -> list[tuple[str, str]]:
     return basis
 
 
+def _deterministic_card(
+    case_id: str,
+    actor: str,
+    corpus_version: str,
+    escalation_type: EscalationType,
+    extraction: Extraction,
+    evidence: EvidenceResult,
+    partial_draft: DraftReply | None,
+) -> EscalationCard:
+    card = _structured_fallback(
+        EscalationCard("", [], [], "", [], escalation_type, partial_draft), extraction, evidence
+    )
+    log_event(
+        case_id=case_id,
+        actor=actor,
+        action="QUESTION_GENERATED",
+        input_ref=case_id,
+        reason="Đã tạo thẻ deterministic từ dữ kiện và căn cứ nguyên văn; không còn lượt diễn đạt.",
+        sources=[chunk.chunk_id for chunk in evidence.chunks],
+        corpus_version=corpus_version,
+    )
+    return card
+
+
 def generate_escalation_card(
     *,
     case_id: str,
@@ -128,6 +153,10 @@ def generate_escalation_card(
     partial_draft: DraftReply | None = None,
 ) -> EscalationCard:
     """Gọi LLM để tạo bốn khối escalation từ dữ liệu đã lọc."""
+    if not has_call_capacity():
+        return _deterministic_card(
+            case_id, actor, corpus_version, escalation_type, extraction, evidence, partial_draft
+        )
     known_facts, missing_facts = _facts(extraction)
     prompt = QUESTION_PROMPT_V1.format(
         escalation_type=escalation_type.value,
@@ -146,9 +175,17 @@ def generate_escalation_card(
     )
     if not result.ok:
         raise ValueError(result.error or "LLM không tạo được câu hỏi chuyển tiếp.")
+    summary = _string(result.data.get("summary"), "summary")
+    facts = _strings(result.data.get("facts"), "facts")
+    question = _string(result.data.get("question"), "question")
+    options = _strings(result.data.get("options"), "options")
     try:
         basis = _basis(result.data.get("basis"), evidence)
     except BasisValidationError:
+        if not has_call_capacity():
+            return _deterministic_card(
+                case_id, actor, corpus_version, escalation_type, extraction, evidence, partial_draft
+            )
         repair = call_json(
             prompt + "\nSửa basis: mỗi quote phải sao chép nguyên văn MỘT substring liên tục "
             "trong chunk được tham chiếu. Không nối các đoạn riêng biệt, không bỏ nhãn "
@@ -162,11 +199,11 @@ def generate_escalation_card(
             raise ValueError(repair.error or "LLM không sửa được căn cứ câu hỏi chuyển tiếp.")
         basis = _basis(repair.data.get("basis"), evidence)
     card = EscalationCard(
-        summary=_string(result.data.get("summary"), "summary"),
-        facts=_strings(result.data.get("facts"), "facts"),
+        summary=summary,
+        facts=facts,
         basis=basis,
-        question=_string(result.data.get("question"), "question"),
-        options=_strings(result.data.get("options"), "options"),
+        question=question,
+        options=options,
         escalation_type=escalation_type,
         partial_draft=partial_draft,
     )
@@ -204,22 +241,24 @@ def generate_multi_intent_card(
         chunks=[chunk for chunk in evidence.chunks if chunk.domain in routine_domains],
         failed_checks=[],
     )
-    partial_draft = generate_reply(
-        case_id=case_id,
-        actor=actor,
-        corpus_version=corpus_version,
-        language=cast(Literal["vi", "en"], extraction.language),
-        evidence=routine_evidence,
-        inp=inp,
-        extraction=replace(extraction, requests=list(plan.routine_requests)),
-    )
-    partial_draft = guard_groundedness(
-        case_id=case_id,
-        actor=actor,
-        corpus_version=corpus_version,
-        draft=partial_draft,
-        evidence=routine_evidence,
-    ).draft
+    partial_draft = None
+    if has_call_capacity():
+        partial_draft = generate_reply(
+            case_id=case_id,
+            actor=actor,
+            corpus_version=corpus_version,
+            language=cast(Literal["vi", "en"], extraction.language),
+            evidence=routine_evidence,
+            inp=inp,
+            extraction=replace(extraction, requests=list(plan.routine_requests)),
+        )
+        partial_draft = guard_groundedness(
+            case_id=case_id,
+            actor=actor,
+            corpus_version=corpus_version,
+            draft=partial_draft,
+            evidence=routine_evidence,
+        ).draft
     locked_extraction = Extraction(
         language=extraction.language,
         requests=list(plan.locked_requests),
@@ -235,11 +274,15 @@ def generate_multi_intent_card(
         actor=actor,
         corpus_version=corpus_version,
         escalation_type=escalation_type,
-        extraction=locked_extraction,
-        evidence=EvidenceResult(
-            evidence.status,
-            [chunk for chunk in evidence.chunks if chunk.domain in locked_domains],
-            evidence.failed_checks,
+        extraction=locked_extraction if partial_draft is not None else extraction,
+        evidence=(
+            EvidenceResult(
+                evidence.status,
+                [chunk for chunk in evidence.chunks if chunk.domain in locked_domains],
+                evidence.failed_checks,
+            )
+            if partial_draft is not None
+            else evidence
         ),
         partial_draft=partial_draft,
         inp=inp,
@@ -249,8 +292,12 @@ def generate_multi_intent_card(
         0,
         (
             "Đã chuẩn bị phần trả lời thông tin; phần còn lại chờ chuyên viên quyết định."
-            if partial_draft.grounded
-            else "Phần trả lời đã soạn chưa đủ căn cứ; chuyên viên cần kiểm tra trước khi dùng."
+            if partial_draft is not None and partial_draft.grounded
+            else (
+                "Phần trả lời đã soạn chưa đủ căn cứ; chuyên viên cần kiểm tra trước khi dùng."
+                if partial_draft is not None
+                else "Chưa soạn phần trả lời thông tin; chuyên viên cần xử lý các yêu cầu trong email."
+            )
         ),
     )
     return card
