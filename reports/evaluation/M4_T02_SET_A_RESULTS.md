@@ -179,7 +179,7 @@ Không có real email send, tuning/adaptation, label change, best-of hoặc seco
 Evidence:
 
 - Post-Tuning Independent Evaluation Set được cho phép theo Coordinator amendment
-  `6ad0466ee12c3c2891436b98e0730f5f90c19a3d`.
+  `6ad04616863aaeb3c1fb352f`.
 - Candidate ID, version và hash đã được đóng băng trước khi thực thi.
 - Bằng chứng provenance/independence được lưu trong
   [M4_T02_SET_A_CANDIDATE_PREPARATION.md](M4_T02_SET_A_CANDIDATE_PREPARATION.md)
