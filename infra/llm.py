@@ -18,7 +18,12 @@ from uuid import uuid4
 
 from infra.db import execute, fetch_one, now_iso
 from infra.demo_access import is_restricted_demo
-from infra.judge_access import active_case, check_active
+from infra.judge_access import (
+    CASE_INPUT_TOKEN_RESERVATION,
+    CASE_OUTPUT_TOKEN_RESERVATION,
+    active_case,
+    check_active,
+)
 from infra.provider_observability import (
     current_correlation,
     sanitize_case_id,
@@ -27,6 +32,7 @@ from infra.provider_observability import (
 from infra.settings import (
     CASE_TIMEOUT_SECONDS,
     LLM_MAX_ATTEMPTS,
+    LLM_PROCESSING_MAX_ATTEMPTS,
     LLM_RETRIES,
     LLM_TIMEOUT_S,
 )
@@ -51,6 +57,47 @@ class _CallBudget:
 _BUDGET: ContextVar[_CallBudget | None] = ContextVar("llm_case_budget", default=None)
 
 
+@dataclass
+class _SimulationBudget:
+    case_id: str
+    directory: Path
+    deadline: float
+    input_tokens: int = 0
+    output_tokens: int = 0
+    attempts: int = 0
+    blocked: bool = False
+
+
+_SIMULATION: ContextVar[_SimulationBudget | None] = ContextVar("c2c_simulation", default=None)
+
+
+@contextmanager
+def _c2c_simulation(case_id: str, directory: Path) -> Iterator[_SimulationBudget]:
+    """Server/test-only scope; usage khai báo synthetic, không phải provider hard cap."""
+    if _SIMULATION.get() is not None or active_case() != case_id:
+        raise ValueError("Scope mô phỏng phải gắn reservation judge, không được khởi tạo lồng.")
+    check_active()
+    if os.getenv("LLM_MODE", "live").lower() != "replay":
+        raise ValueError("Mô phỏng C2-C chỉ cho phép replay.")
+    state = _SimulationBudget(case_id, directory, perf_counter() + CASE_TIMEOUT_SECONDS)
+    token = _SIMULATION.set(state)
+    try:
+        yield state
+    finally:
+        _SIMULATION.reset(token)
+
+
+def _check_simulation(state: _SimulationBudget) -> None:
+    if (
+        state.blocked
+        or active_case() != state.case_id
+        or os.getenv("LLM_MODE", "live").lower() != "replay"
+    ):
+        raise ValueError("Scope mô phỏng không còn hợp lệ; giữ fail-closed.")
+    if int(state.deadline - perf_counter()) <= 0:
+        raise CaseDeadlineExhausted("Đã hết thời gian xử lý email cho phép.")
+
+
 class CaseAttemptsExhausted(TimeoutError):
     """Không còn lượt gọi trong ngân sách hiện tại."""
 
@@ -63,6 +110,11 @@ def has_call_capacity() -> bool:
     """Kiểm tra lượt còn lại; deadline và quyền judge vẫn phải hợp lệ."""
     if active_case() is not None:
         check_active()
+    simulation = _SIMULATION.get()
+    if simulation is not None:
+        _check_simulation(simulation)
+        if simulation.attempts >= LLM_PROCESSING_MAX_ATTEMPTS:
+            return False
     budget = _BUDGET.get()
     if budget is None:
         return True
@@ -193,6 +245,13 @@ def _run_mode(
     provider: str = "openai",
 ) -> LLMResult:
     mode = os.getenv("LLM_MODE", "live").lower()
+    simulation = _SIMULATION.get()
+    if simulation is not None:
+        _check_simulation(simulation)
+        check_active()
+        if case_id != simulation.case_id:
+            return _failure("Case không khớp scope mô phỏng C2-C.", prompt_hash, model)
+        return _c2c_replay(simulation, prompt_hash, model, timeout_s)
     if active_case() is not None:
         check_active()
         if mode != "replay" or case_id != active_case():
@@ -491,6 +550,8 @@ def _request_openai(
     *,
     temperature: float = 0.0,
 ) -> LLMResult:
+    if _SIMULATION.get() is not None:
+        raise ValueError("Mô phỏng C2-C không được gọi provider LIVE.")
     from openai import OpenAI
 
     reasoning_effort = os.getenv("OPENAI_REASONING_EFFORT", "none").strip().lower()
@@ -574,6 +635,52 @@ def _extract_usage(response: object) -> dict[str, object] | None:
             else None
         ),
     }
+
+
+def _c2c_replay(
+    state: _SimulationBudget, prompt_hash: str, model: str, timeout_s: int
+) -> LLMResult:
+    """Debit trước response mô phỏng; chỉ đối soát bằng usage synthetic hợp lệ."""
+    try:
+        payload = json.loads((state.directory / f"{prompt_hash}.json").read_text(encoding="utf-8"))
+        if (
+            payload["is_synthetic"] is not True
+            or payload["model"] != model
+            or payload["prompt_hash"] != prompt_hash
+        ):
+            raise ValueError("Không xác minh được fixture mô phỏng.")
+        request = payload["request"]
+        input_tokens, output_limit = request["input_tokens"], request["max_output_tokens"]
+        if (
+            type(input_tokens) is not int
+            or input_tokens < 0
+            or type(output_limit) is not int
+            or output_limit <= 0
+            or state.input_tokens + input_tokens > CASE_INPUT_TOKEN_RESERVATION
+            or state.output_tokens + output_limit > CASE_OUTPUT_TOKEN_RESERVATION
+        ):
+            raise ValueError("Không đủ ngân sách token mô phỏng.")
+        _attempt_timeout(timeout_s)
+        state.attempts += 1
+        state.input_tokens += input_tokens
+        state.output_tokens += output_limit
+        usage = payload["usage"]
+        if (
+            type(usage["input_tokens"]) is not int
+            or usage["input_tokens"] != input_tokens
+            or type(usage["output_tokens"]) is not int
+            or not 0 <= usage["output_tokens"] <= output_limit
+        ):
+            raise ValueError("Usage mô phỏng thiếu hoặc không đáng tin cậy.")
+        # Chỉ đối soát allocation trong RAM khi usage hợp lệ; không refund ledger C2-A.
+        state.output_tokens -= output_limit - usage["output_tokens"]
+        return replace(
+            _success(_parse_object(payload["data"]), prompt_hash, model),
+            usage={**usage, "source": "synthetic"},
+        )
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, OverflowError):
+        state.blocked = True
+        return _failure("Mô phỏng C2-C bị chặn; chưa xác minh ngân sách/usage.", prompt_hash, model)
 
 
 def _replay(prompt_hash: str, model: str) -> LLMResult:
