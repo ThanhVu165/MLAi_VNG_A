@@ -318,3 +318,7 @@ scope. M7 fingerprints cuối khớp preflight ở đầu report; không stage a
 | CR7 | PASS handoff evidence — before/after, commands, exact references/tree/blobs, self-review, PR; independent re-review pending |
 
 LIVE/API provider calls = **0**. Merge PR/dev/deploy = **NOT RUN**. Candidate không push.
+
+CR01 implementation/test/report commit: `b8b9447551b5ec719acced1a4bc264ce443c67e7`.
+Commit metadata-only tiếp theo chỉ ghi SHA này; không đổi runtime/test blobs đã validation.
+Final PR HEAD được bàn giao trong chat và xác minh trên GitHub; re-review trên final HEAD.
