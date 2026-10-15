@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
@@ -28,6 +29,7 @@ from infra.demo_access import (
     validate_public_text,
 )
 from infra.settings import PENDING_STATUS_REFRESH_SECONDS
+from infra.judge_access import can_read, grant_is_valid, is_judge_case
 from ui.presentation import (
     decision_badge_html,
     escape_html,
@@ -120,7 +122,24 @@ def inbox_input(email: InboxEmail) -> CaseInput:
 
 
 def _submit(inp: CaseInput) -> None:
-    if is_restricted_demo():
+    grant = st.session_state.get("judge_grant")
+    if (
+        is_restricted_demo()
+        and grant is not None
+        and canonical_demo_input(inp.sender, inp.subject, inp.body) is None
+    ):
+        from core.judge_input import process_judge_case
+
+        result = process_judge_case(
+            inp,
+            grant=grant,
+            session=st.session_state.get("judge_session", ""),
+            nonce=secrets.token_urlsafe(24),
+        )
+        if not result.corpus_version:
+            raise RuntimeError(result.decision.reason)
+        case_id = result.case_id
+    elif is_restricted_demo():
         authorize_case_input(
             sender=inp.sender,
             subject=inp.subject,
@@ -147,9 +166,23 @@ def _owned_case_ids() -> list[str]:
     return values if isinstance(values, list) else []
 
 
+def _can_read_case(case_id: str) -> bool:
+    if is_judge_case(case_id):
+        return can_read(
+            case_id, st.session_state.get("judge_grant"), st.session_state.get("judge_session")
+        )
+    return case_is_owned(case_id, _owned_case_ids())
+
+
 def _render_first_time_guidance() -> None:
     """Giải thích đúng khả năng của từng mode trước khi người dùng nhập email."""
-    if is_restricted_demo():
+    if is_restricted_demo() and grant_is_valid(
+        st.session_state.get("judge_grant"), st.session_state.get("judge_session")
+    ):
+        st.info(
+            "Phiên judge đã được cấp quyền nhập email synthetic để xem kết quả offline; không gửi email."
+        )
+    elif is_restricted_demo():
         st.info(
             "Restricted DEMO đang chạy replay offline với 3 email mẫu synthetic canonical. "
             "Hãy chọn một mẫu rồi nhấn **Xử lý email**. Email tự nhập mới vẫn hiển thị để "
@@ -240,7 +273,7 @@ def _render_stepper(current_step: int) -> str:
 
 @st.fragment(run_every=PENDING_STATUS_REFRESH_SECONDS)
 def render_saved_case(case_id: str) -> None:
-    if not case_is_owned(case_id, _owned_case_ids()):
+    if not _can_read_case(case_id):
         st.warning("Bạn không có quyền xem email này trong phiên hiện tại.")
         return
     row = fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,))
@@ -288,7 +321,9 @@ def render_saved_case(case_id: str) -> None:
     # ==================== A. RESULT BANNER ====================
     if decision == Decision.AUTO_REPLY:
         # Thông điệp trạng thái gửi thật từ DB
-        if status == CaseStatus.SENT:
+        if status == CaseStatus.PREVIEW_READY:
+            exec_note = "📝 <strong>Bản xem trước:</strong> Bản nháp sẵn sàng — chưa gửi; không lên lịch gửi."
+        elif status == CaseStatus.SENT:
             exec_note = "✅ <strong>Đã phát hành:</strong> Đã gửi phản hồi mô phỏng tới người gửi."
         elif status == CaseStatus.PENDING_SEND:
             sec_left = seconds_until(row["send_deadline"])
@@ -595,7 +630,7 @@ def main() -> None:
 
     # Xác định bước Stepper hiện tại
     active_case_id = st.query_params.get("case_id") or st.session_state.get("active_case_id")
-    if active_case_id and not case_is_owned(active_case_id, _owned_case_ids()):
+    if active_case_id and not _can_read_case(active_case_id):
         active_case_id = None
         st.session_state.pop("active_case_id", None)
         st.query_params.pop("case_id", None)
@@ -623,7 +658,14 @@ def main() -> None:
             '<div class="ex-card-title">📥 Nhập email cần xử lý</div>', unsafe_allow_html=True
         )
         if is_restricted_demo():
-            st.caption("Public mode chỉ xử lý nội dung được điền từ 3 email mẫu ở phía trên.")
+            if grant_is_valid(
+                st.session_state.get("judge_grant"), st.session_state.get("judge_session")
+            ):
+                st.caption(
+                    "Nhập email synthetic với địa chỉ .invalid hoặc .test để xem bản nháp; chưa gửi."
+                )
+            else:
+                st.caption("Public mode chỉ xử lý nội dung được điền từ 3 email mẫu ở phía trên.")
         else:
             st.caption(
                 "Bạn có thể nhập email tự do trong private mode khi máy chủ được cấp quyền xử lý."
@@ -690,6 +732,7 @@ def main() -> None:
             recent = [
                 row
                 for case_id in _owned_case_ids()
+                if _can_read_case(case_id)
                 if (
                     row := fetch_one(
                         "SELECT case_id, subject, status, received_at FROM cases WHERE case_id = ?",

@@ -9,6 +9,8 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from infra.judge_access import authorize_payload, is_judge_case
+
 APP_MODE_ENV = "APP_MODE"
 PRIVATE_MODE = "private"
 RESTRICTED_MODE = "restricted_demo"
@@ -140,6 +142,10 @@ def authorize_case_input(
     """Chỉ whitelist payload replay đã ghi; lane LIVE của HF1 luôn đóng."""
     if not is_restricted_demo():
         return
+    if isinstance(received_at, datetime) and authorize_payload(sender, subject, body, received_at):
+        if channel != "paste" or external_id is not None:
+            raise DemoAccessDenied("Ngữ cảnh judge không khớp kênh tiếp nhận.")
+        return
     validate_public_text(sender, subject, body)
     if not isinstance(received_at, datetime) or not isinstance(channel, str):
         raise ValueError("Payload email không hợp lệ.")
@@ -157,6 +163,8 @@ def authorize_case_input(
 
 def case_is_owned(case_id: object, owned_case_ids: object) -> bool:
     """Query parameter không đủ cấp quyền; case phải có trong phiên hiện tại."""
+    if isinstance(case_id, str) and is_judge_case(case_id):
+        return False
     if not is_restricted_demo():
         return True
     if not isinstance(case_id, str) or not isinstance(owned_case_ids, (list, tuple, set)):

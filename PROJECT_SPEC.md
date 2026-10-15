@@ -47,6 +47,25 @@ Thành phần thật: nhập/lưu email, gọi LLM khi ở chế độ live, x�
 
 ## 4. Kiến trúc và nguồn chân lý của contract
 
+### C1 — Judge preview offline (Coordinator-approved amendment 15/10/2026)
+
+`CaseStatus.PREVIEW_READY` là trạng thái kết thúc chỉ xem của Judge AUTO_REPLY đã qua
+Policy/Ground Guard. Quyết định vẫn là AUTO_REPLY; case, snapshot và CASE_RESOLVED
+được lưu cùng giao dịch, send_deadline=NULL, không SEND_SCHEDULED/SEND_DISPATCHED.
+Canonical/Verify4 và private mode giữ lifecycle hiện hành. Không thêm audit action/schema.
+
+Judge lane mặc định tắt (`JUDGE_INPUT_ENABLED=0`); server operator cấp opaque grant cho
+session qua `infra/judge_access.py`, không có UI tự cấp quyền. Đây là session sở hữu ẩn
+danh, không phải xác thực production. Quota, nonce, reservation và ownership hash lưu trong
+namespace `judge_c1:*` của settings bằng giao dịch BEGIN IMMEDIATE. Crash giữ reservation
+để fail closed; restart không cấp lại ngân sách. Hạn mức bảo thủ: grant 3 request/600 giây,
+session 10, toàn DB 20, tối đa 2 request đồng thời và 1/session. Không có tự reset ngân sách.
+
+Facade đồng bộ `core/judge_input.py` gọi pipeline chung với request context được reserve
+phía server. Worker không nhận job judge; pipeline kiểm lại payload/case binding và adapter
+chỉ cho replay/offline trong context judge. Không có LIVE exception hoặc hard USD cap;
+ngân sách USD cho C1 bằng 0 vì không gọi provider. Bật LIVE/public cần C2 riêng và review.
+
 Luồng chính:
 
 ```text

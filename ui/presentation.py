@@ -9,6 +9,7 @@ from html import escape
 from infra.db import to_local
 
 STATUS_LABELS = {
+    "PREVIEW_READY": "Bản nháp sẵn sàng — chưa gửi",
     "RECEIVED": "Đã tiếp nhận",
     "PROCESSING": "Đang xử lý",
     "INVALID_INPUT": "Cần bổ sung email",
@@ -730,6 +731,7 @@ def status_badge_html(status: str) -> str:
         "HUMAN_DECIDED": "purple",
         "PENDING_APPROVAL": "escalate",
         "PENDING_SEND": "info",
+        "PREVIEW_READY": "info",
         "SENT": "auto",
         "RESOLVED": "auto",
         "CANCELLED": "neutral",

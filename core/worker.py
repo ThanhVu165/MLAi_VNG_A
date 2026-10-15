@@ -19,6 +19,7 @@ from corpus.api import get_corpus_version
 from infra.audit import log_event
 from infra.db import execute, fetch_all, fetch_one, get_connection, now_iso, to_utc_iso
 from infra.demo_access import authorize_case_input, authorize_demo_action, is_restricted_demo
+from infra.judge_access import active_case, is_judge_case, JudgeDenied
 
 logger = logging.getLogger(__name__)
 POLL_SECONDS = 1
@@ -30,6 +31,8 @@ _stop = Event()
 
 def submit_case(inp: CaseInput, *, actor: str = "SYSTEM", parent_case_id: str | None = None) -> str:
     """Lưu nguyên email và công việc trong cùng giao dịch; cùng mã hộp thư chỉ nhận một lần."""
+    if active_case() is not None or (parent_case_id and is_judge_case(parent_case_id)):
+        raise JudgeDenied("Judge chỉ được xử lý đồng bộ qua facade được cấp quyền.")
     if is_restricted_demo():
         actor = "SYSTEM"
     authorize_case_input(
@@ -173,6 +176,8 @@ def _mark_interrupted(case_id: str) -> None:
 
 def retry_case(case_id: str, *, actor: str = "HUMAN:local") -> str:
     """Tạo lần chạy mới liên kết email lỗi/đã hủy, không chỉnh sửa lần chạy cũ."""
+    if is_judge_case(case_id):
+        raise JudgeDenied("Không chạy lại judge qua thao tác chuyên viên.")
     authorize_demo_action("xử lý lại case")
     case = fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,))
     if case is None:

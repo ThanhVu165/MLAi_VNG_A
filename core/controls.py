@@ -24,6 +24,7 @@ from infra.audit import log_event
 from corpus.api import get_chunk
 from infra.db import execute, fetch_one, get_connection, now_iso, transaction
 from infra.demo_access import authorize_demo_action
+from infra.judge_access import CASE_PREFIX, JudgeDenied, is_judge_case
 
 AUTOMATION_PAUSED_KEY = "automation_paused"
 PAUSED_VALUE = "1"
@@ -42,6 +43,21 @@ def _require_admin(actor: str) -> None:
     authorize_demo_action("điều khiển quản trị")
     if not actor.startswith("ADMIN:") or not actor.removeprefix("ADMIN:").strip():
         raise ValueError("Chỉ ADMIN:<user> được dùng thao tác này.")
+
+
+def _require_non_judge(case_id: str, connection: Connection | None = None) -> None:
+    """Provenance judge không cấp quyền mutation, kể cả trong private mode."""
+    if connection is None:
+        judge_case = is_judge_case(case_id)
+    else:
+        judge_case = (
+            connection.execute(
+                "SELECT 1 FROM settings WHERE key = ?", (CASE_PREFIX + case_id,)
+            ).fetchone()
+            is not None
+        )
+    if judge_case:
+        raise JudgeDenied("Case judge chỉ cho xem kết quả, không được chạy lại hoặc ghi đè.")
 
 
 def _set_automation(value: str, actor: str) -> None:
@@ -120,6 +136,7 @@ def _store_manual_decision(
 ) -> PolicyDecision:
     """Lưu quyết định, câu hỏi và trạng thái cùng giao dịch đang khóa của người gọi."""
     case_id = case["case_id"]
+    _require_non_judge(case_id, connection)
     reason = mask_pii(reason.strip())
     if new_decision is Decision.AUTO_REPLY:
         draft = connection.execute(
@@ -231,6 +248,7 @@ def override_decision(
         raise ValueError("Chỉ có thể chuyển giữa trả lời thông tin và chờ chuyên viên.")
     with closing(get_connection()) as connection, connection:
         connection.execute("BEGIN IMMEDIATE")
+        _require_non_judge(case_id, connection)
         case = connection.execute("SELECT * FROM cases WHERE case_id = ?", (case_id,)).fetchone()
         if case is None:
             raise ValueError("Không tìm thấy email cần thay đổi.")
@@ -271,6 +289,7 @@ def _input_from_case(case: Row) -> CaseInput:
 def rerun_case(case_id: str, actor: str) -> tuple[PipelineResult, dict]:
     """Chạy lại case trên corpus hiện tại và trả ba khác biệt phục vụ UI."""
     _require_admin(actor)
+    _require_non_judge(case_id)
     case = fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,))
     if case is None:
         raise ValueError(f"Không tìm thấy case {case_id}.")

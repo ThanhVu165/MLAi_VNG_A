@@ -16,6 +16,7 @@ from core.types import CaseStatus, Decision, DraftReply, PolicyDecision
 from infra.audit import log_event
 from infra.db import execute, fetch_one, get_connection, now_iso, to_utc_iso, transaction
 from infra.demo_access import authorize_demo_action, authorize_pipeline_action
+from infra.judge_access import is_judge_case, JudgeDenied
 from infra.settings import PENDING_SEND_SECONDS
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ def _utc_now(value: datetime | None = None) -> datetime:
 
 
 def _case(case_id: str) -> Row:
+    if is_judge_case(case_id):
+        raise JudgeDenied("Case judge chỉ cho xem kết quả, không có quyền gửi.")
     row = fetch_one("SELECT * FROM cases WHERE case_id = ?", (case_id,))
     if row is None:
         raise ValueError(f"Không tìm thấy case {case_id}.")
@@ -57,6 +60,8 @@ def schedule_auto_reply(
 ) -> None:
     """Lên lịch gửi cho một quyết định AUTO_REPLY đã được Policy Engine duyệt."""
     authorize_pipeline_action("lên lịch gửi", _capability)
+    if is_judge_case(case_id):
+        raise JudgeDenied("Case judge không được lên lịch gửi.")
     if decision.decision is not Decision.AUTO_REPLY:
         raise ValueError("Chỉ AUTO_REPLY mới được lên lịch gửi.")
     deadline = to_utc_iso(_utc_now() + timedelta(seconds=PENDING_SEND_SECONDS))
@@ -142,6 +147,8 @@ def escalate_from_pending(case_id: str, *, actor: str, reason: str) -> None:
 def dispatch_due(case_id: str, *, actor: str = "SYSTEM", now: datetime | None = None) -> bool:
     """Gửi mô phỏng khi mốc DB đã hết hạn, trả ``True`` nếu đã chuyển trạng thái."""
     authorize_demo_action("gửi phản hồi")
+    if is_judge_case(case_id):
+        return False
     with transaction() as connection:
         # Chặn sửa nguồn/tạm dừng xen giữa kiểm tra cuối và chuyển trạng thái gửi.
         row = connection.execute("SELECT * FROM cases WHERE case_id = ?", (case_id,)).fetchone()
