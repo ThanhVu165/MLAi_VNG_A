@@ -13,7 +13,7 @@ historical and superseded. No Trello READY or new Task ID is required.
   Remaining open PRs #51 and #55 concern deployment/study artifacts.
 - Reviewed merged C1 changes in pipeline, LLM replay-budget enforcement, judge facade,
   grant reservations/ownership and existing C1 regressions before implementation.
-- Status: implementation and self-review complete; final handoff being recorded. No DONE claim.
+- Status: **READY_FOR_REVIEW** — implementation, validation and self-review handed off. No DONE claim.
 
 ### Change and safety boundary
 
@@ -141,7 +141,7 @@ Full repository suite, official evaluation and external provider quality are not
 | AC4 F-04 | PASS | Attempt exhaustion with time left and deadline exhaustion with attempts left each emit one skip, no provider call, no retry, distinct reason/message. Real transient retry regressions remain passing. |
 | AC5 Core/worker/Human Control | PASS offline | Policy/guards, worker persistence, runtime replay/audit, Human Control and R11 budget suites in final 335-test run; no-fail-open and no-over-escalation retained. |
 | AC6 New-Input/C1 | PASS offline | Unmodified `test_judge_new_input_offline.py` and `test_judge_input_c1.py` pass, including PREVIEW_READY, capability defaults, forged/expired/replayed grant, ownership and no-dispatch; additional real-budget C1 retry/fallback test. |
-| AC7 evidence/handoff | Implementation evidence ready | Final commands/results, self-review and scoped secret scan above; Git and PR references recorded below. External LIVE/provider/API calls: 0. Independent review/Coordinator acceptance pending. |
+| AC7 evidence/handoff | PASS implementation handoff | Final commands/results, self-review, scoped secret scan and verified Git/PR references below. External LIVE/provider/API calls: 0. Independent review/Coordinator acceptance pending. |
 
 ### Self-review
 
@@ -154,6 +154,22 @@ dispatch guards, SQL schema and frozen evaluation files have no diff.
 
 Independent safety review and Coordinator acceptance are still required. No merge, deploy or
 DONE declaration is authorized by this evidence.
+
+### Git and review handoff
+
+- Tested implementation commit: `5e0ffe8a3dac3fa51ca77c62c2f8f754a6b1e036`.
+- Pushed branch: `codex/p0-core-reliability-fix`.
+- [PR #71](https://github.com/ThanhVu165/MLAi_VNG_A/pull/71) is OPEN, targets `dev`, and was
+  verified MERGEABLE after creation. PR is attached to this chat.
+- Remote branch matched the implementation commit; remote `dev` remained
+  `534064f88b2851febc762fcdd0d376a2f0b76cd6`. No merge/deploy occurred.
+- This evidence-only follow-up records the implementation SHA and PR URL. The final report
+  commit/head is provided in chat and by the PR branch; no runtime code changed after validation.
+- Handoff to Coordinator/independent reviewer: review the three production-file changes,
+  deterministic-card safety/provenance, F-02 safe-result limitation, C1 grant checks, unchanged
+  mypy debt and AC1–AC7 evidence. Acceptance and integration remain Coordinator decisions.
+- Existing `.codex_tmp/` and `outputs/` remain untracked; no local artifact or credential was
+  included. Secret scan/whitespace checks were repeated for the evidence follow-up.
 
 ---
 
