@@ -88,8 +88,8 @@ This change does not modify or consume the M4-T02 manifest, rubric, Set A, Set B
 ## Handoff
 
 - Implementation commit: `3457f90b9e0edb965163e69ccbb867a09083db58`
-- Evidence report commit: recorded in the PR history after this file is committed.
-- Pull request: to be opened against `dev`; the PR URL will be recorded in a documentation-only follow-up commit.
+- Evidence report commit: `0b0ba84ff67e4d1c5959e080764e1ead14e725f3`.
+- Pull request: [#62 — feat(ux): clarify pre-M4 restricted demo workflow](https://github.com/ThanhVu165/MLAi_VNG_A/pull/62), targeting `dev`.
 - Merge/deploy: not authorized and not performed.
 
 The package is ready for MLAI/Coordinator review. It is not declared DONE.
