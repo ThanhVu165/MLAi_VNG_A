@@ -187,3 +187,37 @@ DATABASE_PATH=/runtime/app.db
 - Required next step: confirm the rotated value was applied to this exact Railway
   project/environment/service and caused a restart, then validate the key outside LIVE.
   Billing/quota evidence and a new Coordinator GO-LIVE are still required before activation.
+
+## Read-only authentication recheck — 2026-10-16 01:09 ICT
+
+Coordinator confirmed another key update and authorized one authentication-only metadata
+request after Railway deployment completion. This authorization did not include Judge LIVE
+activation, a completion request, a grant, or a synthetic case.
+
+**Authentication result: AUTH_PASS.** Production PID 1 called
+`GET /v1/models/gpt-6-luna` once and received HTTP `200` with model ID
+`gpt-6-luna`. OpenAI request ID: `a58b3da9-84c4-404b-8716-7689ebf94ba8`.
+
+### Recheck validation
+
+| Acceptance criterion | Result |
+|---|---|
+| AC1 deployment/target/health | PASS — `exodia-restricted-demo / production / exodia-web`; deployment `2317dbc5-75bc-46d8-9080-9992dd373c4e` is `SUCCESS`; health HTTP 200 `ok` |
+| Source provenance | PASS — deployment message pins `6600588d796233c6f3ca845ab5bb1b5d14548377` |
+| AC2 runtime key | PASS — control-plane key and production PID 1 key were present and their in-memory SHA-256 fingerprints matched; neither fingerprint nor key was printed or stored |
+| AC3 model metadata | PASS — one request, HTTP 200, exact model ID `gpt-6-luna` |
+| Billing/quota | **NOT VERIFIED** — the metadata response exposed no rate-limit quota headers and production has no `OPENAI_ADMIN_KEY`; this gate is not waived |
+| AC4 Judge state | PASS — `APP_MODE=restricted_demo`, `LLM_MODE=replay`, `JUDGE_INPUT_ENABLED=0`, `JUDGE_LIVE_ENABLED=0`; no issuer secret or gateway socket |
+| AC5 no completion/no-send | PASS — zero completion calls; zero jobs; zero `SEND_DISPATCHED`; no grant |
+| Database/no mutation | PASS — integrity `ok`, schema version 2, 42 existing cases, 21 historical `SEND_SCHEDULED`, zero Judge ledger rows |
+
+### Self-review
+
+- Exactly one OpenAI metadata request was made from the credential in production PID 1.
+- No response body beyond the model ID, no key and no fingerprint entered evidence.
+- No completion, Judge case, reservation, ledger debit, grant, email, configuration write,
+  deployment action, restart action, code change or SQLite write was performed.
+- This result establishes API authentication and model visibility only. It does not prove
+  billing headroom, project hard limits, structured-output behavior or LIVE pipeline safety.
+- Result for this task: `AUTH_PASS`; activation remains unauthorized and blocked on a new
+  Coordinator decision packet that explicitly addresses billing/quota.
