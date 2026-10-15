@@ -16,11 +16,17 @@
 
 ## Preflight
 
-- `origin/dev` was fetched and resolved exactly to `e57d04708f77afe7cbfc3493fd57fbdb3f8cdcbd`.
-- PRs #63, #64 and #65 were merged. PR #66 remained open and changed only
+- The original investigation fetched `origin/dev` at
+  `e57d04708f77afe7cbfc3493fd57fbdb3f8cdcbd`. Correction preflight on 2026-10-15
+  fetched current `origin/dev@3a36a2fd1513a7c3afea0bb98c417aaceb1cb3d8`; the intervening
+  change was only merged PR #66.
+- PRs #63, #64, #65 and #66 were merged. PR #66 changed only
   `tests/test_judge_new_input_offline.py` and
   `reports/sprints/JUDGE_NEW_INPUT_CANDIDATE_20261015.md`; it did not own or modify a
   production Core/Infra file examined here.
+- PR #67 remained open, mergeable, based on `dev`, and its remote head matched the reviewed
+  head `a240a2f8cc1cd58d403783a6b91911d6a6b986d7`. The correction branch and working tree
+  were clean before the probe was restored.
 - The prior UI branch was clean. This branch was created directly from verified
   `origin/dev`; no reset, clean, stash, rebase, force-push, clone or worktree was used.
 - Ignored local caches and the existing `.venv` were preserved. No M7 artifact was edited.
@@ -142,21 +148,115 @@ exceptions are persisted fail-safe as `CaseStatus.ERROR` (`core/pipeline.py:726-
   ordinary-path and technical fail-safe invariants therefore remain intact at this baseline,
   while M4 shows a narrower semantic boundary remains unresolved.
 
-## AC4 — isolated offline probes
+## Offline Probe Reproducibility & Evidence
 
-The temporary probe lived under ignored `.codex_tmp/`, used `synthetic@example.invalid`, a
-temporary SQLite database and a patched `_request_openai`; it was removed after execution.
-No network provider, cache, production DB or evaluation payload was accessed.
+### Common execution boundary
 
-| Probe | Result | Evidence |
-|---|---|---|
-| Multi-intent path | **PASS — reproduced** | R2, R4 and partial R7 provider calls all succeeded; R7 question never reached the provider; result `ERROR/TECHNICAL_ERROR`, no card. |
-| R2 validation retry | **PASS — reproduced** | Two successful R2 responses (first rejected by deterministic duplicate-fact validation) plus successful R4 exhausted the cap; mandatory R7 was blocked and result was `TECHNICAL_ERROR`. |
-| R7 basis repair | **PASS — reproduced** | Two pre-consumed attempts plus successful primary question left no repair attempt; repair did not reach provider and `ValueError` propagated. |
-| True deadline distinction | **PASS — reproduced** | After one successful call, forcing the monotonic deadline into the past blocked the next request while leaving two attempts. Public telemetry used the same `case_budget_or_deadline` reason as attempt exhaustion. |
+The correction restored the exact temporary driver from the original Codex execution record,
+added only an outbound `socket.create_connection` failure guard, and reran it. The driver SHA-256
+was `D33EFF3BC5FABA816C4634515DC644B8857440F31CCF0AF486EDD88B19934BFA`.
+It remained under ignored `.codex_tmp/` and was removed after evidence checks; it is not a
+production test or tracked artifact.
 
-These are diagnostic reproductions, not held-out evaluation and not evidence that every M4
-failure followed the same internal branch.
+- Runtime: Windows PowerShell, repository `.venv`, Python 3.11, UTF-8 mode.
+- Exact executed command:
+  `$env:PYTHONPATH='.'; .venv\Scripts\python.exe -X utf8 .codex_tmp\core_reliability_probe.py 2>&1 | Tee-Object -FilePath .codex_tmp\core_reliability_probe.log`.
+- Environment set by the driver: `APP_MODE=private`, `LLM_MODE=live`, `LLM_CACHE=0`,
+  `LLM_PROVIDER=openai`, `OPENAI_MODEL=offline-model`, and a non-secret placeholder API key.
+  The configured case deadline was 60 seconds, request timeout cap 30 seconds, processing
+  attempt budget 3, and wrapper retry limit 1.
+- This was deliberately `LLM_MODE=live`, not cassette replay. `call_json()` therefore entered
+  `_run_mode()` and `_call_live()`. Every allowed provider response came from a
+  `unittest.mock.patch.object(llm, "_request_openai", ...)` double. The double returned
+  `LLMResult` objects via `llm._success`; the OpenAI client was never invoked. The socket guard
+  would fail an attempted outbound connection. Cache was disabled, data used
+  `synthetic@example.invalid`, and pipeline probes used a seeded temporary SQLite file.
+- Evidence was counted from the emitted `provider_attempt` records: an
+  `llm_provider_attempt` means a request crossed the `_request_openai` boundary; an
+  `llm_provider_attempt_skipped` means `_attempt_timeout()` blocked it before that boundary.
+  A successful request is therefore distinct from a skipped logical retry.
+
+### Probe 1 — Multi-intent budget exhaustion
+
+- **Objective and path:** reproduce the four-call multi-intent path through
+  `process_case()` → `extract_facts()` → `retrieve_evidence()` →
+  `generate_multi_intent_card()` → `generate_reply()` → `generate_escalation_card()`.
+- **Double:** returned valid synthetic R2 extraction, R4 chunk selection and R7 partial reply.
+  A fourth response for the escalation card existed in the double but was unreachable.
+- **Expected / actual:** expected three provider requests to start and the fourth logical call
+  to be blocked. Actual telemetry was 3 started, 3 successful, 2 skipped wrapper iterations.
+  Started steps were `R2_extract`, `R4_select`, `R7_generate`; both skipped records were
+  `R7_question`, with attempt counter `0 → 0` and
+  `stop_reason=case_budget_or_deadline` while about 59.7 seconds remained.
+- **Observed result:** pipeline fail-safe returned `status=ERROR`, `decision=ERROR`,
+  `rule_id=TECHNICAL_ERROR`, and no card. This is attempt exhaustion after successful provider
+  requests, not a business escalation and not a wall-clock deadline.
+- **Evidence reference:** driver SHA and exact command above; source paths
+  `core/pipeline.py:460,598-613,685-710`, `core/question_gen.py:185-247`, and
+  `infra/llm.py:68-76,224-313`.
+- **Conclusion:** **VERIFIED** synthetic reproduction.
+
+### Probe 2 — R2 validation retry exhaustion
+
+- **Objective and path:** show that local R2 validation can consume another logical provider
+  call before R4 and mandatory R7: `process_case()` → `extract_facts()` validation loop →
+  `retrieve_evidence()` → `generate_reply()`.
+- **Double:** first R2 response contained conflicting duplicate `cohort` facts and was rejected
+  locally with `FACT_DUPLICATE_CONFLICT`; the second R2 response and R4 selection were valid.
+- **Expected / actual:** expected R2 + R2 retry + R4 to start, then R7 to be blocked. Actual
+  telemetry was 3 started, 3 provider successes, 2 skipped wrapper iterations. Started steps
+  were `R2_extract`, `R2_extract`, `R4_select`; both skipped records were `R7_generate`, with
+  attempt counter `0 → 0` and `stop_reason=case_budget_or_deadline` while about 59.8 seconds
+  remained. The first provider request succeeded even though domain validation failed later.
+- **Observed result:** `ERROR/TECHNICAL_ERROR`; no business route replaced the technical
+  failure. This is attempt exhaustion caused by a validation retry, not provider failure.
+- **Evidence reference:** driver SHA and exact command above; source paths
+  `core/extract.py:280-368`, `core/pipeline.py:527-536,550-561,598-613`, and
+  `infra/llm.py:68-76,224-313`.
+- **Conclusion:** **VERIFIED** synthetic reproduction.
+
+### Probe 3 — R7 basis repair exhaustion
+
+- **Objective and path:** exercise `generate_escalation_card()` with a successful primary
+  response whose `basis` quote is not a substring of its evidence, forcing
+  `R7_question_repair` through `call_json()` and `_call_live()`.
+- **Double:** two explicit preliminary calls consumed two attempts; the third request returned
+  an otherwise valid card with an invalid synthetic quote. No repair response could be
+  requested.
+- **Expected / actual:** expected 3 started requests and a pre-request repair block. Actual
+  telemetry was 3 started, 3 successful, 2 skipped wrapper iterations. Started steps were
+  `pre-0`, `pre-1`, `R7_question`; both skips were `R7_question_repair`, with attempt counter
+  `0 → 0` and `stop_reason=case_budget_or_deadline` while about 59.9 seconds remained.
+- **Observed result:** `generate_escalation_card()` raised `ValueError` after the wrapper
+  returned its safe timeout failure. This direct function probe did not create a
+  `PipelineResult`, so it makes no claim of a business escalation or `TECHNICAL_ERROR` result;
+  `process_case()` would be the layer that maps such propagation to its fail-safe.
+- **Evidence reference:** driver SHA and exact command above; source paths
+  `core/question_gen.py:98-163` and `infra/llm.py:68-76,224-313`.
+- **Conclusion:** **VERIFIED** synthetic reproduction.
+
+### Probe 4 — Attempt cap vs wall-clock deadline
+
+- **Objective and path:** distinguish true deadline exhaustion from the attempt-cap cases by
+  executing `case_call_budget(3)` and `call_json()`/`_call_live()`, then moving only the
+  in-memory monotonic deadline into the past before a second logical call.
+- **Double:** the first request returned success. The deadline was then forced expired; the
+  second request could not cross `_request_openai`.
+- **Expected / actual:** expected 1 started successful request, 2 attempts still available,
+  and two skipped wrapper iterations for the expired second call. Actual telemetry matched:
+  1 started, 1 successful, 2 skipped; attempt counter was `3 → 2` for the first request and
+  remained `2 → 2` for both skips. Both skips nevertheless used
+  `stop_reason=case_budget_or_deadline`.
+- **Observed result:** first `LLMResult.ok=True`, second `False`, provider request count stayed
+  1. This is wall-clock deadline exhaustion with remaining attempts, proving the shared reason
+  code cannot distinguish it from attempt exhaustion.
+- **Evidence reference:** driver SHA and exact command above; source paths
+  `infra/llm.py:42-76,200-313,338-407`.
+- **Conclusion:** **VERIFIED** synthetic reproduction.
+
+These probes establish reproducible mechanics only. They do not identify the terminal branch
+of any individual M4 case, do not use held-out evaluation data, and do not change the historical
+findings or their per-case confidence limits.
 
 ## AC5 — proposed minimal remediation plan (maximum three changes)
 
@@ -222,22 +322,26 @@ nor approves public new-input capability.
 
 ## Validation
 
-Environment: Windows, Python 3.11 `.venv`, `LLM_MODE=replay`, `LLM_CACHE=0`, empty API key for
-regression tests; probes patched `_request_openai` and used temporary SQLite.
+Environment: Windows and Python 3.11 `.venv`. Historical regression tests used
+`LLM_MODE=replay`, `LLM_CACHE=0` and an empty API key. The corrected probes separately used
+`LLM_MODE=live`, cache disabled, a placeholder key, a patched `_request_openai`, an outbound
+socket guard and temporary SQLite, as documented above. Replay did not produce the probe
+evidence.
 
 | Command/check | Result |
 |---|---|
-| Isolated temporary probe script described above | **PASS** — four diagnostic scenarios reproduced; provider/network calls 0 |
-| `.venv\Scripts\python.exe -m pytest -q tests/test_llm_budget.py tests/test_policy_engine.py tests/test_provider_observability.py tests/test_semantic_validator_compat.py tests/test_guards.py` | **PASS — 183 passed in 5.66s** |
-| Existing `test_no_over_escalation` / `test_no_fail_open` (included above) | **PASS** |
+| Exact isolated probe command and SHA documented above | **PASS (correction rerun)** — four scenarios reproduced; 10 mocked provider-boundary requests succeeded, 8 pre-request attempts were skipped, external provider/network calls 0 |
+| `.venv\Scripts\python.exe -m pytest -q tests/test_llm_budget.py tests/test_policy_engine.py tests/test_provider_observability.py tests/test_semantic_validator_compat.py tests/test_guards.py` | **NOT RUN for correction** — no production code changed; preserve historical result at previous SHA: 183 passed in 5.66s |
+| Existing `test_no_over_escalation` / `test_no_fail_open` (included above) | **HISTORICAL PASS at previous SHA; NOT RUN for correction** |
 | Static file/function/line inspection at baseline SHA | **PASS** |
 | Official Set A rerun | **NOT RUN — prohibited; no private payload or Gold accessed** |
 | Set B access/evaluation | **NOT RUN — prohibited and preserved for M7** |
-| LIVE/API/provider execution | **PASS — 0** |
+| External LIVE/API/provider execution | **PASS — 0** |
 
-Final report checks performed before handoff: `git diff --check`, report-only scope,
-credential/private-key pattern scan, private-evaluation marker scan, UTF-8 readback and owner
-self-review.
+Correction report checks performed before handoff: report consistency against the captured
+provider-attempt records, command/configuration cross-check, `git diff --check`, report-only
+scope, scoped credential/private-key and PII scan, private-evaluation marker scan, UTF-8/NFC
+readback and owner self-review.
 
 ## AC1–AC7
 
@@ -246,10 +350,22 @@ self-review.
 | AC1 pipeline/deadline/retry trace | **PASS** | Actual R0–R14 and 3+1/60s/30s mechanics traced with lines above. |
 | AC2 five technical errors classified | **PASS with explicit limitation** | All five classified as technical/non-business; aggregate cause supported; exact per-case terminal step marked NOT VERIFIED. |
 | AC3 route/stop/rule analysis | **PASS** | Deterministic mechanics and structural ambiguity recorded without private Gold inference. |
-| AC4 offline probes | **PASS** | Four isolated synthetic scenarios; no network or production data. |
+| AC4 offline probes | **PASS** | Four isolated synthetic scenarios with exact rerun command, environment, boundary counts, stop reasons and evidence references; no network or production data. |
 | AC5 maximum three minimal fixes | **PASS** | Three scoped proposals with AC/tests/risk/owner/dependency/approval. |
 | AC6 no production/evaluation change | **PASS** | Only this report is tracked; probe was temporary and ignored. |
-| AC7 evidence, validation, self-review, handoff | **PASS candidate** | Report complete; commit/PR and final SHA are supplied in handoff. |
+| AC7 evidence, validation, self-review, handoff | **PASS candidate** | Evidence correction and self-review complete; correction commit, PR head and final SHA are supplied in handoff. |
+
+### Evidence-correction AC1–AC7
+
+| Correction AC | Result | Evidence |
+|---|---|---|
+| AC1 four-probe evidence | **PASS** | All four probes rerun and marked VERIFIED with actual outcomes. |
+| AC2 command/environment/isolation accuracy | **PASS** | Exact command, Python/runtime settings, `LLM_MODE=live`, cache state, provider double and socket guard recorded. |
+| AC3 count provenance | **PASS** | Started/successful/skipped counts, attempt counters and stop reasons came from emitted `provider_attempt` records. |
+| AC4 preserve historical findings | **PASS** | F-01–F-06 conclusions and confidence were not expanded. |
+| AC5 evidence-only scope | **PASS** | Only this report changed; temporary probe/log removed; source, tests, fixtures, contracts, Gold and evaluation untouched. |
+| AC6 per-case attribution boundary | **PASS** | Exact terminal causes for the five M4 cases remain NOT VERIFIED per case. |
+| AC7 correction handoff | **PASS candidate** | Validation and owner self-review complete; correction commit SHA and updated PR head are supplied in handoff. |
 
 ## Self-review, remaining uncertainty and recommendation
 
