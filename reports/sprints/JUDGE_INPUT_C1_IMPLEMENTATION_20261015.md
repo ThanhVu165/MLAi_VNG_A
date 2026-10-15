@@ -11,7 +11,8 @@
 - Branch: `codex/judge-input-c1`, tạo từ verified `origin/dev`.
 - PR #66: GitHub xác nhận merged, merge commit đúng baseline trên.
 - LIVE/API provider calls: 0. Merge/deploy: NOT RUN.
-- Implementation SHA/PR C1: bổ sung sau validation cuối.
+- Implementation SHA: `c810f5b5ea86b209662c1c6a1048022f202146bc`.
+- PR C1: [#68](https://github.com/ThanhVu165/MLAi_VNG_A/pull/68), open, nhắm `dev`.
 
 ## Preflight
 
@@ -225,3 +226,11 @@ Quyết định C2 cần: independent security review đúng SHA; gateway/princi
 operational recovery/retention; authorization LIVE cụ thể về provider/budget/case; token/USD
 reservation thực trước khi claim hard cost cap. Offline tests chỉ chứng minh flow/control và
 security trong điều kiện mô tả, không phải semantic quality hoặc public acceptance.
+
+## Handoff
+
+READY_FOR_REVIEW: implementation commit `c810f5b5ea86b209662c1c6a1048022f202146bc`,
+PR #68 nhắm dev `11bd04205e560e489203da43874e332505727a2a`. Commit sau implementation
+chỉ bổ sung metadata SHA/PR vào report; SHA head cuối được bàn giao trong chat/GitHub.
+Independent reviewer cần đọc đúng PR head cuối; không mặc định test PASS là security gate PASS.
+LIVE/API provider calls=0. Merge/deploy NOT RUN. Feature chưa được bật public.
