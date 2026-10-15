@@ -16,7 +16,8 @@ from corpus.api import get_chunk
 from infra.audit import events_for_case, recent_events
 from infra.db import fetch_all, fetch_one
 from infra.demo_access import case_is_owned, is_restricted_demo
-from infra.judge_access import can_read, is_judge_case
+from infra.judge_access import is_judge_case
+from ui import judge_gateway
 from ui.presentation import (
     ACTION_LABELS,
     action_badge_html,
@@ -35,9 +36,7 @@ AUDIT_CASE_SESSION_KEY = "audit_case_id"
 
 def _can_read_case(case_id: str, owned: list[str]) -> bool:
     if is_judge_case(case_id):
-        return can_read(
-            case_id, st.session_state.get("judge_grant"), st.session_state.get("judge_session")
-        )
+        return judge_gateway.can_read(case_id)
     return case_is_owned(case_id, owned)
 
 

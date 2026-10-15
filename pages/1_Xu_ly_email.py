@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
@@ -29,7 +28,8 @@ from infra.demo_access import (
     validate_public_text,
 )
 from infra.settings import PENDING_STATUS_REFRESH_SECONDS
-from infra.judge_access import can_read, grant_is_valid, is_judge_case
+from infra.judge_access import JudgeDenied, is_judge_case
+from ui import judge_gateway
 from ui.presentation import (
     decision_badge_html,
     escape_html,
@@ -122,20 +122,12 @@ def inbox_input(email: InboxEmail) -> CaseInput:
 
 
 def _submit(inp: CaseInput) -> None:
-    grant = st.session_state.get("judge_grant")
     if (
         is_restricted_demo()
-        and grant is not None
+        and judge_gateway.grant_valid()
         and canonical_demo_input(inp.sender, inp.subject, inp.body) is None
     ):
-        from core.judge_input import process_judge_case
-
-        result = process_judge_case(
-            inp,
-            grant=grant,
-            session=st.session_state.get("judge_session", ""),
-            nonce=secrets.token_urlsafe(24),
-        )
+        result = judge_gateway.submit(inp)
         if not result.corpus_version:
             raise RuntimeError(result.decision.reason)
         case_id = result.case_id
@@ -168,17 +160,13 @@ def _owned_case_ids() -> list[str]:
 
 def _can_read_case(case_id: str) -> bool:
     if is_judge_case(case_id):
-        return can_read(
-            case_id, st.session_state.get("judge_grant"), st.session_state.get("judge_session")
-        )
+        return judge_gateway.can_read(case_id)
     return case_is_owned(case_id, _owned_case_ids())
 
 
 def _render_first_time_guidance() -> None:
     """Giải thích đúng khả năng của từng mode trước khi người dùng nhập email."""
-    if is_restricted_demo() and grant_is_valid(
-        st.session_state.get("judge_grant"), st.session_state.get("judge_session")
-    ):
+    if is_restricted_demo() and judge_gateway.grant_valid():
         st.info(
             "Phiên judge đã được cấp quyền nhập email synthetic để xem kết quả offline; không gửi email."
         )
@@ -594,6 +582,13 @@ def render_saved_case(case_id: str) -> None:
 
 
 def main() -> None:
+    if judge_gateway.configured() and is_restricted_demo():
+        try:
+            reference = judge_gateway.prepare_session()
+            st.caption(f"Mã đối chiếu phiên với operator: {reference} (không cấp quyền).")
+        except (JudgeDenied, OSError):
+            st.error("Gateway chưa sẵn sàng; operator cần kiểm tra kênh local.")
+            st.stop()
     inject_app_css()
 
     # 1. Header matching mockup 04_email_entry_BASE.png
@@ -658,9 +653,7 @@ def main() -> None:
             '<div class="ex-card-title">📥 Nhập email cần xử lý</div>', unsafe_allow_html=True
         )
         if is_restricted_demo():
-            if grant_is_valid(
-                st.session_state.get("judge_grant"), st.session_state.get("judge_session")
-            ):
+            if judge_gateway.grant_valid():
                 st.caption(
                     "Nhập email synthetic với địa chỉ .invalid hoặc .test để xem bản nháp; chưa gửi."
                 )
