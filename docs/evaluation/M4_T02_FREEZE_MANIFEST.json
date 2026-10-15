@@ -1,0 +1,82 @@
+{
+  "freeze_status": "FREEZE_INCOMPLETE",
+  "created_at": "2026-10-15T03:21:31Z",
+  "coordinator_decision_reference": [
+    "trello-action:6ad04616863aaeb3c1fb352f",
+    "github-pr:59",
+    "reports/evaluation/M4_T02_GO_A_READINESS.md"
+  ],
+  "runtime_source_sha": "47a1fcd9686b5409674979b34a521ead2f65ae8d",
+  "collector_revision": "sha256:3bcff1577f2fde9e0716a3a75f77eba766244e5b916b4195dbcf52d9885c0d68",
+  "harness_revision": "sha256:76e476eb33b1bb8e5fa13f64b5c1ad45f2eb68ea4113774c2f66a87555b2109e",
+  "dataset": {
+    "identifier": "NOT_RESOLVED",
+    "version": "NOT_RESOLVED",
+    "hash": "NOT_RESOLVED",
+    "reference": "NOT_RESOLVED",
+    "eligibility": "NOT_VERIFIED"
+  },
+  "gold": {
+    "identifier": "NOT_RESOLVED",
+    "version": "NOT_RESOLVED",
+    "hash": "NOT_RESOLVED",
+    "reference": "NOT_RESOLVED"
+  },
+  "set_b": {
+    "existence": "NOT_RESOLVED",
+    "version": "NOT_RESOLVED",
+    "hash": "NOT_RESOLVED",
+    "seal": "NOT_RESOLVED",
+    "access_history": "NOT_RESOLVED"
+  },
+  "corpus": {
+    "identifier": "NOT_RESOLVED",
+    "version": "NOT_RESOLVED",
+    "hash": "NOT_RESOLVED",
+    "reference": "NOT_RESOLVED"
+  },
+  "policy_hash": "git-blob-sha1:381a80e095af8b0b9d9baa63fdeb9abbd67a3b3c",
+  "prompt_config_hashes": {
+    "protocol": "sha256:c8f55327d80e39770e5ec764c7bfcb50014398d9b012e6e46eb75189b2a0a982",
+    "case_schema": "sha256:653ab5de6b52b8d907b75e048242abaa44ba4a57ad17e9b26dbf0fe29167072f",
+    "freeze_schema": "sha256:47c0d5c562af015c66183b36185eada4979bffdb507509ac0035f190b1fc34de",
+    "settings": "git-blob-sha1:74a509237afdcccce433b089a871e6ac6ff6ebfa",
+    "llm": "git-blob-sha1:227162cebeccec9a6126edeed5b4037807fad658",
+    "extract": "git-blob-sha1:73d51b4fd9b3c181d0219f01d6621740aa26adb8",
+    "retrieval": "git-blob-sha1:d8f96452c008550971d8f0670e4b4cd5cb0cf12b",
+    "generate": "git-blob-sha1:9037843e71d80e7eaa823332a523a74ad7675e5a",
+    "question_gen": "git-blob-sha1:d6229ca79ba91bae2e7b8e6fa7ea4e92cd12a3aa",
+    "resume": "git-blob-sha1:c1fc2f6366dee4d9847578e81fd813654eff28fd"
+  },
+  "adaptation": {
+    "state": "NONE",
+    "version": "NONE"
+  },
+  "provider": "openai",
+  "model": "gpt-6-luna",
+  "model_parameters": {
+    "reasoning_effort": "none",
+    "temperature": 0
+  },
+  "environment": {
+    "python_version": "3.11",
+    "docker_base_image": "python:3.11-slim",
+    "dockerfile_hash": "git-blob-sha1:ad19ffc707e886b9fda9369cf5b9bcaca6c7161f",
+    "compose_hash": "git-blob-sha1:dc9d75253e3190505e4c0d4acff8abc2b582cbd4",
+    "dependency_manifest_hash": "git-blob-sha1:828309b78eb21a2e9642efe695638ffa819bb17a",
+    "deployed_image_digest": "NOT_RESOLVED"
+  },
+  "execution_mode": "LIVE",
+  "timeout_seconds": 30,
+  "retries": 1,
+  "per_case_deadline_seconds": 60,
+  "gates": {
+    "quality": "NOT_RESOLVED",
+    "sample_size": "NOT_RESOLVED",
+    "strata": "NOT_RESOLVED",
+    "coverage": "NOT_RESOLVED",
+    "abort_threshold": "NOT_RESOLVED"
+  },
+  "budget": 0,
+  "execution_authorized": false
+}
