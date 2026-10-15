@@ -6,7 +6,6 @@ import json
 import os
 from dataclasses import asdict
 from time import perf_counter
-from urllib.parse import quote
 
 import streamlit as st
 
@@ -492,11 +491,13 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    st.link_button(
+    if st.button(
         f"🔍 Xem nhật ký kiểm toán của ca {selected_result.case_id} →",
-        f"/Nhat_ky_kiem_toan?case_id={quote(selected_result.case_ref)}",
+        key=f"open_verify_audit_{selected_result.case_ref}",
         use_container_width=True,
-    )
+    ):
+        st.session_state["audit_case_id"] = selected_result.case_ref
+        st.switch_page("pages/4_Nhat_ky_kiem_toan.py")
 
 
 main()

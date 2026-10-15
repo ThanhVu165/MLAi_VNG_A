@@ -29,6 +29,17 @@ from ui.presentation import (
     status_label,
 )
 
+AUDIT_CASE_SESSION_KEY = "audit_case_id"
+
+
+def _requested_audit_case_id() -> str | None:
+    """Đọc ca được chọn; query cũ chỉ có hiệu lực khi vẫn qua kiểm tra quyền."""
+    query_case_id = st.query_params.get("case_id")
+    if isinstance(query_case_id, str) and query_case_id:
+        return query_case_id
+    session_case_id = st.session_state.get(AUDIT_CASE_SESSION_KEY)
+    return session_case_id if isinstance(session_case_id, str) and session_case_id else None
+
 
 def _build_story_summary(case: dict, events: list) -> list[str]:
     """Tạo chuỗi tóm tắt tiến trình tự nhiên từ các sự kiện thực tế."""
@@ -107,14 +118,17 @@ def _render_restricted_audit() -> None:
         if isinstance(owned, list)
         else []
     )
-    query_id = st.query_params.get("case_id")
-    if query_id and not case_is_owned(query_id, available):
+    requested_id = _requested_audit_case_id()
+    if requested_id and not case_is_owned(requested_id, available):
         st.warning("Bạn không có quyền xem nhật ký của case này trong phiên hiện tại.")
         return
     if not available:
         st.info("Phiên này chưa có case nào để xem nhật ký.")
         return
-    case_id = query_id if isinstance(query_id, str) else st.selectbox("Chọn case", available)
+    default_index = available.index(requested_id) if requested_id else 0
+    case_id = st.selectbox(
+        "Chọn case", available, index=default_index, key="restricted_audit_case_selector"
+    )
     row = fetch_one(
         "SELECT case_id, subject, body_masked, status, received_at FROM cases WHERE case_id = ?",
         (case_id,),
@@ -178,12 +192,12 @@ def main() -> None:
     raw_cases = fetch_all("SELECT * FROM cases ORDER BY rowid DESC LIMIT 200")
     cases: list[dict] = [dict(c) for c in raw_cases]
 
-    # Kiểm tra query parameter ?case_id=... (Deep-link từ Verify hoặc Human Review)
-    query_id = st.query_params.get("case_id")
-    if isinstance(query_id, str) and query_id:
+    # Ưu tiên ca được truyền nội bộ trong cùng phiên; query chỉ để tương thích ngược.
+    requested_id = _requested_audit_case_id()
+    if requested_id:
         existing_ids = {c["case_id"] for c in cases}
-        if query_id not in existing_ids:
-            older = fetch_one("SELECT * FROM cases WHERE case_id = ?", (query_id,))
+        if requested_id not in existing_ids:
+            older = fetch_one("SELECT * FROM cases WHERE case_id = ?", (requested_id,))
             if older is not None:
                 cases.insert(0, dict(older))
 
@@ -337,8 +351,8 @@ def main() -> None:
         options = [GLOBAL_OPTION] + [c["case_id"] for c in filtered_cases]
 
         default_idx = 0
-        if query_id and query_id in options:
-            default_idx = options.index(query_id)
+        if requested_id and requested_id in options:
+            default_idx = options.index(requested_id)
         elif len(options) > 1:
             default_idx = 1
 
