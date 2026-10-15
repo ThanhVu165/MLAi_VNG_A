@@ -96,4 +96,16 @@ B2, restart and isolation checks passed. No fallback to LIVE occurred. Therefore
   contract; current recorded replay pack provenance remains unapproved.
 - Explicit Project Coordinator GO-STUDY decision.
 
-No commit, push or pull request was created for this first-round verification artifact.
+## Git / Evidence Preservation
+
+During the initial local verification round, no commit, push or pull request was
+created. Evidence preservation was subsequently recorded as follows:
+
+- Initial evidence commit: `618c4d8dff857723f5cf2da10c4a480a79d7142f`.
+- Pull request: `#57`, target `dev`.
+- Evidence-only; no runtime or code change.
+- Tested STUDY candidate remains
+  `e9f3fd2ce85b5290ff1fd9593c6de9c0ef6fae44`.
+- GO-STUDY: `NOT ISSUED`.
+- Participant sessions: `0`.
+- LIVE/API calls: `0`.
