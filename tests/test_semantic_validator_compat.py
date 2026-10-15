@@ -320,16 +320,18 @@ def test_repair_uses_real_public_wrapper_shared_budget(monkeypatch, caplog, limi
             assert generate().basis == [("Điều 1", "Câu đầu.")]
             assert len(requests) == 2
             assert budget.deadline == deadline
+        elif limit == "attempts_exhausted":
+            card = generate()
+            assert card.escalation_type is EscalationType.AUTHORITY_REQUIRED
+            assert card.basis == [(chunk.breadcrumb, chunk.text) for chunk in evidence().chunks]
+            assert len(requests) == 1 and budget.remaining == 0
+            assert budget.deadline == deadline > llm.perf_counter()
         else:
-            with pytest.raises(ValueError):
+            with pytest.raises(llm.CaseDeadlineExhausted):
                 generate()
             assert len(requests) == 1
-            if limit == "attempts_exhausted":
-                assert budget.remaining == 0
-                assert budget.deadline == deadline > llm.perf_counter()
-            else:
-                assert budget.remaining > 0
-                assert budget.deadline < llm.perf_counter()
+            assert budget.remaining > 0
+            assert budget.deadline < llm.perf_counter()
         assert budget.remaining == llm.LLM_MAX_ATTEMPTS - preconsumed - len(requests)
         events = [r.provider_attempt for r in caplog.records if hasattr(r, "provider_attempt")]
         started = [e for e in events if e["event"] == "llm_provider_attempt"]
@@ -339,11 +341,7 @@ def test_repair_uses_real_public_wrapper_shared_budget(monkeypatch, caplog, limi
             assert [e["step"] for e in started] == ["R7_question", "R7_question_repair"]
             assert skipped == []
         else:
-            assert len(skipped) == 2
-            assert all(e["step"] == "R7_question_repair" for e in skipped)
-            assert all(e["stop_reason"] == "case_budget_or_deadline" for e in skipped)
-            assert all(e["attempts_remaining_before"] == budget.remaining for e in skipped)
-            assert all(e["attempts_remaining_after"] == budget.remaining for e in skipped)
-            assert all(e["retryable"] is False and e["will_retry"] is False for e in skipped)
+            # Capacity is checked before optional repair; no provider call is attempted.
+            assert skipped == []
         assert llm._BUDGET.get() is budget
     assert llm.LLM_MAX_ATTEMPTS == 4 and llm.CASE_TIMEOUT_SECONDS == 60

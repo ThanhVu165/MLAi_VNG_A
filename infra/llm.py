@@ -51,6 +51,26 @@ class _CallBudget:
 _BUDGET: ContextVar[_CallBudget | None] = ContextVar("llm_case_budget", default=None)
 
 
+class CaseAttemptsExhausted(TimeoutError):
+    """Không còn lượt gọi trong ngân sách hiện tại."""
+
+
+class CaseDeadlineExhausted(TimeoutError):
+    """Đã hết thời gian xử lý email."""
+
+
+def has_call_capacity() -> bool:
+    """Kiểm tra lượt còn lại; deadline và quyền judge vẫn phải hợp lệ."""
+    if active_case() is not None:
+        check_active()
+    budget = _BUDGET.get()
+    if budget is None:
+        return True
+    if int(budget.deadline - perf_counter()) <= 0:
+        raise CaseDeadlineExhausted("Đã hết thời gian xử lý email cho phép.")
+    return budget.remaining > 0
+
+
 @contextmanager
 def case_call_budget(max_attempts: int = LLM_MAX_ATTEMPTS) -> Iterator[None]:
     """Một ngân sách chung cho toàn bộ lượt xử lý, kể cả các lần thử lại."""
@@ -67,12 +87,14 @@ def case_call_budget(max_attempts: int = LLM_MAX_ATTEMPTS) -> Iterator[None]:
 
 
 def _attempt_timeout(timeout_s: int) -> int:
+    if not has_call_capacity():
+        raise CaseAttemptsExhausted("Đã hết số lượt xử lý email cho phép.")
     budget = _BUDGET.get()
     if budget is None:
         return min(timeout_s, LLM_TIMEOUT_S)
     remaining_seconds = int(budget.deadline - perf_counter())
-    if budget.remaining <= 0 or remaining_seconds <= 0:
-        raise TimeoutError("Đã hết thời gian hoặc số lần xử lý cho phép.")
+    if remaining_seconds <= 0:
+        raise CaseDeadlineExhausted("Đã hết thời gian xử lý email cho phép.")
     budget.remaining -= 1
     return min(timeout_s, LLM_TIMEOUT_S, remaining_seconds)
 
@@ -146,6 +168,8 @@ def call_json(
                 step=step,
                 provider=provider,
             )
+    except (CaseAttemptsExhausted, CaseDeadlineExhausted) as error:
+        result = _failure(f"{error} Email được giữ lại, chưa gửi phản hồi.", prompt_hash, model)
     except Exception as error:
         LOGGER.warning("Lỗi không mong đợi khi gọi LLM: %s", type(error).__name__)
         result = _failure(f"Lỗi LLM: {type(error).__name__}", prompt_hash, model)
@@ -245,8 +269,7 @@ def _call_live(
             result = _request_openai(prompt, schema, prompt_hash, model, api_key, remaining_timeout)
         except Exception as error:
             LOGGER.warning("Lần gọi LLM %s thất bại: %s", attempt + 1, type(error).__name__)
-            pre_request_budget_block = not request_started and isinstance(error, TimeoutError)
-            transient = _openai_retryable(error) if request_started else pre_request_budget_block
+            transient = request_started and _openai_retryable(error)
             will_retry = request_started and transient and attempt < retry_count
             retry_backoff_s = 0.0
             if will_retry:
@@ -276,7 +299,15 @@ def _call_live(
                 will_retry=will_retry,
                 retry_backoff_ms=round(retry_backoff_s * MILLISECONDS_PER_SECOND),
                 stop_reason=(
-                    "case_budget_or_deadline"
+                    (
+                        "case_deadline_exhausted"
+                        if isinstance(error, CaseDeadlineExhausted)
+                        else (
+                            "case_attempts_exhausted"
+                            if isinstance(error, CaseAttemptsExhausted)
+                            else "non_retryable"
+                        )
+                    )
                     if not request_started
                     else (
                         "non_retryable"
@@ -285,8 +316,12 @@ def _call_live(
                     )
                 ),
             )
-            if not transient or attempt == retry_count:
+            if not will_retry:
                 error_name = type(error).__name__
+                if isinstance(error, (CaseAttemptsExhausted, CaseDeadlineExhausted)):
+                    return _failure(
+                        f"{error} Email được giữ lại, chưa gửi phản hồi.", prompt_hash, model
+                    )
                 if error_name in {
                     "TimeoutError",
                     "APITimeoutError",

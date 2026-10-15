@@ -339,10 +339,10 @@ def test_shared_budget_skips_requests_after_four_attempts(monkeypatch, caplog):
     recorded = events(caplog)
     assert sum(event["event"] == "llm_provider_attempt" for event in recorded) == 4
     skipped = [event for event in recorded if event["event"].endswith("skipped")]
-    assert len(skipped) == 2
+    assert len(skipped) == 1
     assert all(event["attempts_remaining_before"] == 0 for event in skipped)
     assert all(event["retryable"] is False and event["will_retry"] is False for event in skipped)
-    assert all(event["stop_reason"] == "case_budget_or_deadline" for event in skipped)
+    assert all(event["stop_reason"] == "case_attempts_exhausted" for event in skipped)
 
 
 def test_deadline_block_and_effective_timeout_are_unchanged(monkeypatch, caplog):
@@ -360,10 +360,10 @@ def test_deadline_block_and_effective_timeout_are_unchanged(monkeypatch, caplog)
         assert llm._BUDGET.get().remaining == llm.LLM_MAX_ATTEMPTS - 1
     assert len(seen) == 1
     skipped = events(caplog)[1:]
-    assert len(skipped) == 2
+    assert len(skipped) == 1
     assert all(event["event"] == "llm_provider_attempt_skipped" for event in skipped)
     assert all(event["retryable"] is False and event["will_retry"] is False for event in skipped)
-    assert all(event["stop_reason"] == "case_budget_or_deadline" for event in skipped)
+    assert all(event["stop_reason"] == "case_deadline_exhausted" for event in skipped)
     assert llm.LLM_MAX_ATTEMPTS == 4 and llm.CASE_TIMEOUT_SECONDS == 60
 
 
