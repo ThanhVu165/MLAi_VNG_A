@@ -9,7 +9,10 @@
 - Branch: `codex/judge-input-c2a`, tạo từ verified origin/dev.
 - Result: READY_FOR_REVIEW cho foundation offline; independent security/code review và
   Coordinator acceptance còn pending. Không đề xuất merge trước review.
-- Implementation SHA/PR: bổ sung sau commit/push.
+- Implementation SHA: `6156d416d57f633dc54fbd8bf9ea47e66cd85cee`.
+- PR: [#70](https://github.com/ThanhVu165/MLAi_VNG_A/pull/70), open, nhắm dev
+  `534064f88b2851febc762fcdd0d376a2f0b76cd6`. Commit sau implementation chỉ ghi metadata
+  handoff; SHA head cuối được bàn giao trong chat và GitHub để independent review.
 - LIVE/API provider calls: **0**. Merge/deploy: **NOT RUN**.
 
 ## Preflight và ownership
