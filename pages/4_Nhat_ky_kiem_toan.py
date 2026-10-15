@@ -16,6 +16,7 @@ from corpus.api import get_chunk
 from infra.audit import events_for_case, recent_events
 from infra.db import fetch_all, fetch_one
 from infra.demo_access import case_is_owned, is_restricted_demo
+from infra.judge_access import can_read, is_judge_case
 from ui.presentation import (
     ACTION_LABELS,
     action_badge_html,
@@ -30,6 +31,14 @@ from ui.presentation import (
 )
 
 AUDIT_CASE_SESSION_KEY = "audit_case_id"
+
+
+def _can_read_case(case_id: str, owned: list[str]) -> bool:
+    if is_judge_case(case_id):
+        return can_read(
+            case_id, st.session_state.get("judge_grant"), st.session_state.get("judge_session")
+        )
+    return case_is_owned(case_id, owned)
 
 
 def _requested_audit_case_id() -> str | None:
@@ -113,13 +122,14 @@ def _render_restricted_audit() -> None:
             case_id
             for case_id in owned
             if isinstance(case_id, str)
+            and _can_read_case(case_id, owned)
             and fetch_one("SELECT 1 FROM cases WHERE case_id = ?", (case_id,)) is not None
         ]
         if isinstance(owned, list)
         else []
     )
     requested_id = _requested_audit_case_id()
-    if requested_id and not case_is_owned(requested_id, available):
+    if requested_id and not _can_read_case(requested_id, available):
         st.warning("Bạn không có quyền xem nhật ký của case này trong phiên hiện tại.")
         return
     if not available:

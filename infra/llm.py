@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from infra.db import execute, fetch_one, now_iso
 from infra.demo_access import is_restricted_demo
+from infra.judge_access import active_case, check_active
 from infra.provider_observability import (
     current_correlation,
     sanitize_case_id,
@@ -168,6 +169,12 @@ def _run_mode(
     provider: str = "openai",
 ) -> LLMResult:
     mode = os.getenv("LLM_MODE", "live").lower()
+    if active_case() is not None:
+        check_active()
+        if mode != "replay" or case_id != active_case():
+            return _failure("C1 judge chỉ cho phép provider offline.", prompt_hash, model)
+        _attempt_timeout(timeout_s)
+        return _replay(prompt_hash, model)
     if is_restricted_demo() and mode != "replay":
         return _failure("Restricted DEMO hiện không cho phép LIVE hoặc record.", prompt_hash, model)
     if mode == "replay":

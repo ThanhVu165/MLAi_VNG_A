@@ -48,6 +48,7 @@ from infra.audit import log_event
 from infra.db import execute, fetch_one, now_iso, to_utc_iso, transaction
 from infra.demo_access import _PIPELINE_CAPABILITY, authorize_case_input, is_restricted_demo
 from infra.llm import case_call_budget
+from infra.judge_access import active_case, is_judge_case, JudgeDenied
 from infra.settings import LLM_PROCESSING_MAX_ATTEMPTS
 
 logger = logging.getLogger(__name__)
@@ -372,6 +373,16 @@ def _finalize(
     )
     # Không công bố quyền gửi trước khi snapshot đã lưu thành công.
     with transaction():
+        if status is CaseStatus.PREVIEW_READY:
+            _transition(
+                intake,
+                status=status,
+                actor="SYSTEM",
+                action="CASE_RESOLVED",
+                reason="Đã chuẩn bị bản xem trước có căn cứ; chưa gửi và không lên lịch gửi.",
+                rule_id=decision.rule_id,
+            )
+            execute("UPDATE cases SET send_deadline = NULL WHERE case_id = ?", (intake.case_id,))
         _save_latencies(intake, latencies)
         save_result(result)
         if status is CaseStatus.PENDING_SEND:
@@ -443,6 +454,11 @@ def process_case(
 ) -> PipelineResult:
     """Đường vào chung, giới hạn ngân sách gọi và trả lại kết quả đã lưu khi chạy trùng."""
     try:
+        judge_id = active_case()
+        if judge_id is not None and case_id != judge_id:
+            raise JudgeDenied("Case không khớp reservation judge.")
+        if case_id is not None and is_judge_case(case_id) and judge_id != case_id:
+            raise JudgeDenied("Case judge chỉ được chạy trong reservation gốc.")
         if is_restricted_demo():
             actor = "SYSTEM"
         authorize_case_input(
@@ -665,7 +681,9 @@ def _process_case(
 
                 if get_corpus_version() != intake.corpus_version:
                     raise RuntimeError("Quy định đã thay đổi trong khi soạn thư. Hãy chạy lại.")
-                if is_automation_paused():
+                if active_case() == intake.case_id:
+                    status = CaseStatus.PREVIEW_READY
+                elif is_automation_paused():
                     _run_step(
                         "R9",
                         lambda: _transition(
