@@ -547,11 +547,13 @@ def render_saved_case(case_id: str) -> None:
         else:
             st.caption("Hàng duyệt đặc quyền không mở cho khách.")
     with col_nxt2:
-        st.link_button(
+        if st.button(
             "📋 Nhật ký kiểm toán",
-            f"/Nhat_ky_kiem_toan?case_id={quote(case_id)}",
+            key=f"open_audit_{case_id}",
             use_container_width=True,
-        )
+        ):
+            st.session_state["audit_case_id"] = case_id
+            st.switch_page("pages/4_Nhat_ky_kiem_toan.py")
     with col_nxt3:
         st.link_button("🛡️ Verify (Kiểm thử tự động)", "/Verify", use_container_width=True)
 
