@@ -147,6 +147,34 @@ def _owned_case_ids() -> list[str]:
     return values if isinstance(values, list) else []
 
 
+def _render_first_time_guidance() -> None:
+    """Giải thích đúng khả năng của từng mode trước khi người dùng nhập email."""
+    if is_restricted_demo():
+        st.info(
+            "Restricted DEMO đang chạy replay offline với 3 email mẫu synthetic canonical. "
+            "Hãy chọn một mẫu rồi nhấn **Xử lý email**. Email tự nhập mới vẫn hiển thị để "
+            "minh họa giao diện nhưng không được lưu hoặc xử lý ở chế độ công khai; hệ thống "
+            "không gọi provider LIVE."
+        )
+    else:
+        st.info(
+            "Chọn một email mẫu để thử nhanh, hoặc nhập email đầy đủ nếu môi trường private "
+            "đã được cấp quyền xử lý."
+        )
+
+    st.markdown(
+        """
+        **Bắt đầu trong 5 bước**
+
+        1. Chọn một email mẫu phía dưới để điền nội dung.
+        2. Nhấn **Xử lý email**.
+        3. Đọc quyết định, lý do và căn cứ được hiển thị.
+        4. Mở **Verify** để chạy bộ kiểm thử được phép.
+        5. Trong cùng phiên, dùng thanh điều hướng bên trái để mở **Nhật ký kiểm toán** và chọn ca vừa chạy.
+        """
+    )
+
+
 def _render_correction(case_id: str) -> None:
     row = fetch_one(
         "SELECT * FROM drafts WHERE case_id = ? ORDER BY rowid DESC LIMIT 1", (case_id,)
@@ -541,6 +569,8 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
+    _render_first_time_guidance()
+
     # 2. Thử nhanh với email mẫu (Quick Samples matching 04_email_entry_BASE.png)
     st.markdown(
         '<div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">'
@@ -590,9 +620,12 @@ def main() -> None:
         st.markdown(
             '<div class="ex-card-title">📥 Nhập email cần xử lý</div>', unsafe_allow_html=True
         )
-        st.caption(
-            "Bạn có thể nhập email tự do; lane xử lý mới chỉ hoạt động khi máy chủ được cấp quyền LIVE."
-        )
+        if is_restricted_demo():
+            st.caption("Public mode chỉ xử lý nội dung được điền từ 3 email mẫu ở phía trên.")
+        else:
+            st.caption(
+                "Bạn có thể nhập email tự do trong private mode khi máy chủ được cấp quyền xử lý."
+            )
 
         with st.form("email_form"):
             sender = st.text_input(
@@ -628,11 +661,6 @@ def main() -> None:
                 st.rerun()
             except (ValueError, RuntimeError) as error:
                 st.error(readable_text(str(error)))
-
-        if is_restricted_demo():
-            st.info(
-                "Hiện chỉ email mẫu canonical và Verify chạy bằng replay; input mới chưa được lưu hoặc xử lý."
-            )
 
         # Expander: Thử bằng email minh họa (Giữ nguyên để tương thích AppTest)
         if not is_restricted_demo():

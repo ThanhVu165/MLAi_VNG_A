@@ -264,6 +264,7 @@ st.markdown(
 )
 
 if is_restricted_demo():
+    synthetic_sources = [source for source in list_sources() if source.is_synthetic]
     public_sources = [
         {
             "Mã nguồn": source.doc_id,
@@ -273,13 +274,18 @@ if is_restricted_demo():
                 DOMAIN_NAMES.get(domain.value, domain.value) for domain in source.domains
             ),
         }
-        for source in list_sources()
-        if source.is_synthetic
+        for source in synthetic_sources
     ]
     st.info(
         "Chế độ công khai chỉ cho phép tra cứu corpus synthetic; mọi thao tác quản trị đã bị khóa phía máy chủ."
     )
-    st.dataframe(public_sources, hide_index=True, use_container_width=True)
+    if public_sources:
+        st.dataframe(public_sources, hide_index=True, use_container_width=True)
+    else:
+        st.info(
+            "Danh mục quy chế synthetic hiện chưa có dữ liệu để tra cứu. "
+            "Hãy quay lại sau khi quản trị viên đã chuẩn bị nguồn mô phỏng."
+        )
     st.stop()
 
 # Admin Reviewer Identity
@@ -447,7 +453,13 @@ with browse_tab:
         )
 
         if not filtered_sources:
-            st.info("Không tìm thấy quy định phù hợp với bộ lọc tìm kiếm.")
+            if not all_sources:
+                st.info(
+                    "Danh mục quy chế hiện chưa có dữ liệu. Hãy nạp và xác nhận nguồn trước "
+                    "khi tra cứu."
+                )
+            else:
+                st.info("Không tìm thấy quy định phù hợp với bộ lọc tìm kiếm.")
             selected_source: SourceRecord | None = None
         else:
             source_dict = {s.doc_id: s for s in filtered_sources}

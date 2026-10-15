@@ -37,6 +37,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def restricted(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_MODE", "restricted_demo")
     monkeypatch.setenv("LLM_MODE", "replay")
+    monkeypatch.setenv("LLM_CACHE", "0")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-6-luna")
     monkeypatch.setenv("OPENAI_API_KEY", "")
 
 
