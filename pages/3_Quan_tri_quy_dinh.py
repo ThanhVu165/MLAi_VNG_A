@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sqlite3
 from dataclasses import replace
 from datetime import date
 
@@ -41,6 +42,19 @@ STATUS_NAMES = {
     SourceStatus.SUPERSEDED: "Đã thay thế",
     SourceStatus.REJECTED: "Đã từ chối",
 }
+
+SOURCE_READ_ERROR = (
+    "Hiện chưa thể truy xuất danh mục quy chế. " "Vui lòng thử lại sau hoặc liên hệ người quản trị."
+)
+
+
+def _list_sources_or_stop(status: SourceStatus | None = None) -> list[SourceRecord]:
+    try:
+        return list_sources(status)
+    except (sqlite3.Error, OSError):
+        LOGGER.exception("Không truy xuất được danh mục quy chế.")
+        st.error(SOURCE_READ_ERROR)
+        st.stop()
 
 
 def _date(value: str | None) -> date | None:
@@ -228,7 +242,7 @@ def _edit_fields(draft: MetadataDraft) -> MetadataDraft:
         "Có điều khoản chuyển tiếp giữa các khóa hoặc thời điểm",
         value=bool(draft.transitional_clause),
     )
-    replacements = {item.doc_id: item for item in list_sources(SourceStatus.ACTIVE)}
+    replacements = {item.doc_id: item for item in _list_sources_or_stop(SourceStatus.ACTIVE)}
     supersedes = st.multiselect(
         "Thay thế tài liệu đã duyệt",
         list(replacements),
@@ -264,7 +278,7 @@ st.markdown(
 )
 
 if is_restricted_demo():
-    synthetic_sources = [source for source in list_sources() if source.is_synthetic]
+    synthetic_sources = [source for source in _list_sources_or_stop() if source.is_synthetic]
     public_sources = [
         {
             "Mã nguồn": source.doc_id,
@@ -294,7 +308,7 @@ actor = f"ADMIN:{name.strip()}"
 identified = bool(name.strip())
 
 # Sources inventory and metrics
-all_sources = list_sources()
+all_sources = _list_sources_or_stop()
 active_count = sum(1 for s in all_sources if s.status is SourceStatus.ACTIVE)
 superseded_count = sum(1 for s in all_sources if s.status is SourceStatus.SUPERSEDED)
 pending_count = sum(1 for s in all_sources if s.status is SourceStatus.PENDING_REVIEW)
@@ -374,7 +388,9 @@ with upload_tab:
     _upload(actor, identified)
 
 with pending_tab:
-    pending = {source.doc_id: source for source in list_sources(SourceStatus.PENDING_REVIEW)}
+    pending = {
+        source.doc_id: source for source in _list_sources_or_stop(SourceStatus.PENDING_REVIEW)
+    }
     if not pending:
         st.info("Chưa có tài liệu chờ xác nhận. Hãy nạp tài liệu mới nếu cần bổ sung căn cứ.")
     else:
