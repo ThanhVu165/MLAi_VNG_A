@@ -9,11 +9,12 @@ from core.controls import is_automation_paused, pause_automation, resume_automat
 from core.worker import start_worker
 from corpus.seed import ensure_seeded
 from infra.demo_access import is_restricted_demo, validate_runtime_mode
-from ui.presentation import readable_text
+from ui.presentation import inject_app_css, readable_text
 
 
 def main() -> None:
     st.set_page_config(page_title="Exodia · Trợ lý email sinh viên", page_icon="🏛️", layout="wide")
+    inject_app_css()
     try:
         validate_runtime_mode()
         ensure_seeded()
@@ -24,10 +25,11 @@ def main() -> None:
             "Chưa mở được dữ liệu hệ thống. Hãy kiểm tra tệp dữ liệu, quy định và bản sao lưu trước khi khởi động lại."
         )
         st.stop()
+    restricted_demo = is_restricted_demo()
     pages = [
         st.Page("pages/1_Xu_ly_email.py", title="Xử lý email", icon="✉️", default=True),
     ]
-    if not is_restricted_demo():
+    if not restricted_demo:
         pages.append(
             st.Page(
                 "pages/2_Hang_cho_duyet.py",
@@ -53,14 +55,20 @@ def main() -> None:
             st.Page("pages/5_Verify.py", title="Kiểm thử", icon="🛡️", url_path="Verify"),
         ]
     )
-    if not is_restricted_demo():
+    if not restricted_demo:
         pages.append(
             st.Page("pages/6_Do_luong.py", title="Đo lường", icon="📊", url_path="Do_luong")
         )
     page = st.navigation(pages)
     paused = is_automation_paused()
-    st.sidebar.caption("Chưa kết nối hộp thư. Thao tác gửi hiện được ghi nhận mô phỏng.")
-    if not is_restricted_demo():
+    if restricted_demo:
+        st.sidebar.caption(
+            "Restricted DEMO: replay offline trên dữ liệu synthetic; không kết nối hộp thư, "
+            "không gửi email thật và không gọi provider LIVE."
+        )
+    else:
+        st.sidebar.caption("Chưa kết nối hộp thư. Thao tác gửi hiện được ghi nhận mô phỏng.")
+    if not restricted_demo:
         with st.sidebar.expander("Điều khiển gửi tự động", expanded=paused):
             st.caption("Đang tạm dừng gửi" if paused else "Đang cho phép gửi sau 60 giây")
             if paused:
@@ -76,15 +84,17 @@ def main() -> None:
                         st.error(readable_text(str(error)))
                     else:
                         st.rerun()
+    if restricted_demo:
+        shell_title = "🔵 Restricted DEMO"
+        shell_description = "Môi trường mô phỏng dùng replay offline; email LIVE không hoạt động."
+    else:
+        shell_title = "🟢 Ứng dụng sẵn sàng"
+        shell_description = "Môi trường mô phỏng; email LIVE chưa được kết nối."
     st.sidebar.markdown(
-        """
-        <div style="margin-top: 1.5rem; padding: 10px 12px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;">
-            <div style="font-size: 11.5px; font-weight: 700; color: #047857; display: flex; align-items: center; gap: 6px;">
-                <span>🟢</span> Hệ thống hoạt động
-            </div>
-            <div style="font-size: 11px; color: #64748B; margin-top: 2px;">
-                Môi trường mô phỏng an toàn
-            </div>
+        f"""
+        <div class="ex-shell-status">
+            <div class="ex-shell-status-title">{shell_title}</div>
+            <div class="ex-shell-status-description">{shell_description}</div>
         </div>
         """,
         unsafe_allow_html=True,
