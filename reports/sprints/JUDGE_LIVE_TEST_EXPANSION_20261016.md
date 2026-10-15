@@ -169,7 +169,8 @@ numeric limits and derived expressions in that module.
 
 - Result: `BLOCKED`.
 - Production deployment: `38e8efce-8824-4f16-8074-7d07f8f86a56` (unchanged).
-- Source SHA: `6600588d796233c6f3ca845ab5bb1b5d14548377` (production); candidate SHA pending commit.
+- Source SHA: `6600588d796233c6f3ca845ab5bb1b5d14548377` (production); implementation
+  commit `ed2a82599ccde4e59c74c41f88b860d3b330966b`.
 - LIVE switches: Replay / input OFF / LIVE OFF.
 - Model: `gpt-6-luna`.
 - Total / remaining application budget after reviewed deployment: USD 5.00 / USD 4.99.
