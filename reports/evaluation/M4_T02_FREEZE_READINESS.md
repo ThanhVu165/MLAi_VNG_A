@@ -9,12 +9,16 @@
   `2026-10-15T03:18:46.576Z`
 - Candidate authorization: Trello action `6ad04dd2fb6c52f6121deaa4`
 - Private-storage authorization: Trello action `6ad04fd528b7095d4152b4c1`
-- Kết quả: **BLOCKED**
+- Corpus freeze/DB authorization: Trello actions `6ad08b8a2dc7c9bc2cd7183a`,
+  `6ad090657fec4bfefeefcb0c`
+- AI-Gold amendment: Trello action `6ad09a85feb1dedb88ea2c48`,
+  `2026-10-15T09:19:01.194Z`
+- Kết quả: **GOLD_BINDING_READY / OFFICIAL_EXECUTION_NOT_READY**
 - Freeze status: **FREEZE_INCOMPLETE**
 - GO-A recommendation: **NO_GO_A**
 - Official Set A runs: **0**
 - Application LIVE/API/provider/email calls: **0**
-- Private access: **Set A input-only authoring; Set B input-only overlap; Gold reads 0**
+- Private access: **Set A input-only authoring; Set B input-only overlap; exact Set A Gold binding verification**
 
 Đây là gói freeze-preparation cho một **POST-TUNING INDEPENDENT EVALUATION SET**
 mới theo amendment. Báo cáo không claim pre-M2 held-out, historical preregistration
@@ -43,7 +47,22 @@ Nguồn đã kiểm:
   M7 input-only candidate để overlap check; không mở Gold/reviewer material.
 
 Candidate Set A được tạo sau khi Coordinator cấp quyền preparation và storage. Gold
-chưa được tạo; không suy hoặc tạo expected labels trong authoring pass.
+không được tạo hoặc suy nhãn trong authoring pass.
+
+### Checkpoint binding ngày 15/10/2026
+
+Coordinator đã chấp nhận exact `M4-SET-A-POSTTUNE-GOLD/v1` làm
+**AI-adjudicated evaluation Gold** và miễn yêu cầu independent human Gold riêng cho
+M4-T02. Đây không phải human-reviewed, independently human-adjudicated hoặc blind-human
+Gold. M7 Set B vẫn là final independent held-out evidence.
+
+Exact Gold SHA-256 `e6b7ea08c03c93d3b952f5166a1cfcd0ecb0423cdb2c9c5cb532110f024509f5`
+đã được tính lại từ exact bytes. Gold bind đúng candidate `M4-SET-A-POSTTUNE/v1`,
+18 case theo đúng thứ tự và candidate SHA-256
+`98d691c8437f1c466a6c2b7be1cd4ca3c34f4e0a0218f02376c2ae4f4a414385`.
+Corpus `M4-T02-CORPUS/v1` được tính lại read-only từ evaluation DB cô lập
+`M4T02_EVAL_DB_V1`: 6 nguồn, 5 ACTIVE, 1 SUPERSEDED, 72 chunks; SHA-256
+`03f1f7d346775200d2c9cecd94efeeb14a4de0f90047a62f9eba00de705d44fd`.
 
 ## 2. Set A mới
 
@@ -71,14 +90,17 @@ và receipt tương ứng. Eligibility này không phải GO-A hoặc execution 
 
 | Metadata bắt buộc | Kết quả | Evidence / giới hạn |
 |---|---|---|
-| Identifier/version/hash/reference | **NOT_RESOLVED** | Không có Gold artifact/sidecar |
-| Author | **NOT_RESOLVED** | Không suy từ Task Owner |
-| Independent reviewer | **NOT_RESOLVED** | Final Reviewer của task không được coi là Gold reviewer khi chưa có attestation |
-| Binding với Set A version/hash | **NOT_VERIFIED** | Cả hai phía chưa có identity/hash |
-| Finalization timestamp | **NOT_RESOLVED** | Không có signed freeze receipt |
+| Identifier/version/hash/reference | **RESOLVED** | `M4-SET-A-POSTTUNE-GOLD` / `v1` / exact SHA-256 ở checkpoint / `M4T02_PRIVATE_SET_A_STORE` |
+| Reviewer type | **RESOLVED WITH LIMITATION** | AI-adjudicated; Coordinator waiver tại action `6ad09a85feb1dedb88ea2c48` |
+| Independent human review | **NOT CLAIMED** | Yêu cầu này được miễn riêng cho M4-T02; M7 Set B không đổi |
+| Binding với Set A version/hash/order | **PASS** | 18/18 ID duy nhất, đúng thứ tự candidate; exact candidate hash khớp |
+| Corpus binding trong Gold | **PASS** | `M4-T02-CORPUS/v1`; exact corpus hash khớp evaluation DB read-only |
 
-Không đọc expected label hoặc rationale. Gold M5-T01 không được tái sử dụng cho M4-T02.
-**Set A ↔ Gold binding: `NOT_VERIFIED`.**
+Gold M5-T01 không được tái sử dụng cho M4-T02. **Set A ↔ Gold binding: `PASS`.**
+Gold v1 có phân bố P01=7, P03=5, P02=4, P05=2, P04=0; AUTO_REPLY Gold n=2.
+Mười case có reviewer confidence MEDIUM: 001, 005, 008, 009, 011, 012, 013, 014,
+017, 018. Năm case đổi từ reviewer draft r2: 003, 013, 014, 017, 018. Các giới
+hạn này phải đi cùng mọi diễn giải kết quả M4-T02.
 
 ## 4. Runtime/config freeze candidate
 
@@ -90,7 +112,7 @@ Candidate receipt là current evidence, không phải historical preregistration
 |---|---|---|
 | Runtime source SHA | **RESOLVED** | `47a1fcd9686b5409674979b34a521ead2f65ae8d`, exact remote `dev` |
 | Deployed accepted source reference | **RESOLVED reference** | `fe8c2dbca013e9344a678ba52f70588495c897ef`; không có thay đổi trong `core/`, `infra/`, `corpus/`, `policies/`, `verify/`, Dockerfile, requirements, Streamlit/pages từ SHA này tới baseline |
-| Corpus identifier/version/hash/reference | **NOT_RESOLVED** | Historical `cv_f6eb04187bb0` không bind actual ACTIVE snapshot cho run mới |
+| Corpus identifier/version/hash/reference | **RESOLVED** | `M4-T02-CORPUS/v1`; exact SHA-256 bind `M4T02_EVAL_DB_V1` |
 | Policy | **RESOLVED** | `git-blob-sha1:381a80e095af8b0b9d9baa63fdeb9abbd67a3b3c` |
 | Protocol | **RESOLVED** | SHA-256 `c8f55327d80e39770e5ec764c7bfcb50014398d9b012e6e46eb75189b2a0a982` |
 | Case schema | **RESOLVED** | SHA-256 `653ab5de6b52b8d907b75e048242abaa44ba4a57ad17e9b26dbf0fe29167072f` |
@@ -142,24 +164,28 @@ quality gate và abort threshold chưa được duyệt, execution phải dừng
 
 ## 7. Unresolved fields và blocker
 
-1. Gold identity/version/hash/reference/author/reviewer/finalization và Set A binding.
-2. Actual corpus snapshot identifier/version/hash/reference cho baseline.
-3. Immutable deployed image digest, nếu Coordinator yêu cầu container/image execution.
-4. Numeric sample-size, strata, coverage, quality và abort gates.
-5. Independent review/acceptance của exact manifest và collector/harness binding.
-6. GO-A, execution authorization và nonzero budget.
+1. Set B existence/version/hash/seal/access-history metadata trong manifest; không cần
+   và không được mở Set B Gold để giải quyết các field này.
+2. Immutable deployed image digest, nếu Coordinator yêu cầu container/image execution.
+3. Numeric sample-size, strata, coverage, quality và abort gates.
+4. Independent review/acceptance của exact manifest và collector/harness binding.
+5. GO-A, execution authorization và nonzero budget.
 
 Do các field bắt buộc còn thiếu, không thể trả `READY_FOR_GO_A_DECISION`.
 
 ## 8. Privacy, validation và recommendation
 
-- Chỉ mở Set A input-only để author/validate và đúng Set B input-only candidate để
-  overlap; không mở Set B Gold/reviewer material hoặc Set A Gold.
+- Set A Gold chỉ được đọc để xác minh exact hash, candidate/corpus binding, consistency
+  và các limitation đã được Coordinator chấp nhận; không chạy model trên Set A.
+- Chỉ mở đúng Set B input-only candidate cho overlap lịch sử; không mở Set B Gold hoặc
+  reviewer material.
 - Không commit case, expected label, rationale, PII, secret hoặc private artifact path.
 - DEV/regression và M7 Set B access chỉ phục vụ offline overlap validation; Set B
   access bị giới hạn ở đúng input-only candidate đã được ủy quyền.
 - Official Set A runs: **0**.
 - Application LIVE/API/provider/email: **0**; chỉ dùng GitHub/Trello read-only cho evidence.
+- Exact Gold/candidate/corpus binding: **PASS**; raw candidate, raw Gold, private receipt
+  và private absolute path không được commit.
 - Freeze schema + runtime/collector/harness hash assertions: **PASS**.
 - Offline evaluation unit tests: **18 protocol + 19 collector PASS**.
 - Targeted harness contract: **2 PASS**. Lượt đầu có một setup error do quyền truy cập
@@ -168,8 +194,26 @@ Do các field bắt buộc còn thiếu, không thể trả `READY_FOR_GO_A_DECI
 - Runtime/product/evaluation run: **NOT RUN**; production không đổi và task cấm official run.
 - Link, sensitive-data và Git checks được ghi sau validation cuối của branch.
 
+Validation checkpoint cho binding này:
+
+- `Get-FileHash -Algorithm SHA256 <authorized-private-artifact>` và offline canonical
+  serialization check: **PASS** cho exact Gold/candidate bytes.
+- Offline structural validator cho ID/version/count/order, rule/type mapping, distribution,
+  reviewer-confidence và changed-from-draft metadata: **PASS**.
+- SQLite URI `mode=ro` + `PRAGMA query_only=ON` + canonical corpus snapshot hash:
+  **PASS**; 6 nguồn, 5 ACTIVE, 1 SUPERSEDED, 72 chunks, DB không đổi sau query.
+- `python -m unittest discover -s docs/evaluation -p test_protocol.py -v`:
+  **18 PASS**.
+- `python -m unittest discover -s docs/evaluation -p test_collector.py -v`:
+  **19 PASS**.
+- `validate_freeze_manifest(..., expected_runtime_sha=...)`:
+  **PASS**, trả `FREEZE_INCOMPLETE` đúng các field còn unresolved.
+- Sanitized leak scan, local-link check và `git diff --check`: **PASS**.
+- Targeted harness không chạy lại ở checkpoint này vì chỉ đổi metadata/report; giữ kết quả
+  historical **2 PASS** ở trên.
+
 **FREEZE STATUS: `FREEZE_INCOMPLETE`.**
 
-**GO-A RECOMMENDATION: `NO_GO_A`.** Independent reviewer cần tạo Gold và binding;
-Coordinator còn phải chốt corpus/image disposition cùng numeric gates, rồi review exact
-manifest. Một quyết định GO-A riêng mới có thể đổi execution state.
+**GO-A RECOMMENDATION: `NO_GO_A`.** Gold/corpus binding đã sẵn sàng nhưng official
+execution chưa sẵn sàng. Coordinator còn phải chốt image disposition cùng numeric gates,
+rồi review exact manifest. Một quyết định GO-A riêng mới có thể đổi execution state.

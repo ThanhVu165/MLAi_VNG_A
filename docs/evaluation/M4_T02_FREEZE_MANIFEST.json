@@ -5,6 +5,9 @@
     "trello-action:6ad04616863aaeb3c1fb352f",
     "trello-action:6ad04dd2fb6c52f6121deaa4",
     "trello-action:6ad04fd528b7095d4152b4c1",
+    "trello-action:6ad08b8a2dc7c9bc2cd7183a",
+    "trello-action:6ad090657fec4bfefeefcb0c",
+    "trello-action:6ad09a85feb1dedb88ea2c48",
     "github-pr:59",
     "reports/evaluation/M4_T02_GO_A_READINESS.md"
   ],
@@ -19,10 +22,10 @@
     "eligibility": "ELIGIBLE"
   },
   "gold": {
-    "identifier": "NOT_RESOLVED",
-    "version": "NOT_RESOLVED",
-    "hash": "NOT_RESOLVED",
-    "reference": "NOT_RESOLVED"
+    "identifier": "M4-SET-A-POSTTUNE-GOLD",
+    "version": "v1",
+    "hash": "sha256:e6b7ea08c03c93d3b952f5166a1cfcd0ecb0423cdb2c9c5cb532110f024509f5",
+    "reference": "M4T02_PRIVATE_SET_A_STORE"
   },
   "set_b": {
     "existence": "NOT_RESOLVED",
@@ -32,10 +35,10 @@
     "access_history": "NOT_RESOLVED"
   },
   "corpus": {
-    "identifier": "NOT_RESOLVED",
-    "version": "NOT_RESOLVED",
-    "hash": "NOT_RESOLVED",
-    "reference": "NOT_RESOLVED"
+    "identifier": "M4-T02-CORPUS",
+    "version": "v1",
+    "hash": "sha256:03f1f7d346775200d2c9cecd94efeeb14a4de0f90047a62f9eba00de705d44fd",
+    "reference": "M4T02_EVAL_DB_V1"
   },
   "policy_hash": "git-blob-sha1:381a80e095af8b0b9d9baa63fdeb9abbd67a3b3c",
   "prompt_config_hashes": {
