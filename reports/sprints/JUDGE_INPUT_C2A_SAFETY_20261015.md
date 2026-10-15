@@ -188,3 +188,133 @@ staging/retention/HOLD operational procedure. C2-C cần ownership clearance c�
 authorization riêng về provider/model/cases/budget; max-output/input enforcement và numeric
 usage reconciliation trước bất kỳ tuyên bố hard USD ceiling nào. Nếu cần schema/interface/
 audit/provider-policy change, phải có amendment riêng. LIVE/API=0; merge/deploy NOT RUN.
+
+## CHANGE REQUEST 01 — durable terminal readability correction
+
+### Authorization / disposition
+
+Coordinator xác nhận trực tiếp trong chat: `PPROVE C2-A CHANGE REQUEST 01`.
+Scope: chỉ infra/judge_access.py, dedicated C2-A tests và bổ sung báo cáo này.
+Reviewed PR #70 HEAD: `cc42211779526327b968cb3ec1e37517a423b188`.
+Verified reference dev chứa #71: `2c8b19ad03a8027cba73ca342211e573702308fe`.
+Trạng thái: READY_FOR_RE_REVIEW; chờ Lenovo independent re-review và Coordinator acceptance,
+không tuyên bố DONE hoặc đề xuất tự merge. Phần validation C2-A phía trên là lịch sử trước
+CR01; kết quả PASS trước đó không bao phủ finding độc lập này.
+
+### Finding và correction
+
+Matcher cũ chỉ kiểm một phần payload (case/status/decision) nên có thể nhả active slot dù
+snapshot thiếu trace_id, fields khác hoặc nested values không deserialize được bằng
+core.results.load_result. Cả operator recovery và cleanup tự động đều bị ảnh hưởng.
+
+Matcher nay giữ các kiểm tra provenance/status/latest-decision/no-send cũ, đồng thời gọi
+chính load_result trước khi cho phép release. Không thêm parser hoặc danh sách required
+snapshot fields riêng. Decode/type/value errors trả False, dẫn đến HOLD và giữ active slot.
+Không fallback về kết quả tổng hợp khi snapshot thiếu: snapshot row vẫn bắt buộc tồn tại
+trước khi gọi reader. Các lỗi SQLite tiếp tục propagate/fail closed, không nhả slot.
+
+Import core.results chỉ thực hiện cục bộ tại matcher, sau khi modules đã khởi tạo, để tránh
+vòng import; đây là bridge reader tối thiểu theo AC-CR1, không chuyển logic Core vào Infra.
+Không sửa core/results.py hoặc interface. infra.db.fetch_one dùng transaction context đang
+mở, nên reader chạy trên cùng SQLite connection, không mở transaction/provider hoặc ghi DB.
+Test riêng xác minh connection identity và total_changes không tăng khi matcher đọc.
+
+### Before → after evidence
+
+Chỉ thêm tests trước, giữ production tại reviewed SHA cc422117:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q -p no:cacheprovider tests/test_judge_input_c2a.py -k 'unreadable_terminal or readable_terminal' --tb=short
+```
+
+Before, exit 1: **26 failed, 6 passed, 28 deselected in 4.51s**. Thirteen corruptions được
+accept sai qua cả recovery (RECOVERED thay HOLD) và cleanup (nhả active slot thay giữ HOLD).
+Malformed JSON đã được chặn ở bản cũ (2 PASS); snapshot hợp lệ release đúng (4 PASS).
+
+Dedicated tests thêm 33 ca: 14 corruption variants × 2 release paths, 2 valid scenarios ×
+2 paths, và 1 transaction-reader test. Corruptions gồm thiếu 9 top-level fields, thiếu
+decision.reason, bad timestamp, evidence domain sai, partial draft không deserialize được,
+và malformed JSON. Negative tests chứng minh load_result thực tế thất bại trước khi kiểm
+HOLD; đồng thời giữ nguyên C1 ledger, quota/nonce, token/cost reservation, revoke, cases,
+snapshot và Audit. Không sửa expectations hoặc fixtures lịch sử.
+
+Lượt targeted ngay sau correction (trước khi thêm transaction identity test): **111 passed
+in 14.50s** gồm C1/C2-A; Black/Ruff PASS. Final branch validation và integration ghi dưới.
+
+### Integrated snapshot cùng Core Fix #71
+
+Không merge/rebase/cherry-pick vào PR hoặc dev. Dùng lại local candidate đã được Coordinator
+cho phép từ lượt integration, chuyển đúng hai file CR01 chưa commit sang candidate có cùng
+preimage. Chạy tests rồi chuyển lại PR branch; production/test changes không bị sửa thêm.
+
+- Existing local candidate commit: `a65aa78637f8503a0e9d3b8c5ca70ecf7244749c`.
+- Parents: dev `2c8b19ad03a8027cba73ca342211e573702308fe` và reviewed C2-A
+  `cc42211779526327b968cb3ec1e37517a423b188`.
+- Tested candidate + CR01 tree: `34399640a294e54f153522e2bbfaedb11f7d897a`.
+- infra/judge_access.py blob: `e685891552364906122a1dfc6bad49fd0f54311d`.
+- tests/test_judge_input_c2a.py blob: `d6973f2a113f0b1de8fc14e6b653a0c17404f887`.
+
+Tree hash được ghi bằng index tạm ngoài repo, không commit candidate hoặc đổi index thật.
+Tree này giữ phiên bản report trước CR01; chỉ hai code/test blobs mới ảnh hưởng regression.
+Reviewer tái lập bằng tree của candidate cũ, thay hai blobs trên; tree phải khớp exact hash.
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q -rs -p no:cacheprovider tests/test_judge_input_c2a.py tests/test_judge_input_c1.py tests/test_judge_new_input_offline.py tests/test_core_reliability.py tests/test_llm_budget.py tests/test_guards.py tests/test_semantic_validator_compat.py tests/test_provider_observability.py tests/test_runtime_worker.py tests/test_m3_t06_human_control.py tests/test_restricted_demo.py tests/test_runtime_replay_audit.py tests/test_policy_engine.py tests/test_r2_validation_diagnostics.py tests/test_audit_navigation_session.py tests/test_email_input_ui.py tests/test_pre_m4_ux.py tests/test_audit_coverage.py tests/test_audit_details.py tests/test_ux_responsive_cardless.py --tb=short
+```
+
+After, exit 0: **445 passed, 3 skipped in 25.39s**. Ba SKIP là historical LIVE artifacts
+local không có, tại test_r2_validation_diagnostics.py:355; không có security/crash tests skip.
+F-01–F-04, C1/C2-A, guards/no-fail-open, Human Control, persistence, replay/Audit, canonical,
+Verify4 4/4 và Email/UI đều PASS trong suite này. Python 3.11.17, pytest 8.3.3, Darwin arm64;
+DB synthetic tạm, conftest khóa network/DNS/OpenAI trước collection. Child crash tests khóa
+riêng trong process con. Không dùng dữ liệu Gold hoặc API thật.
+
+Chạy lại 9 probes giao điểm ngoài repo từ lượt integration trước:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/Users/nguyenvoviettrinh/exodia-t06-work/MLAi_VNG_A/tests:/Users/nguyenvoviettrinh/exodia-t06-work/MLAi_VNG_A .venv/bin/python -B -c 'import pytest, conftest; raise SystemExit(pytest.main(["-q", "-p", "no:cacheprovider", "--tb=short", "/private/tmp/exodia-c2a-core71-validation.yYLdzZ/test_intersections.py"], plugins=[conftest]))'
+```
+
+**9 passed, 1 warning in 1.46s**. Probe SHA-256:
+`b3e8676b0e7998857a66ddb7af45e51da4a1eefd1b5d6fd8e3bfce04aecffb32`.
+Coverage: revoke/kill/HOLD trước provider/fallback, deadline trước fallback, terminal
+fallback + release-store failure + revoke + recovery, no-send/debit/no-duplicate.
+Warning chỉ là anyio đã import trước pytest assertion rewriting. Probe ngoài repo không
+được commit; dedicated CR01 regression có trong PR, reviewer không cần temp probe để tái
+hiện finding. Không claim full repository suite, mypy hoặc LIVE/provider quality.
+
+### Self-review / boundaries / remaining gate
+
+Diff correction chỉ 3 files trong scope; không đổi llm.py, Core Fix, schema/migration,
+audit semantics, public interface, policy hoặc budget. No-send checks và strict partial
+payload/latest-decision match cũ vẫn giữ, reader chỉ thêm điều kiện để release. Chưa có
+confirmed defect còn mở sau validation trong phạm vi CR01. Snapshot chỉ đạt độ hợp lệ
+mà reader hiện hành thực thi; không tự mở rộng thành schema validator mới. HOLD sai/bất
+định không tự refund hoặc retry. Operational HOLD resolution và provider hard-cap vẫn là
+gate riêng của C2-B/C2-C. Final SHA được ghi ở handoff sau commit; Lenovo phải re-review
+SHA mới, không tái dùng approval trên cc422117. PR vẫn là #70.
+
+### Final PR-branch validation / AC-CR1–CR7
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q -rs -p no:cacheprovider tests/test_judge_input_c2a.py tests/test_judge_input_c1.py tests/test_guards.py tests/test_runtime_worker.py tests/test_restricted_demo.py tests/test_judge_new_input_offline.py tests/test_audit_navigation_session.py tests/test_email_input_ui.py tests/test_pre_m4_ux.py tests/test_runtime_replay_audit.py tests/test_audit_coverage.py tests/test_audit_details.py tests/test_llm_budget.py tests/test_ux_responsive_cardless.py --tb=short
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m black --check --line-length 100 infra/judge_access.py tests/test_judge_input_c2a.py
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m ruff check --no-cache infra/judge_access.py tests/test_judge_input_c2a.py
+git diff --check
+```
+
+PR branch: **314 passed in 21.12s**, zero skip/failure; Black/Ruff/diff check exit 0.
+Code/test blobs khớp exact integrated tree bên trên. Tracked changes chỉ đúng 3 files
+scope. M7 fingerprints cuối khớp preflight ở đầu report; không stage artifacts untracked.
+
+| CR AC | Status / evidence |
+|---|---|
+| CR1 | PASS — dùng load_result thật, không parser snapshot riêng |
+| CR2 | PASS — 28 negative cases giữ HOLD/slot cho hai release paths |
+| CR3 | PASS — before 26 FAIL / after PASS, không đổi expected |
+| CR4 | PASS — valid preview/escalation release; reader cùng connection, zero writes |
+| CR5 | PASS — exact ledger/debit/revoke/case/snapshot/Audit invariance assertions |
+| CR6 | PASS offline — 314 PR branch; 445 PASS/3 historical skips với #71; 9 boundary probes |
+| CR7 | PASS handoff evidence — before/after, commands, exact references/tree/blobs, self-review, PR; independent re-review pending |
+
+LIVE/API provider calls = **0**. Merge PR/dev/deploy = **NOT RUN**. Candidate không push.

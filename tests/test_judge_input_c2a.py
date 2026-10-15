@@ -13,6 +13,7 @@ from threading import Barrier
 import pytest
 
 from core.judge_input import process_judge_case
+from core.pipeline import process_case
 from core.results import load_result
 from core.types import CaseStatus, Decision
 from infra import db, judge_access as access, llm
@@ -371,3 +372,120 @@ def test_release_store_failure_preserves_debit_until_verified_recovery(judge, mo
     assert access.recover_reservations(SECRET) == {case_id: "RECOVERED"}
     assert _ledgers()[0]["total"] == 1
     assert len(_ledgers()[1]["requests"]) == 1
+
+
+def _corrupt_terminal_snapshot(case_id: str, corruption: str) -> None:
+    row = db.fetch_one("SELECT payload_json FROM case_results WHERE case_id=?", (case_id,))
+    payload = json.loads(row["payload_json"])
+    if corruption.startswith("missing_"):
+        field = corruption.removeprefix("missing_")
+        if field == "decision_reason":
+            del payload["decision"]["reason"]
+        else:
+            del payload[field]
+    elif corruption == "bad_timestamp":
+        payload["finished_at"] = "not-an-iso-timestamp"
+    elif corruption == "bad_evidence_domain":
+        payload["evidence"]["chunks"][0]["domain"] = "not-a-domain"
+    elif corruption == "bad_card_partial":
+        payload["card"]["partial_draft"] = {"subject": "incomplete"}
+    serialized = "{" if corruption == "malformed_json" else json.dumps(payload)
+    db.execute("UPDATE case_results SET payload_json=? WHERE case_id=?", (serialized, case_id))
+
+
+@pytest.mark.parametrize("release_path", ["recovery", "cleanup"])
+@pytest.mark.parametrize(
+    "corruption",
+    [
+        "missing_trace_id",
+        "missing_extraction",
+        "missing_evidence",
+        "missing_draft",
+        "missing_card",
+        "missing_corpus_version",
+        "missing_step_latencies_ms",
+        "missing_started_at",
+        "missing_finished_at",
+        "missing_decision_reason",
+        "bad_timestamp",
+        "bad_evidence_domain",
+        "bad_card_partial",
+        "malformed_json",
+    ],
+)
+def test_unreadable_terminal_snapshot_keeps_hold(judge, monkeypatch, release_path, corruption):
+    scenario = "JUDGE-AUTHORITY" if corruption == "bad_card_partial" else "JUDGE-AUTO"
+    _provider(monkeypatch, scenario)
+    inp = _input(scenario)
+    fingerprint = access.payload_hash(inp.sender, inp.subject, inp.body, inp.received_at)
+    with access.request_scope(judge, "session-a", NONCE, "c_unreadable", fingerprint):
+        access.mark_processing()
+        result = process_case(inp, actor="SYSTEM", case_id="c_unreadable")
+        assert load_result(result.case_id).status is result.status
+        _corrupt_terminal_snapshot(result.case_id, corruption)
+        with pytest.raises((KeyError, TypeError, ValueError)):
+            load_result(result.case_id)
+        access.revoke_grant(judge, SECRET)
+        before_c1, before_c2 = _ledgers()
+        cases = [tuple(row) for row in db.fetch_all("SELECT * FROM cases")]
+        audit = [tuple(row) for row in db.fetch_all("SELECT * FROM audit_events")]
+        snapshots = [tuple(row) for row in db.fetch_all("SELECT * FROM case_results")]
+        if release_path == "recovery":
+            assert access.recover_reservations(SECRET) == {result.case_id: "HOLD"}
+    c1, c2 = _ledgers()
+    assert c1 == before_c1
+    assert c2["requests"][result.case_id]["phase"] == "HOLD"
+    before_c2["requests"][result.case_id]["phase"] = "HOLD"
+    assert c2 == before_c2
+    assert not access.grant_is_valid(judge, "session-a")
+    assert [tuple(row) for row in db.fetch_all("SELECT * FROM cases")] == cases
+    assert [tuple(row) for row in db.fetch_all("SELECT * FROM audit_events")] == audit
+    assert [tuple(row) for row in db.fetch_all("SELECT * FROM case_results")] == snapshots
+    assert not db.fetch_all("SELECT * FROM case_jobs")
+    assert not db.fetch_all("SELECT * FROM audit_events WHERE action LIKE 'SEND_%'")
+
+
+@pytest.mark.parametrize("release_path", ["recovery", "cleanup"])
+@pytest.mark.parametrize("scenario", ["JUDGE-AUTO", "JUDGE-AUTHORITY"])
+def test_readable_terminal_snapshot_still_releases(judge, monkeypatch, release_path, scenario):
+    _provider(monkeypatch, scenario)
+    inp = _input(scenario)
+    fingerprint = access.payload_hash(inp.sender, inp.subject, inp.body, inp.received_at)
+    with access.request_scope(judge, "session-a", NONCE, "c_readable", fingerprint):
+        access.mark_processing()
+        result = process_case(inp, actor="SYSTEM", case_id="c_readable")
+        assert load_result(result.case_id).status is result.status
+        before_c1, before_c2 = _ledgers()
+        if release_path == "recovery":
+            assert access.recover_reservations(SECRET) == {result.case_id: "RECOVERED"}
+    c1, c2 = _ledgers()
+    before_c1["active"].pop(result.case_id)
+    assert c1 == before_c1
+    before_c2["requests"][result.case_id]["phase"] = (
+        "RECOVERED" if release_path == "recovery" else "FINISHED"
+    )
+    assert c2 == before_c2
+    assert access.recover_reservations(SECRET) == {}
+    assert not db.fetch_all("SELECT * FROM case_jobs")
+    assert not db.fetch_all("SELECT * FROM audit_events WHERE action LIKE 'SEND_%'")
+
+
+def test_terminal_reader_reuses_transaction_without_writes(judge, monkeypatch):
+    from core import results
+
+    _provider(monkeypatch)
+    result = process_judge_case(_input(), grant=judge, session="session-a", nonce=NONCE)
+    fetch = results.fetch_one
+    queries = []
+    with db.transaction() as connection:
+        changes = connection.total_changes
+
+        def same_connection(statement, parameters=()):
+            assert db._transaction_connection(None) is connection
+            queries.append(statement)
+            return fetch(statement, parameters)
+
+        monkeypatch.setattr(results, "fetch_one", same_connection)
+        assert access._terminal_snapshot_matches(connection, result.case_id)
+        assert connection.total_changes == changes
+    assert queries

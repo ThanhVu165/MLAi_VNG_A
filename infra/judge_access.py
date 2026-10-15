@@ -477,6 +477,9 @@ def recover_reservations(operator_secret: str) -> dict[str, str]:
 
 
 def _terminal_snapshot_matches(connection: sqlite3.Connection, case_id: str) -> bool:
+    # Import trễ để dùng đúng reader/decoder mà không tạo vòng import lúc khởi động.
+    from core.results import load_result
+
     case = connection.execute(
         "SELECT status,send_deadline FROM cases WHERE case_id=?", (case_id,)
     ).fetchone()
@@ -512,7 +515,11 @@ def _terminal_snapshot_matches(connection: sqlite3.Connection, case_id: str) -> 
             )
         ):
             return False
-    except (ValueError, KeyError, TypeError):
+        # fetch_one của reader dùng cùng transaction; không fallback khi snapshot hỏng.
+        result = load_result(case_id)
+        if result is None or result.case_id != case_id or result.status.value != case["status"]:
+            return False
+    except (ValueError, KeyError, TypeError, AttributeError, IndexError, OverflowError):
         return False
     sends = connection.execute(
         "SELECT 1 FROM audit_events WHERE case_id=? AND action IN ('SEND_SCHEDULED','SEND_DISPATCHED')",
