@@ -1,0 +1,3 @@
+BEFORE: unchecked runtime SHA accepted
+BEFORE: invalid authorization accepted: None
+BEFORE: invalid authorization accepted: 0

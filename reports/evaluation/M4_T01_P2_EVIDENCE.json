@@ -1,0 +1,114 @@
+{
+  "task": "M4-T01",
+  "checkpoint": "P2_CORRECTION_AND_SELF_REVIEW",
+  "technical_verdict": "TECHNICAL_SELF_REVIEW_PASS",
+  "task_disposition": "PARTIAL_ONLY",
+  "previous_reviewed_sha": "b618e7c14267a43925884c406fb9b4aa39a2fca1",
+  "baseline_sha": "eaaeea88a59618b49219a20ae01a3cf3227cec87",
+  "tested_implementation_sha": "742ffd41f5726917d788f93c926373455a3cd827",
+  "final_revision": "Evidence-only branch tip; exact SHA recorded in PR #52 body and final handoff",
+  "pr": "https://github.com/ThanhVu165/MLAi_VNG_A/pull/52",
+  "environment": {
+    "python": "3.11.16",
+    "packages": {
+      "jsonschema": "4.23.0",
+      "pytest": "8.3.3"
+    }
+  },
+  "commands": {
+    "before": ".\\.venv\\Scripts\\python.exe -B -m unittest discover -s docs/evaluation -p test_protocol.py -k whitespace -v",
+    "after": ".\\.venv\\Scripts\\python.exe -B -m unittest discover -s docs/evaluation -p test_protocol.py -v",
+    "harness": "python -B - : AST-isolated exact VerifyCase/_string/_case_from_payload with real CaseInput/enum types; 8 declared synthetic boundary inputs",
+    "black": ".\\.venv\\Scripts\\python.exe -m black --workers 1 --check --line-length 100 docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py",
+    "ruff": ".\\.venv\\Scripts\\python.exe -m ruff check docs/evaluation/protocol_validation.py docs/evaluation/test_protocol.py",
+    "diff": "git diff --check eaaeea88a59618b49219a20ae01a3cf3227cec87...HEAD"
+  },
+  "before": {
+    "test_methods": 2,
+    "expected_failing_subtests": 8,
+    "valid_input_test": "PASS",
+    "failed_test_id": "test_whitespace_only_sender_and_subject_are_rejected",
+    "error_messages": [
+      "AssertionError: True is not false",
+      "AssertionError: ValueError not raised"
+    ]
+  },
+  "after": {
+    "passed": 18,
+    "failed": 0,
+    "seconds": 0.062,
+    "draft_2020_12_schema": "PASS",
+    "manifest_metrics_wilson_missing_error_checks": "PASS"
+  },
+  "harness": {
+    "passed": 8,
+    "invalid_rejected": 4,
+    "valid_accepted_unchanged": 4,
+    "level": "Pure exact input-loader definitions; no pipeline/model run",
+    "prior_full_harness_tests": "EVIDENCE REVIEWED - NOT RERUN"
+  },
+  "checks": {
+    "black": "PASS",
+    "ruff": "PASS",
+    "diff_check": "PASS",
+    "links_checked": 39,
+    "broken_links": [],
+    "known_secret_matches": [],
+    "manual_privacy_review": "PASS: synthetic boundary inputs and permitted public metadata only",
+    "scope": "Only docs/evaluation and reports/evaluation",
+    "helper_and_protocol": "UNCHANGED",
+    "production_gold_status_dependencies": "UNCHANGED",
+    "prior_report_sha256": "365aae0c4b70d6978d9bd1aab76e01045a6b264e0874d7861f2bd488c1780376",
+    "historical_artifacts": "PRESERVED"
+  },
+  "ac": {
+    "AC1": "NOT VERIFIED",
+    "AC2": "NOT VERIFIED",
+    "AC3": "PASS candidate",
+    "AC4": "BLOCKED official lock",
+    "AC5": "PASS offline",
+    "AC6": "PASS session safety",
+    "AC7": "Preparation evidence complete; human sign-off pending"
+  },
+  "owner_confirmation": "PENDING MINH",
+  "independent_review": "PENDING THU",
+  "coordinator_acceptance_go": "NOT GRANTED",
+  "live_application_llm_provider_email_calls": 0,
+  "official_set_runs": 0,
+  "private_set_reads": 0,
+  "artifact_hash_scope": "Working-tree SHA256 and canonical Git blob SHA1; line-ending filters disclosed",
+  "artifacts": {
+    "docs/evaluation/M4_T01_PROTOCOL.md": {
+      "working_tree_sha256": "1eb9c8fb508957b8d7491dc3e1af7a396822fce7a4b4b5fca4b8003046793f5c",
+      "git_blob_sha1": "4f514ce5ca08f779994a4165c6c387e9c1b5d026"
+    },
+    "docs/evaluation/M4_T01_SCHEMA.json": {
+      "working_tree_sha256": "653ab5de6b52b8d907b75e048242abaa44ba4a57ad17e9b26dbf0fe29167072f",
+      "git_blob_sha1": "58930dec93dac271db6d262ebd452e9c5dd70d58"
+    },
+    "docs/evaluation/protocol_validation.py": {
+      "working_tree_sha256": "d6ab36300974f1e68f24182abe0d1f13ffc278a8cb62dc2df0a445567c85705e",
+      "git_blob_sha1": "bb66e04343918cb7095ae8668052cf02e4d3c1fc"
+    },
+    "docs/evaluation/test_protocol.py": {
+      "working_tree_sha256": "08c367480ebae28a00a5fec967508719d241a58537b227f06bb131694bafe2eb",
+      "git_blob_sha1": "0b20a986b0e9106c41f6e9be02acf23ae6ff154f"
+    },
+    "reports/evaluation/M4_T01_PROTOCOL_READINESS.md": {
+      "working_tree_sha256": "87fa9423cb1635231da08c731a12326a35e29c9af35f1622b8e8192e70c2bb54",
+      "git_blob_sha1": "52cbae61db28d2f85d02ba9f85381e7aa2e1a28b"
+    },
+    "reports/evaluation/M4_T01_P2_BEFORE.txt": {
+      "working_tree_sha256": "d43537b197e4ef02d37590db3de09aea885b674682ac85f3b3f612a14067aa4b",
+      "git_blob_sha1": "5d884ad35265a2f1943729dc3b6a2f8fc5fdc3dc"
+    },
+    "reports/evaluation/M4_T01_P2_AFTER.txt": {
+      "working_tree_sha256": "bc4354e65b43477d3fd1b9b08f2dcacbddff7f488752194fcd2bc91e011f3df9",
+      "git_blob_sha1": "6e2f5db8dae0341227fc5065124701f706ed2493"
+    },
+    "reports/evaluation/M4_T01_P2_HARNESS.txt": {
+      "working_tree_sha256": "c30197f69d840c738e93193b32628164936eeacab83bce981906432b5ec37a94",
+      "git_blob_sha1": "dc11299faecc8246f391e37e41ffc5cbe4922ad7"
+    }
+  }
+}
