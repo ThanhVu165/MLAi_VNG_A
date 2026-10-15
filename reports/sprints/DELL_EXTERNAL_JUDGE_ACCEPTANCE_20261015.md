@@ -157,6 +157,8 @@ Các trường người gửi, tiêu đề và nội dung hiển thị và nhậ
 
 - Authorization: yêu cầu Phase A closeout cho phép commit, push và mở PR nhắm `dev`; không merge/deploy.
 - Branch: `codex/dell-external-judge-acceptance`.
-- Commit/PR: sẽ bổ sung sau khi tạo; commit chứa cập nhật reference được xác định qua lịch sử Git của file.
+- Evidence commit: `1873f4d5c3a614a6b0ef300f48551b51fb2905f5` — `docs(dell-judge-acceptance): finalize phase A external judge evidence`.
+- PR nhắm `dev`: [#69](https://github.com/ThanhVu165/MLAi_VNG_A/pull/69), OPEN; không merge/deploy. Commit bổ sung reference này được xác định qua lịch sử Git của file.
+- Validation closeout: full diff/Markdown self-review, secret/PII pattern scan và `git diff --cached --check` PASS; chỉ report được stage. Không có private Set A/B/Gold; nội dung case là synthetic.
 
 Ma trận AC1–AC7 ghi trạng thái kiểm tra và bằng chứng; hoàn tất ghi nhận Phase A không đồng nghĩa sản phẩm đạt acceptance. Kết luận sản phẩm vẫn là **PARTIAL**.
