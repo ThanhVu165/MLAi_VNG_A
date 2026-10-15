@@ -59,12 +59,33 @@ session qua `infra/judge_access.py`, không có UI tự cấp quyền. Đây là
 danh, không phải xác thực production. Quota, nonce, reservation và ownership hash lưu trong
 namespace `judge_c1:*` của settings bằng giao dịch BEGIN IMMEDIATE. Crash giữ reservation
 để fail closed; restart không cấp lại ngân sách. Hạn mức bảo thủ: grant 3 request/600 giây,
-session 10, toàn DB 20, tối đa 2 request đồng thời và 1/session. Không có tự reset ngân sách.
+session 10, toàn DB 500, tối đa 2 request đồng thời và 1/session. Không có tự reset ngân sách.
 
 Facade đồng bộ `core/judge_input.py` gọi pipeline chung với request context được reserve
 phía server. Worker không nhận job judge; pipeline kiểm lại payload/case binding và adapter
-chỉ cho replay/offline trong context judge. Không có LIVE exception hoặc hard USD cap;
-ngân sách USD cho C1 bằng 0 vì không gọi provider. Bật LIVE/public cần C2 riêng và review.
+chỉ cho replay/offline trong context judge. Ngân sách USD cho C1 bằng 0 vì không gọi
+provider; Judge LIVE tuân theo amendment C2 bên dưới.
+
+### C2 — Judge LIVE có kiểm soát (Coordinator-approved amendment 16/10/2026)
+
+Judge LIVE giữ nguyên lane C1 và chỉ mở khi `APP_MODE=restricted_demo`, hai switch Judge
+bật, `LLM_MODE=live`, provider OpenAI, model runtime khớp model được duyệt, cache tắt và
+credential có mặt. Mỗi browser session cần grant riêng do operator cấp; grant không truyền
+qua frontend/query, không dùng lại sau revoke và không vượt 3 case. Session tối đa 10 case;
+toàn DB tối đa 500 case và 2 case đồng thời, tối đa 1 case/session.
+
+Budget được reserve nguyên tử, bền vững và fail-closed trước pipeline: USD 0,01/case,
+USD 0,10/session và USD 5,00/toàn DB; tương ứng reserve 24.000 input + 6.000 output
+token/case, 300.000 token/session và 15.000.000 token/toàn DB. Mỗi case tối đa 3 provider
+attempt, 2.000 output token/attempt. Reservation, kể cả `FINISHED`, `HOLD` hoặc
+`RECOVERED`, không được refund và restart/grant mới không reset quota. Attempt chưa đối
+soát, usage không hợp lệ, ledger hỏng, model/config lệch, revoke hoặc kill switch phải chặn
+mọi provider call tiếp theo.
+
+Judge LIVE chỉ kết thúc ở preview: không tạo worker/send job, `send_deadline=NULL`, không
+`SEND_SCHEDULED`/`SEND_DISPATCHED`. `JUDGE_INPUT_ENABLED=0`, `JUDGE_LIVE_ENABLED=0`
+hoặc `LLM_MODE=replay` là kill switch. Amendment này không đổi SQLite schema, enum, audit
+action hay quyền gửi email thật.
 
 Luồng chính:
 

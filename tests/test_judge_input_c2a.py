@@ -28,6 +28,87 @@ def _ledgers() -> tuple[dict, dict]:
         return access._load(connection), access._load_c2(connection)
 
 
+def test_approved_global_envelope_is_five_usd_and_internally_consistent() -> None:
+    assert access.GLOBAL_ESTIMATE_MICRO_USD_LIMIT == 5_000_000
+    assert (
+        access.GLOBAL_REQUEST_LIMIT * access.CASE_ESTIMATE_MICRO_USD
+        == access.GLOBAL_ESTIMATE_MICRO_USD_LIMIT
+    )
+    assert access.GLOBAL_TOKEN_RESERVATION_LIMIT == access.GLOBAL_REQUEST_LIMIT * (
+        access.CASE_INPUT_TOKEN_RESERVATION + access.CASE_OUTPUT_TOKEN_RESERVATION
+    )
+
+
+def test_concurrent_grants_stop_exactly_at_five_usd(
+    judge: access.JudgeGrant,
+) -> None:
+    del judge
+    completed = access.GLOBAL_REQUEST_LIMIT - access.GLOBAL_CONCURRENCY
+    grants: dict[str, dict] = {}
+    sessions: dict[str, int] = {}
+    requests: dict[str, dict] = {}
+    ready: list[tuple[access.JudgeGrant, str]] = []
+    with db.transaction() as connection:
+        connection.execute("DELETE FROM settings WHERE key LIKE 'judge_%'")
+        for index in range(completed):
+            grant_hash = access._hash(f"spent-grant-{index}")
+            session_hash = access._hash(f"spent-session-{index}")
+            case_id = f"spent-case-{index}"
+            grants[grant_hash] = {
+                "session": session_hash,
+                "expires": 99_999_999_999,
+                "count": 1,
+                "nonces": [access._hash(f"spent-nonce-{index:04}")],
+            }
+            sessions[session_hash] = 1
+            requests[case_id] = access._reservation_record(grant_hash, session_hash, "FINISHED")
+            connection.execute(
+                "INSERT INTO settings(key,value,updated_at,actor) VALUES(?,?,?,'SYSTEM')",
+                (access.CASE_PREFIX + case_id, grant_hash, db.now_iso()),
+            )
+        for index in range(access.GLOBAL_CONCURRENCY):
+            token = f"ready-grant-{index}"
+            session = f"ready-session-{index}"
+            grants[access._hash(token)] = {
+                "session": access._hash(session),
+                "expires": 99_999_999_999,
+                "count": 0,
+                "nonces": [],
+            }
+            ready.append((access.JudgeGrant(token), session))
+        access._save(
+            connection,
+            {"grants": grants, "sessions": sessions, "total": completed, "active": {}},
+        )
+        access._save_c2(
+            connection,
+            {"version": 1, "provisioned": {}, "revoked": [], "requests": requests},
+        )
+
+    def reserve(index: int) -> None:
+        grant, session = ready[index]
+        with access.request_scope(
+            grant, session, f"ready-nonce-{index:04}", f"ready-case-{index}", "hash"
+        ):
+            pass
+
+    with ThreadPoolExecutor(max_workers=access.GLOBAL_CONCURRENCY) as pool:
+        list(pool.map(reserve, range(access.GLOBAL_CONCURRENCY)))
+    before = _ledgers()
+    assert before[0]["total"] == access.GLOBAL_REQUEST_LIMIT
+    assert sum(r["estimated_micro_usd"] for r in before[1]["requests"].values()) == 5_000_000
+    assert (
+        sum(r["input_tokens"] + r["output_tokens"] for r in before[1]["requests"].values())
+        == access.GLOBAL_TOKEN_RESERVATION_LIMIT
+    )
+    with pytest.raises(access.JudgeDenied):
+        with access.request_scope(
+            ready[0][0], ready[0][1], "over-limit-nonce", "over-limit-case", "hash"
+        ):
+            pytest.fail("Request thứ 501 đã vượt global budget.")
+    assert _ledgers() == before
+
+
 def test_provisioning_requires_operator_and_is_single_use(judge: access.JudgeGrant) -> None:
     for secret in ("", "guest", "ADMIN:fake"):
         with pytest.raises(access.JudgeDenied):
