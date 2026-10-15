@@ -148,8 +148,8 @@ authorization.
   provider request ID, payment detail, or raw provider header is included here.
 - PASS: no source code, database schema, Judge case, ledger, or configuration was edited
   after the one authorized case except the required production rollback variables.
-- Required repository handoff checks: `git diff --check`, secret-pattern scan,
-  exact-file staging, commit/push, and PR #76 read-back.
+- PASS: repository handoff used `git diff --check`, a secret-pattern scan, exact-file
+  staging, commit/push, and PR #76 read-back.
 
 ## Risks and next step
 
