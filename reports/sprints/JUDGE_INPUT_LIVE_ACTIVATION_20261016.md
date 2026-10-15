@@ -126,3 +126,64 @@ OPENAI_API_KEY=PRESENT (REDACTED)
 - Risks: invalid/unusable provider credential; backup not restore-tested in this run.
 - NEXT STEP: repair the dedicated key and obtain a new Coordinator GO-LIVE; do not proceed
   on the current authorization.
+
+## Resume after API key rotation — 2026-10-16 00:54 ICT
+
+Coordinator supplied a new one-email GO-LIVE and stated that `OPENAI_API_KEY` had been
+rotated. The activation owner repeated preflight from the disabled Replay state.
+
+**Resume result: BLOCKED.** The configured Railway key again returned HTTP `401
+Unauthorized` for `GET /v1/models/gpt-6-luna`. This request used the value injected by
+`railway run`; the key was not printed, logged in this report, or copied to a file. No
+completion request was made and the failed metadata request was not retried.
+
+### Resume preflight evidence
+
+| Check | Result |
+|---|---|
+| Railway target | VERIFIED `exodia-restricted-demo / production / exodia-web` |
+| Active deployment | `a570476e-969a-4503-ae42-fb333d08db8b`, `SUCCESS` |
+| Production source | Deployment message still pins `6600588d796233c6f3ca845ab5bb1b5d14548377` |
+| Restart/deployment after rotation | **NOT VERIFIED** — Railway deployment history exposed no newer deployment ID than the active deployment created on 2026-10-16 00:05 ICT |
+| Health | PASS before and after the probe: HTTP 200, body `ok` |
+| Database | PASS: `/runtime/app.db`, integrity `ok`, schema version 2, 34 cases, zero jobs, zero Judge ledger rows |
+| Backup | Prior pre-cutover backup evidence remains the rollback reference; no restore drill or backup mutation was performed in this blocked resume |
+| API key presence | PRESENT in Railway; value redacted |
+| API authentication | **FAIL — HTTP 401** |
+| Model access | **FAIL — access to `gpt-6-luna` not established** |
+| Billing/quota | **NOT VERIFIED**; authentication failed first and production has no `OPENAI_ADMIN_KEY` for the documented Administration APIs |
+
+OpenAI's current Administration API documentation states that organization cost and hard
+spend-limit endpoints require a separate Admin API key. A normal project inference key is
+not sufficient evidence for those controls:
+
+- <https://developers.openai.com/api/docs/guides/admin-apis>
+- <https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/usage/methods/costs>
+
+### Resume stop and no-mutation proof
+
+The 401 and missing billing/quota verification each independently require STOP. The owner
+therefore did not configure `JUDGE_LIVE_MODEL`, create `JUDGE_ISSUER_SECRET`, enable the
+gateway, issue an operator grant, or submit a synthetic email. Post-check remained:
+
+```text
+APP_MODE=restricted_demo
+LLM_MODE=replay
+OPENAI_MODEL=gpt-6-luna
+JUDGE_INPUT_ENABLED=0
+JUDGE_LIVE_ENABLED=0
+JUDGE_LIVE_MODEL=MISSING
+JUDGE_ISSUER_SECRET=MISSING
+JUDGE_GATEWAY_SOCKET=MISSING
+DATABASE_PATH=/runtime/app.db
+```
+
+- Synthetic result, route, draft and citations: not produced.
+- Provider completion attempts/tokens/application cost: `0 / 0 / USD 0`.
+- Audit: no Judge case or Judge ledger row created.
+- No-send: zero jobs and zero `SEND_DISPATCHED`; historical `SEND_SCHEDULED=17` unchanged.
+- Grant revoked: N/A; no grant was issued.
+- Trello handoff: skipped at the user's explicit instruction during this resume.
+- Required next step: confirm the rotated value was applied to this exact Railway
+  project/environment/service and caused a restart, then validate the key outside LIVE.
+  Billing/quota evidence and a new Coordinator GO-LIVE are still required before activation.
