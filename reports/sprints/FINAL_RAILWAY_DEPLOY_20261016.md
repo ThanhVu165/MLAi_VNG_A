@@ -143,7 +143,7 @@ If disabling the two Judge switches does not restore a healthy Replay-only servi
 - Secret/data review: no secret value, grant, database or email containing real personal data is included.
 - LIVE/API calls in this task: 0.
 - Trello handoff: SKIPPED at the user's explicit request; Coordinator acceptance is still required.
-- Commit / PR: pending creation on `codex/final-deploy-closeout`, targeting `dev`; no merge authorization implied.
+- Commit / PR: initial report commit `f473413`; PR #75 targets `dev`; no merge authorization implied.
 
 ## Remaining risks and decisions
 
