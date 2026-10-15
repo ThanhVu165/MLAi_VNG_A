@@ -170,7 +170,7 @@ def _render_first_time_guidance() -> None:
         2. Nhấn **Xử lý email**.
         3. Đọc quyết định, lý do và căn cứ được hiển thị.
         4. Mở **Verify** để chạy bộ kiểm thử được phép.
-        5. Sau khi có kết quả, chỉ mở **Nhật ký kiểm toán** của ca thuộc cùng phiên khi nút điều hướng hợp lệ xuất hiện.
+        5. Trong cùng phiên, dùng thanh điều hướng bên trái để mở **Nhật ký kiểm toán** và chọn ca vừa chạy.
         """
     )
 

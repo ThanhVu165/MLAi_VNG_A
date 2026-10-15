@@ -42,7 +42,9 @@ def test_restricted_email_guidance_appears_before_input(isolated_ui_db: Path) ->
     )
     guidance = "\n".join(item.value for item in app.markdown)
     assert "Bắt đầu trong 5 bước" in guidance
-    assert "chỉ mở **Nhật ký kiểm toán** của ca thuộc cùng phiên" in guidance
+    assert (
+        "Trong cùng phiên, dùng thanh điều hướng bên trái để mở **Nhật ký kiểm toán**" in guidance
+    )
 
 
 def test_restricted_regulations_has_distinct_empty_state(isolated_ui_db: Path) -> None:
