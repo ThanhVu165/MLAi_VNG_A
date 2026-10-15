@@ -8,7 +8,7 @@
 - Branch: `codex/ux-responsive-cardless`
 - Baseline đã xác minh và đồng bộ: `origin/dev@b728d00ba6e53b8568554082fe7f4cb6a0dc03e1`
 - Final implementation SHA: `14a98e6ff6c3176ddc16c4854959157eecc16695`
-- PR: cập nhật sau khi push/mở PR; target `dev`.
+- PR: [#65](https://github.com/ThanhVu165/MLAi_VNG_A/pull/65), target `dev`.
 - LIVE/API calls: **0**
 
 ## Preflight
