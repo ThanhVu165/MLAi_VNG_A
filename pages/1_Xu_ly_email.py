@@ -583,10 +583,10 @@ def render_saved_case(case_id: str) -> None:
 
 
 def main() -> None:
+    reference = None
     if judge_gateway.configured() and is_restricted_demo():
         try:
             reference = judge_gateway.prepare_session()
-            st.caption(f"Mã đối chiếu phiên với operator: {reference} (không cấp quyền).")
         except (JudgeDenied, OSError):
             st.error("Gateway chưa sẵn sàng; operator cần kiểm tra kênh local.")
             st.stop()
@@ -601,6 +601,9 @@ def main() -> None:
         ),
         unsafe_allow_html=True,
     )
+
+    if reference is not None:
+        st.info(f"Mã đối chiếu phiên với operator: {reference} (không cấp quyền).")
 
     _render_first_time_guidance()
 
