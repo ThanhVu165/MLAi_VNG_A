@@ -13,8 +13,10 @@
   `6ad090657fec4bfefeefcb0c`
 - AI-Gold amendment: Trello action `6ad09a85feb1dedb88ea2c48`,
   `2026-10-15T09:19:01.194Z`
-- Kết quả: **GOLD_BINDING_READY / OFFICIAL_EXECUTION_NOT_READY**
-- Freeze status: **FREEZE_INCOMPLETE**
+- Freeze Completion Amendment: Trello action `6ad09d61dc90b3a61a7bd4e4`,
+  `2026-10-15T09:31:13.865Z`
+- Kết quả: **FINAL_FREEZE_CANDIDATE_READY / GO_A_NOT_GRANTED**
+- Freeze status: **FROZEN**
 - GO-A recommendation: **NO_GO_A**
 - Official Set A runs: **0**
 - Application LIVE/API/provider/email calls: **0**
@@ -28,7 +30,10 @@ hoặc final sealed held-out; không tự cấp GO-A, budget hay quyền LIVE.
 
 Coordinator đã chấp nhận audit tại PR #59 và sửa AC1: Set A mới chỉ cần chứng minh
 independence/provenance từ lúc tạo sau M2, nhưng vẫn phải freeze đầy đủ trước execution.
-Amendment giữ `GO-A = NOT YET GRANTED`, LIVE/API chưa được phép và budget bằng 0.
+Freeze Completion Amendment chốt toàn bộ metadata còn thiếu theo diễn giải cuối:
+Set B được dời sang M7, runtime là local isolated evaluation, population/gates được
+bind trước khi có kết quả. Amendment giữ `GO-A = NOT GRANTED`, LIVE/API chưa được phép,
+`execution_authorized=false` và budget bằng 0.
 
 Remote `dev` đã đổi từ baseline audit cũ do PR #59 được merge. Audit này fetch và dùng
 đúng `origin/dev@47a1fcd9686b5409674979b34a521ead2f65ae8d`; không dùng SHA cũ làm baseline.
@@ -124,7 +129,7 @@ Candidate receipt là current evidence, không phải historical preregistration
 | Python/base image | **RESOLVED** | Python `3.11`, `python:3.11-slim` |
 | Dockerfile/dependencies | **RESOLVED** | Git blobs `ad19ffc707e886b9fda9369cf5b9bcaca6c7161f` / `828309b78eb21a2e9642efe695638ffa819bb17a` |
 | Compose config | **RESOLVED** | Git blob `dc9d75253e3190505e4c0d4acff8abc2b582cbd4`; compose mặc định replay, không thay planned official mode |
-| Deployed image digest for baseline | **NOT_RESOLVED** | Deployment IDs/source SHA không thay immutable image digest |
+| Deployed image digest | **RESOLVED / NOT APPLICABLE** | `NOT_APPLICABLE_LOCAL_EVALUATION`; runtime đánh giá cô lập, local, không yêu cầu production image digest |
 | Planned execution mode | **RESOLVED candidate** | `LIVE` từ accepted M4-T01 template; **không được thực thi** trước quyền riêng |
 | Authorization/budget | **RESOLVED safety state** | `execution_authorized=false`, `budget=0`, `GO-A=NOT GRANTED` |
 
@@ -145,43 +150,46 @@ Chúng chỉ xác định exact bytes; independent review và manifest acceptanc
 
 | Hạng mục | Trạng thái | Freeze rule / phần còn thiếu |
 |---|---|---|
-| Planned population/denominator | **Định nghĩa RESOLVED; candidate count 18** | `S` là toàn bộ planned eligible business cases; `V` là valid AUTO_REPLY/ESCALATE. Count không tự tạo gate |
-| Sample size | **NOT_RESOLVED** | Candidate có 18 case nhưng chưa có Coordinator-approved numeric gate |
-| Strata | **NOT_RESOLVED** | Domain/family/Gold-route minimum chưa được duyệt |
-| Coverage | **Định nghĩa RESOLVED; threshold NOT_RESOLVED** | `count(V)/count(S)`; không có numeric requirement |
+| Planned population/denominator | **RESOLVED** | Toàn bộ 18/18 case đã hoạch định; không drop hoặc rebalance sau khi thấy kết quả |
+| Sample size | **RESOLVED** | `planned_count=18`; `required_normalized_results=18` |
+| Strata | **RESOLVED** | P01=7, P03=5, P02=4, P05=2, P04=0; `minimum_P04_required=false`; `rebalance_allowed=false` |
+| Coverage | **RESOLVED** | `planned=18`; `required_normalized=18`; `missing_allowed=0` |
 | Missingness | **RESOLVED** | `MISSING/count(S)`; aborted/unattempted IDs vẫn ở denominator |
 | TECHNICAL_ERROR | **RESOLVED** | `(ERROR+MALFORMED)/count(S)`, tách subtype; không đổi thành business escalation |
 | Wilson CI | **RESOLVED** | Wilson 95%, raw integer n/N; N=0 → null/`UNDEFINED` |
 | Latency | **RESOLVED** | Attempted-case count, median, nearest-rank p95, wall time; success/failure strata; null/censored rõ |
 | Stop-type metrics | **RESOLVED** | Exact stop trên Gold ESCALATE in V và conditional exact stop trên TP; rule correctness riêng |
-| Quality/reporting | **Reporting RESOLVED; thresholds NOT_RESOLVED** | Raw n/N, confusion matrix, MER/OER, bounds, failures, content/citation/grounding; không có pass threshold |
-| Abort threshold | **NOT_RESOLVED** | Không có Coordinator-approved numeric/condition source |
+| Quality/reporting | **RESOLVED — DESCRIPTIVE** | Không có post-hoc pass threshold; bắt buộc báo cáo MER, OER, route/stop/rule correctness, technical failure, raw n/N, Wilson 95% và limitations |
+| Abort threshold | **RESOLVED — STOP** | Dừng khi candidate/Gold/corpus hash mismatch; runtime/config/model drift; unauthorized provider call; budget exceed; evidence leakage; hoặc safety violation |
 | Timeout/retry/deadline | **RESOLVED** | 30 giây / 1 retry / 60 giây mỗi case |
 | Execution state | **RESOLVED safety state** | `execution_authorized=false`, budget `0`, GO-A `NOT GRANTED` |
 
-Không được chọn numeric gate sau khi xem results. Vì sample size, strata, coverage,
-quality gate và abort threshold chưa được duyệt, execution phải dừng trước GO-A.
+Không được chọn gate sau khi xem results. Các gate trên đã được Coordinator bind trước
+execution; chúng hoàn tất metadata freeze nhưng không cấp GO-A hoặc quyền chạy.
 
-## 7. Unresolved fields và blocker
+## 7. Final freeze interpretation và quyền còn thiếu
 
-1. Set B existence/version/hash/seal/access-history metadata trong manifest; không cần
-   và không được mở Set B Gold để giải quyết các field này.
-2. Immutable deployed image digest, nếu Coordinator yêu cầu container/image execution.
-3. Numeric sample-size, strata, coverage, quality và abort gates.
-4. Independent review/acceptance của exact manifest và collector/harness binding.
-5. GO-A, execution authorization và nonzero budget.
+Manifest không còn field `NOT_RESOLVED`. Theo exact Freeze Completion Amendment:
 
-Do các field bắt buộc còn thiếu, không thể trả `READY_FOR_GO_A_DECISION`.
+- Set B existence/version/hash/seal/access-history đều dùng giá trị public-safe
+  `DEFERRED_TO_M7`; không truy cập Set B Gold.
+- Runtime là local isolated evaluation; `deployed_image_digest` có semantic value
+  `NOT_APPLICABLE_LOCAL_EVALUATION`.
+- Exact manifest cùng collector/harness bindings tại PR #60 head `f45d0a0557ed8e9057c956aba63038f8afe37107`
+  được Coordinator chấp nhận làm freeze candidate.
+- `FROZEN` chỉ có nghĩa metadata/evidence freeze đã hoàn tất. GO-A vẫn **NOT GRANTED**,
+  `execution_authorized=false`, budget `0`, LIVE/API `0`, official Set A runs `0`.
+
+Vì vậy candidate đã sẵn sàng để Coordinator ra quyết định GO-A riêng; chưa được execution.
 
 ## 8. Privacy, validation và recommendation
 
 - Set A Gold chỉ được đọc để xác minh exact hash, candidate/corpus binding, consistency
   và các limitation đã được Coordinator chấp nhận; không chạy model trên Set A.
-- Chỉ mở đúng Set B input-only candidate cho overlap lịch sử; không mở Set B Gold hoặc
-  reviewer material.
+- Freeze-completion pass không mở Set B Gold hoặc reviewer material; Set B được dời sang M7.
 - Không commit case, expected label, rationale, PII, secret hoặc private artifact path.
-- DEV/regression và M7 Set B access chỉ phục vụ offline overlap validation; Set B
-  access bị giới hạn ở đúng input-only candidate đã được ủy quyền.
+- Lịch sử access Set B input-only trước đó chỉ phục vụ offline overlap validation; amendment
+  hiện tại không truy cập thêm Set B và không truy cập Set B Gold.
 - Official Set A runs: **0**.
 - Application LIVE/API/provider/email: **0**; chỉ dùng GitHub/Trello read-only cho evidence.
 - Exact Gold/candidate/corpus binding: **PASS**; raw candidate, raw Gold, private receipt
@@ -207,13 +215,13 @@ Validation checkpoint cho binding này:
 - `python -m unittest discover -s docs/evaluation -p test_collector.py -v`:
   **19 PASS**.
 - `validate_freeze_manifest(..., expected_runtime_sha=...)`:
-  **PASS**, trả `FREEZE_INCOMPLETE` đúng các field còn unresolved.
+  **PASS**, trả `FROZEN`; danh sách `NOT_RESOLVED` rỗng.
 - Sanitized leak scan, local-link check và `git diff --check`: **PASS**.
 - Targeted harness không chạy lại ở checkpoint này vì chỉ đổi metadata/report; giữ kết quả
   historical **2 PASS** ở trên.
 
-**FREEZE STATUS: `FREEZE_INCOMPLETE`.**
+**FREEZE STATUS: `FROZEN`.**
 
-**GO-A RECOMMENDATION: `NO_GO_A`.** Gold/corpus binding đã sẵn sàng nhưng official
-execution chưa sẵn sàng. Coordinator còn phải chốt image disposition cùng numeric gates,
-rồi review exact manifest. Một quyết định GO-A riêng mới có thể đổi execution state.
+**GO-A: `NOT GRANTED`.** Final freeze candidate đã sẵn sàng, nhưng official execution
+vẫn bị khóa bởi `execution_authorized=false` và budget `0`. Bước kế tiếp duy nhất là trả
+về Coordinator để ra quyết định GO-A / execution authorization riêng.

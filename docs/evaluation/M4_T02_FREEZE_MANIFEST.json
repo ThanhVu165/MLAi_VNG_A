@@ -1,5 +1,5 @@
 {
-  "freeze_status": "FREEZE_INCOMPLETE",
+  "freeze_status": "FROZEN",
   "created_at": "2026-10-15T03:21:31Z",
   "coordinator_decision_reference": [
     "trello-action:6ad04616863aaeb3c1fb352f",
@@ -8,6 +8,7 @@
     "trello-action:6ad08b8a2dc7c9bc2cd7183a",
     "trello-action:6ad090657fec4bfefeefcb0c",
     "trello-action:6ad09a85feb1dedb88ea2c48",
+    "trello-action:6ad09d61dc90b3a61a7bd4e4",
     "github-pr:59",
     "reports/evaluation/M4_T02_GO_A_READINESS.md"
   ],
@@ -28,11 +29,11 @@
     "reference": "M4T02_PRIVATE_SET_A_STORE"
   },
   "set_b": {
-    "existence": "NOT_RESOLVED",
-    "version": "NOT_RESOLVED",
-    "hash": "NOT_RESOLVED",
-    "seal": "NOT_RESOLVED",
-    "access_history": "NOT_RESOLVED"
+    "existence": "DEFERRED_TO_M7",
+    "version": "DEFERRED_TO_M7",
+    "hash": "DEFERRED_TO_M7",
+    "seal": "DEFERRED_TO_M7",
+    "access_history": "DEFERRED_TO_M7"
   },
   "corpus": {
     "identifier": "M4-T02-CORPUS",
@@ -69,18 +70,59 @@
     "dockerfile_hash": "git-blob-sha1:ad19ffc707e886b9fda9369cf5b9bcaca6c7161f",
     "compose_hash": "git-blob-sha1:dc9d75253e3190505e4c0d4acff8abc2b582cbd4",
     "dependency_manifest_hash": "git-blob-sha1:828309b78eb21a2e9642efe695638ffa819bb17a",
-    "deployed_image_digest": "NOT_RESOLVED"
+    "deployed_image_digest": "NOT_APPLICABLE_LOCAL_EVALUATION"
   },
   "execution_mode": "LIVE",
   "timeout_seconds": 30,
   "retries": 1,
   "per_case_deadline_seconds": 60,
   "gates": {
-    "quality": "NOT_RESOLVED",
-    "sample_size": "NOT_RESOLVED",
-    "strata": "NOT_RESOLVED",
-    "coverage": "NOT_RESOLVED",
-    "abort_threshold": "NOT_RESOLVED"
+    "quality": {
+      "mode": "DESCRIPTIVE",
+      "post_hoc_pass_threshold": false,
+      "required_reporting": [
+        "MER",
+        "OER",
+        "route_correctness",
+        "stop_correctness",
+        "rule_correctness",
+        "technical_failure",
+        "raw_n_N",
+        "wilson_95",
+        "limitations"
+      ]
+    },
+    "sample_size": {
+      "planned_count": 18,
+      "required_normalized_results": 18
+    },
+    "strata": {
+      "P01": 7,
+      "P03": 5,
+      "P02": 4,
+      "P05": 2,
+      "P04": 0,
+      "minimum_P04_required": false,
+      "rebalance_allowed": false
+    },
+    "coverage": {
+      "planned": 18,
+      "required_normalized": 18,
+      "missing_allowed": 0
+    },
+    "abort_threshold": {
+      "action": "STOP",
+      "conditions": [
+        "candidate_hash_mismatch",
+        "gold_hash_mismatch",
+        "corpus_hash_mismatch",
+        "runtime_config_model_drift",
+        "unauthorized_provider_call",
+        "budget_exceed",
+        "evidence_leakage",
+        "safety_violation"
+      ]
+    }
   },
   "budget": 0,
   "execution_authorized": false
