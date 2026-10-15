@@ -14,7 +14,7 @@ chính thức.
 - Nhánh M4-T01 hiện có đã hợp nhất bình thường với `origin/dev`; không rebase,
   force-push hoặc viết lại lịch sử, và tập đường dẫn thay đổi giữa hai nhánh không giao nhau.
 - Hai thư mục chưa được theo dõi và không liên quan `.codex_tmp/`, `outputs/` được giữ nguyên.
-- **SHA triển khai đã kiểm thử:** `7702d2b9a7db7c66880e8d8e4a8894b34403e3d9`.
+- **SHA triển khai đã kiểm thử:** `f8111d45045c1b1b63aa30d765fb3cacb4255ecf`.
   Commit bằng chứng cuối chỉ thay đổi báo cáo này, không đổi mã Python đã kiểm thử.
 
 ## Sửa lỗi 1 — trạng thái sẵn sàng chính thức bắt buộc dữ liệu đủ điều kiện
