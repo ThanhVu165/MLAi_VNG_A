@@ -29,6 +29,7 @@ from infra.demo_access import (
 )
 from infra.settings import PENDING_STATUS_REFRESH_SECONDS
 from infra.judge_access import JudgeDenied, is_judge_case
+from infra.public_demo import enabled as public_demo_enabled
 from ui import judge_gateway
 from ui.presentation import (
     decision_badge_html,
@@ -124,7 +125,7 @@ def inbox_input(email: InboxEmail) -> CaseInput:
 def _submit(inp: CaseInput) -> None:
     if (
         is_restricted_demo()
-        and judge_gateway.grant_valid()
+        and judge_gateway.input_available()
         and canonical_demo_input(inp.sender, inp.subject, inp.body) is None
     ):
         result = judge_gateway.submit(inp)
@@ -166,9 +167,12 @@ def _can_read_case(case_id: str) -> bool:
 
 def _render_first_time_guidance() -> None:
     """Giải thích đúng khả năng của từng mode trước khi người dùng nhập email."""
-    if is_restricted_demo() and judge_gateway.grant_valid():
+    if is_restricted_demo() and judge_gateway.input_available():
         st.info(
-            "Phiên judge đã được cấp quyền xử lý email mới để xem kết quả; "
+            "Public LIVE: nhập email synthetic mới, tối đa 10 email/phiên và 2 email/phút; "
+            "không gửi email. Không nhập dữ liệu cá nhân thật."
+            if public_demo_enabled()
+            else "Phiên judge đã được cấp quyền xử lý email mới để xem kết quả; "
             "không gửi email. Chỉ dùng dữ liệu thử nghiệm, không nhập PII thật."
         )
     elif is_restricted_demo():
@@ -602,7 +606,7 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    if reference is not None:
+    if reference is not None and not public_demo_enabled():
         st.info(f"Mã đối chiếu phiên với operator: {reference} (không cấp quyền).")
 
     _render_first_time_guidance()
@@ -657,7 +661,7 @@ def main() -> None:
             '<div class="ex-card-title">📥 Nhập email cần xử lý</div>', unsafe_allow_html=True
         )
         if is_restricted_demo():
-            if judge_gateway.grant_valid():
+            if judge_gateway.input_available():
                 st.caption(
                     "Nhập email mới để xem quyết định và bản nháp; không gửi. "
                     "Không dùng dữ liệu cá nhân thật."

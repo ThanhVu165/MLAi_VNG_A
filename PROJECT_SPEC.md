@@ -87,6 +87,28 @@ Judge LIVE chỉ kết thúc ở preview: không tạo worker/send job, `send_de
 hoặc `LLM_MODE=replay` là kill switch. Amendment này không đổi SQLite schema, enum, audit
 action hay quyền gửi email thật.
 
+### C3 — Public LIVE demo (Coordinator-approved CONTRACT-CHANGE 16/10/2026)
+
+`JUDGE_PUBLIC_DEMO_ENABLED=1` mở admission tự động phía server cho email dán mới;
+mặc định OFF, vẫn bắt buộc toàn bộ guards Judge LIVE C2. Không cần operator provision,
+không truyền grant/issuer secret ra browser. Operator lane giữ 3 case/grant/600 giây.
+Public capability có thời hạn 1.800 giây và tối đa 10 case/phiên server, cùng trần 2 request
+global và 1/phiên. Quota/rate public trong namespace `public_demo:*` của settings, cùng
+transaction `BEGIN IMMEDIATE` với debit C1/C2; không schema/migration/audit action mới.
+Budget $5 gồm cả operator/public và lịch sử, giữ nguyên $0,01/case, attempts/tokens,
+PREVIEW_READY, ownership/Audit và no-send. Usage hỏng/blocked, pending mồ côi hoặc HOLD
+chặn request public mới; owner vẫn đọc được kết quả lỗi/Audit.
+
+Admission lazy tại submit đầu tiên, tối đa 10 binding mới/phút, 100 phiên server cho cả
+đợt demo (bền vững, không tự reset), 10 public request/phút toàn ứng dụng và 2/phút/phiên.
+Không dựa IP/header client để cấp quota. Rerun/reconnect cùng server session ID giữ tổng
+quota và revoke, nhưng kết nối mới có capability/ownership mới, không kế thừa case cũ.
+ID server chỉ là khóa tính quota, không là bằng chứng authentication. Refresh tạo AppSession
+mới/profile mới có thể có quota mới và chịu admission/global limits; không cam kết nhận diện
+cùng một người. Restart giữ ledger/quota, mất binding thì không khôi phục quyền đọc cũ.
+Tắt public switch chặn admission/reservation và attempt public tiếp theo, không refund,
+không tắt operator lane. Switch deployment vẫn cần authorization riêng.
+
 Luồng chính:
 
 ```text

@@ -21,7 +21,7 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 from core.judge_input import process_judge_case
 from core.types import CaseInput, PipelineResult
-from infra import judge_access as access
+from infra import judge_access as access, public_demo
 from infra.db import transaction
 
 _MAX_MESSAGE = 4096
@@ -133,8 +133,30 @@ def can_read(case_id: str) -> bool:
 
 
 def submit(inp: CaseInput) -> PipelineResult:
+    if public_demo.enabled():
+        _runtime_guard()
+        with _LOCK:
+            record = _current()
+            if record is None:
+                raise access.JudgeDenied("Không xác minh được kết nối public hiện tại.")
+            if record["grant"] is None and not record["provisioned"]:
+                context = get_script_run_ctx(suppress_warning=True)
+                record["grant"] = public_demo.admit(record["session"], context.session_id)
+                record["provisioned"] = True
     grant, session = _credentials()
     return process_judge_case(inp, grant=grant, session=session, nonce=secrets.token_urlsafe(24))
+
+
+def input_available() -> bool:
+    """UI mô tả admission; submit vẫn kiểm mọi quyền/quota ở server."""
+    if grant_valid():
+        grant, _ = _credentials()
+        return not grant.token.startswith(public_demo.TOKEN_PREFIX) or public_demo.enabled()
+    try:
+        public_demo.require_enabled()
+        return configured() and _current() is not None
+    except access.JudgeDenied:
+        return False
 
 
 def _operate(message: dict) -> dict:

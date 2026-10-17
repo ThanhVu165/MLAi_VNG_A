@@ -68,6 +68,7 @@ class _Lease:
     session_hash: str
     case_id: str
     payload_hash: str
+    public: bool = False
 
 
 _ACTIVE: ContextVar[_Lease | None] = ContextVar("judge_c1_lease", default=None)
@@ -172,6 +173,11 @@ def _grant(state: dict, grant: object, session: object) -> tuple[str, dict]:
     record = state["grants"].get(key)
     if not record or record["session"] != _hash(session) or record["expires"] <= time.time():
         raise JudgeDenied("Quyền judge không hợp lệ hoặc đã hết hạn.")
+    if grant.token.startswith("public."):
+        from infra import public_demo
+
+        with transaction() as connection:
+            public_demo.validate_grant(connection, key)
     return key, record
 
 
@@ -405,16 +411,21 @@ def request_scope(
     with transaction() as connection:
         state = _load(connection)
         key, record = _grant(state, grant, session)
+        public = grant.token.startswith("public.")
         session_hash = _hash(session)
         if (
             _hash(nonce) in record["nonces"]
-            or record["count"] >= GRANT_REQUEST_LIMIT
+            or record["count"] >= (SESSION_REQUEST_LIMIT if public else GRANT_REQUEST_LIMIT)
             or state["sessions"].get(session_hash, 0) >= SESSION_REQUEST_LIMIT
             or state["total"] >= GLOBAL_REQUEST_LIMIT
             or len(state["active"]) >= GLOBAL_CONCURRENCY
             or session_hash in state["active"].values()
         ):
             raise JudgeDenied("Yêu cầu trùng, đang xử lý hoặc đã chạm hạn mức judge.")
+        if public:
+            from infra import public_demo
+
+            public_demo.reserve(connection, key)
         _reserve_budget(connection, case_id, key, session_hash)
         record["count"] += 1
         record["nonces"].append(_hash(nonce))
@@ -426,7 +437,7 @@ def request_scope(
             (CASE_PREFIX + case_id, key, now_iso()),
         )
         _save(connection, state)
-    token = _ACTIVE.set(_Lease(key, session_hash, case_id, fingerprint))
+    token = _ACTIVE.set(_Lease(key, session_hash, case_id, fingerprint, public))
     try:
         yield
     finally:
@@ -460,6 +471,12 @@ def check_active() -> None:
         request = _load_c2(connection)["requests"].get(lease.case_id)
         state = _load(connection)
         record = state["grants"].get(lease.grant_hash)
+        if lease.public:
+            from infra import public_demo
+
+            public_demo.require_enabled()
+            public_demo.validate_grant(connection, lease.grant_hash)
+            public_demo.check_accounting(connection)
         if (
             not record
             or record["expires"] <= time.time()
